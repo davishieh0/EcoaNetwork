@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Ecoa</title>
+  <style>path{fill:#11110f}@media (prefers-color-scheme:dark){path{fill:#6d9bff}}</style>
+  <path d="M144 16V240A112 112 0 0 1 144 16Z M176 128A56 56 0 0 1 176 240Z"/>
+</svg>

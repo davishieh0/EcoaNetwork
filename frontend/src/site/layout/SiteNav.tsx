@@ -15,7 +15,7 @@ import { ROUTES } from '@/routes'
 import { cn } from '@/components/ui/cn'
 
 // --- GLOBALS ---
-const WORDMARK_SQUARES = 'transition-colors duration-surface ease-standard'
+const WORDMARK_SYMBOL = 'transition-colors duration-surface ease-standard'
 
 // --- CODE ---
 /**
@@ -85,12 +85,7 @@ function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
               )}
             >
               <Dialog.Title className="sr-only">Menu</Dialog.Title>
-              <span
-                aria-hidden="true"
-                className="font-display text-h4 font-semibold tracking-wordmark"
-              >
-                ECOA
-              </span>
+              <Wordmark />
               <Dialog.Close asChild>
                 <Button variant="ghost" size="sm">
                   Close
@@ -226,7 +221,7 @@ export function SiteNav() {
           className="flex items-center gap-3 justify-self-start"
           aria-label="Ecoa — home"
         >
-          <Wordmark squareClassName={WORDMARK_SQUARES} />
+          <Wordmark symbolClassName={WORDMARK_SYMBOL} />
         </a>
 
         <nav

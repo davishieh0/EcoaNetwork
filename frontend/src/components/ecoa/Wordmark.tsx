@@ -1,5 +1,5 @@
 /**
- * The Ecoa wordmark: four squares and the name.
+ * The Ecoa logo: three half-discs and the name.
  */
 
 // --- IMPORTS ---
@@ -7,26 +7,67 @@ import type { WordmarkProps } from '@/components/ecoa/Wordmark.t'
 import { cn } from '@/components/ui/cn'
 
 // --- GLOBALS ---
-const SQUARES = ['bg-signal', 'bg-primary', 'bg-primary', 'bg-signal']
+/** Cropped to the artwork, so the caller sizes it by height alone. */
+const VIEW_BOX = '28 32 632 194'
+
+/** Half-discs on one baseline, each radius half the one before. */
+const SYMBOL =
+  'M124 32 V224 A96 96 0 0 1 124 32 Z M140 128 A48 48 0 0 1 140 224 Z ' +
+  'M204 176 A24 24 0 0 1 204 224 Z'
+
+/** "Ecoa" in Space Grotesk SemiBold, outlined so it never waits on a font. */
+const NAME =
+  'M295.1 224 V112 H366.4 V129.5 H314.3 V158.8 H361.9 V176.3 H314.3 V206.5 ' +
+  'H367.3 V224 Z M421.6 226.2 Q410.1 226.2 400.9 221.4 ' +
+  'Q391.6 216.6 386.2 207.5 Q380.8 198.4 380.8 185.5 V183.4 ' +
+  'Q380.8 170.5 386.2 161.4 Q391.6 152.3 400.9 147.5 ' +
+  'Q410.1 142.7 421.6 142.7 Q433 142.7 441.1 146.7 Q449.1 150.8 454.1 157.7 ' +
+  'Q459 164.6 460.5 173.2 L442.8 177 Q442.1 171.9 439.7 167.8 ' +
+  'Q437.3 163.8 432.9 161.4 Q428.5 159 422 159 Q415.5 159 410.3 161.8 ' +
+  'Q405.1 164.7 402.1 170.2 Q399.1 175.8 399.1 183.7 V185.2 ' +
+  'Q399.1 193.1 402.1 198.7 Q405.1 204.2 410.3 207.1 Q415.5 209.9 422 209.9 ' +
+  'Q431.8 209.9 436.9 204.9 Q441.9 199.8 443.3 191.8 L461 196 ' +
+  'Q459.1 204.3 454.1 211.2 Q449.1 218.2 441.1 222.2 Q433 226.2 421.6 226.2 ' +
+  'Z M516.3 226.2 Q504.4 226.2 495.1 221.4 Q485.7 216.6 480.4 207.5 ' +
+  'Q475.1 198.3 475.1 185.7 V183.2 Q475.1 170.6 480.4 161.5 ' +
+  'Q485.7 152.4 495.1 147.5 Q504.4 142.7 516.3 142.7 ' +
+  'Q528.1 142.7 537.5 147.5 Q546.8 152.4 552.1 161.5 ' +
+  'Q557.5 170.6 557.5 183.2 V185.7 Q557.5 198.3 552.1 207.5 ' +
+  'Q546.8 216.6 537.5 221.4 Q528.1 226.2 516.3 226.2 Z M516.3 209.9 ' +
+  'Q526.3 209.9 532.8 203.5 Q539.2 197 539.2 185.2 V183.7 ' +
+  'Q539.2 171.9 532.8 165.5 Q526.5 159 516.3 159 Q506.2 159 499.8 165.5 ' +
+  'Q493.4 171.9 493.4 183.7 V185.2 Q493.4 197 499.8 203.5 ' +
+  'Q506.2 209.9 516.3 209.9 Z M601.5 226.2 Q593.1 226.2 586.4 223.3 ' +
+  'Q579.6 220.4 575.7 214.7 Q571.8 209.1 571.8 201 Q571.8 192.9 575.7 187.5 ' +
+  'Q579.6 182 586.5 179.3 Q593.4 176.5 602.2 176.5 H625.2 V171.7 ' +
+  'Q625.2 165.4 621.3 161.6 Q617.4 157.7 609.3 157.7 ' +
+  'Q601.3 157.7 597.2 161.4 Q593.1 165.1 591.8 171.1 L574.9 165.4 ' +
+  'Q576.8 159.2 581 154.1 Q585.3 149 592.3 145.8 Q599.4 142.7 609.6 142.7 ' +
+  'Q625.1 142.7 634 150.5 Q642.9 158.3 642.9 173 V204 ' +
+  'Q642.9 208.8 647.4 208.8 H654 V224 H641.1 Q635.4 224 631.7 221.1 ' +
+  'Q628 218.2 628 213.4 V213 H625.3 Q624.4 215.2 621.9 218.4 ' +
+  'Q619.5 221.6 614.6 223.9 Q609.7 226.2 601.5 226.2 Z M604.5 211.3 ' +
+  'Q613.7 211.3 619.4 206.1 Q625.2 200.9 625.2 192 V190.4 H603.4 ' +
+  'Q597.4 190.4 593.8 193 Q590.1 195.6 590.1 200.5 Q590.1 205.3 593.9 208.3 ' +
+  'Q597.7 211.3 604.5 211.3 Z'
 
 // --- CODE ---
 /**
- * Renders the mark and the name, for the caller to wrap in a link.
+ * Renders the symbol and the name, for the caller to wrap in a link.
  *
- * @param props - Extra classes for the four squares.
- * @returns The mark and the name.
+ * @param props - Extra classes for the symbol.
+ * @returns The logo, as inline SVG.
  */
-export function Wordmark({ squareClassName }: WordmarkProps) {
+export function Wordmark({ symbolClassName }: WordmarkProps) {
   return (
-    <>
-      <span aria-hidden="true" className="grid grid-cols-2 gap-0.5">
-        {SQUARES.map((tone, index) => (
-          <span key={index} className={cn('size-2', squareClassName, tone)} />
-        ))}
-      </span>
-      <span className="font-display text-h4 font-semibold tracking-wordmark">
-        ECOA
-      </span>
-    </>
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      viewBox={VIEW_BOX}
+      className="h-7 w-auto"
+    >
+      <path d={SYMBOL} className={cn('fill-logo', symbolClassName)} />
+      <path d={NAME} className="fill-current" />
+    </svg>
   )
 }

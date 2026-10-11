@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-labelledby="title">
+  <title id="title">Ecoa app icon</title>
+  <rect width="256" height="256" rx="56" fill="#6d9bff"/>
+  <g id="symbol" transform="translate(48.64,48.64) scale(0.62)"><path fill="#11110f" d="M124 32V224A96 96 0 0 1 124 32Z M140 128A48 48 0 0 1 140 224Z M204 176A24 24 0 0 1 204 224Z"/></g>
+</svg>

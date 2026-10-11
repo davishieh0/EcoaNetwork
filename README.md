@@ -1,4 +1,9 @@
-# EcoaNetwork
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="brand/banner/ecoa-banner-dark.png">
+  <img alt="Ecoa. Every experience leaves an echo." src="brand/banner/ecoa-banner-light.png">
+</picture>
+
+# Ecoa
 
 Every experience leaves an echo.
 
