@@ -1,0 +1,43 @@
+{
+  "brand": "Ecoa",
+  "tagline": "Every experience leaves an echo",
+  "brief": "An open, decentralized network for reviews, complaints and experiences about companies, products and services. Every review is a signed, immutable event: nobody can silently edit or delete it, and anyone can verify who wrote it.",
+  "adjectives": ["verifiable", "open", "honest", "precise", "human"],
+  "criteria": "Success: unique and ownable, nothing like the old 2x2 grid, works at 16 px, as an app icon and in the site header, holds in one colour on dark and on paper.",
+  "industry": "software",
+  "mockups": ["website", "favicon-tab", "app-icon", "readme", "terminal", "social"],
+  "nav": ["Explore", "Protocol", "Run a node"],
+  "brand_color": "#6d9bff",
+  "greyscale": false,
+  "final": true,
+  "designer": "Ecoa",
+  "round": 3,
+  "concepts": [
+    {
+      "name": "Halves",
+      "symbol": "../logo/symbol/ecoa-symbol-ink.svg",
+      "lockup": "../logo/horizontal/ecoa-logo-horizontal-ink.svg",
+      "stacked": "../logo/stacked/ecoa-logo-stacked-ink.svg",
+      "avatar": "../logo/symbol/ecoa-symbol-small-ink.svg",
+      "symbol_on_tile": "../logo/symbol/ecoa-symbol-ink.svg",
+      "lockup_on_tile": "../logo/horizontal/ecoa-logo-horizontal-ink.svg",
+      "stacked_on_tile": "../logo/stacked/ecoa-logo-stacked-ink.svg",
+      "symbol_on_dark": "../logo/symbol/ecoa-symbol-blue.svg",
+      "lockup_on_dark": "../logo/horizontal/ecoa-logo-horizontal-color-on-dark.svg",
+      "stacked_on_dark": "../logo/stacked/ecoa-logo-stacked-color-on-dark.svg",
+      "idea": "A half-circle, then the same shape again at half the size, and again.",
+      "rationale": [
+        "The echo is the whole shape: one form, repeating and fading",
+        "Three half-discs on one baseline, each radius half the one before",
+        "Symbol and wordmark share that baseline, so the echo runs into the name",
+        "A two-piece cut keeps it crisp at 16 px"
+      ]
+    }
+  ],
+  "recommendation": "Halves is the approved direction. Blue on the dark surface is the primary version; on paper the logo is ink, or ink on a blue tile.",
+  "next_steps": [
+    "Replace the old header mark with the horizontal lockup",
+    "Run a trademark search before public launch",
+    "Extend the half-disc rhythm into patterns and motion"
+  ]
+}
