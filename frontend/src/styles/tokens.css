@@ -94,6 +94,9 @@
 
   /* spelled out: bg-accent/10 silently drops the opacity */
   --ecoa-accent-wash: rgb(109 155 255 / 0.12);
+
+  /* --- logo symbol: blue on dark, ink on paper --- */
+  --ecoa-logo: #6d9bff;
 }
 
 /* --- paper context --- */
@@ -123,6 +126,9 @@
   --ecoa-info-wash: #e6f4f9;
   --ecoa-text-on-danger: #ffffff;
   --ecoa-focus-halo: #11110f;
+
+  /* blue on paper is 2.6:1, so the symbol goes to ink */
+  --ecoa-logo: #111316;
 
   color: var(--ecoa-text-primary);
   background-color: var(--ecoa-canvas);
@@ -214,4 +220,6 @@
   --color-accent-wash: var(--ecoa-accent-wash);
   --color-accent-valid: var(--ecoa-accent-valid);
   --color-on-accent: var(--ecoa-text-on-accent);
+
+  --color-logo: var(--ecoa-logo);
 }

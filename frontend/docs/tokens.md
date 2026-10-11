@@ -83,10 +83,14 @@ because the hover has to keep ink readable on paper.
 | `focus` | `#6d9bff` | `#6d9bff` |
 | `focus-halo` | `#fafaf8` | `#11110f` |
 | `hand` | `#6d9bff` | `#6d9bff` |
+| `logo` | `#6d9bff` | `#111316` |
 
 `focus-halo` is the second ring, in the opposite tone. The blue alone is 2.6:1
 on paper, under the 3:1 a focus indicator has to clear; the pair always clears
 it.
+
+`logo` fills the logo's symbol. It goes to ink on paper for the same reason:
+the blue is too faint there to carry a shape on its own.
 
 ### Semantics
 
