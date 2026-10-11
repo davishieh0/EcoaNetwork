@@ -33,7 +33,7 @@ never the raw value.
 | `text-mono-s` | 0.6875rem | 1.45 |
 
 Tracking: `tracking-display` -0.03em · `tracking-heading` -0.02em ·
-`tracking-wordmark` -0.05em · `tracking-metadata` 0.06em.
+`tracking-metadata` 0.06em.
 
 ## Colour
 
