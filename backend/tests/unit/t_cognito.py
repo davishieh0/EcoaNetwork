@@ -9,6 +9,8 @@ from collections.abc import Callable
 from src.clients.cognito import CognitoClient
 from src.err.auth_provider_error import AuthProviderError
 from src.err.email_already_registered_error import EmailAlreadyRegisteredError
+from src.err.expired_code_error import ExpiredCodeError
+from src.err.invalid_code_error import InvalidCodeError
 from src.err.invalid_password_error import InvalidPasswordError
 from src.err.too_many_requests_error import TooManyRequestsError
 from typing import Any
@@ -88,3 +90,23 @@ def test_sign_up_failures(code: str, expected: type[Exception]) -> None:
 
     with pytest.raises(expected):
         asyncio.run(_cognito(idp).sign_up(EMAIL, 'Passw0rd!'))
+
+
+# --- CONFIRMATION ---
+@pytest.mark.parametrize(
+    ('code', 'expected'),
+    [
+        ('CodeMismatchException', InvalidCodeError),
+        ('ExpiredCodeException', ExpiredCodeError),
+        # neither says whether the address has an account
+        ('UserNotFoundException', InvalidCodeError),
+        ('NotAuthorizedException', InvalidCodeError),
+    ],
+)
+def test_confirm_sign_up_failures(
+    code: str, expected: type[Exception]
+) -> None:
+    idp = FakeIdp(error=_failure(code))
+
+    with pytest.raises(expected):
+        asyncio.run(_cognito(idp).confirm_sign_up(EMAIL, '123456'))

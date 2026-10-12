@@ -176,3 +176,25 @@ class CognitoClient:
         )
 
         return str(response['UserSub'])
+
+
+    async def confirm_sign_up(self, email: str, code: str) -> None:
+        """
+        Confirms an account with the code it was emailed.
+
+        :param email: The account's address.
+        :param code: The confirmation code.
+
+        :return: None.
+        """
+        await self._call(
+            'confirm_sign_up',
+            errors={
+                'NotAuthorizedException': InvalidCodeError,
+                'UserNotFoundException': InvalidCodeError,
+            },
+            ClientId=self._client_id,
+            SecretHash=self._secret_hash(email),
+            Username=email,
+            ConfirmationCode=code,
+        )
