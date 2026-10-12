@@ -23,6 +23,10 @@ class Config(BaseSettings):
     # cors
     CORS_ORIGINS: str = 'http://localhost:*'
 
+    # aws (the endpoint is only set when pointing at LocalStack)
+    AWS_REGION: str
+    AWS_ENDPOINT_URL: str = ''
+
     @property
     def cors_origins(self) -> list[str]:
         """
