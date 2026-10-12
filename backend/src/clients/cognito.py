@@ -302,3 +302,25 @@ class CognitoClient:
         )
 
         return self._tokens('refresh', response)
+
+
+    async def sign_out(self, refresh_token: str) -> None:
+        """
+        Revokes a refresh token, and every access token issued from it.
+
+        Succeeds when the token is already revoked or was never valid.
+
+        :param refresh_token: The session's refresh token.
+
+        :return: None.
+        """
+        await self._call(
+            'revoke_token',
+            errors={
+                'InvalidParameterException': None,
+                'UnauthorizedException': None,
+            },
+            Token=refresh_token,
+            ClientId=self._client_id,
+            ClientSecret=self._client_secret,
+        )

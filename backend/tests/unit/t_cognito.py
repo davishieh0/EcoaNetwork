@@ -216,3 +216,23 @@ def test_refresh_with_a_dead_token_ends_the_session() -> None:
 
     with pytest.raises(InvalidSessionError):
         asyncio.run(_cognito(idp).refresh('refresh', SUB))
+
+
+def test_sign_out_revokes_with_the_client_secret() -> None:
+    idp = FakeIdp()
+
+    asyncio.run(_cognito(idp).sign_out('refresh'))
+
+    operation, params = idp.calls[0]
+    assert operation == 'revoke_token'
+    assert params == {
+        'Token': 'refresh',
+        'ClientId': 'client-id',
+        'ClientSecret': 'client-secret',
+    }
+
+
+def test_sign_out_succeeds_with_a_token_that_was_never_valid() -> None:
+    idp = FakeIdp(error=_failure('InvalidParameterException'))
+
+    asyncio.run(_cognito(idp).sign_out('garbage'))
