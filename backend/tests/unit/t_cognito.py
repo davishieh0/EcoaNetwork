@@ -4,13 +4,16 @@ Unit tests for the Cognito client.
 
 # --- IMPORTS ---
 from botocore.exceptions import ClientError
+from botocore.exceptions import EndpointConnectionError
 from collections.abc import Awaitable
 from collections.abc import Callable
 from src.clients.cognito import CognitoClient
 from src.err.auth_provider_error import AuthProviderError
 from src.err.email_already_registered_error import EmailAlreadyRegisteredError
+from src.err.email_not_verified_error import EmailNotVerifiedError
 from src.err.expired_code_error import ExpiredCodeError
 from src.err.invalid_code_error import InvalidCodeError
+from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_password_error import InvalidPasswordError
 from src.err.too_many_requests_error import TooManyRequestsError
 from typing import Any
@@ -25,6 +28,14 @@ SUB = 'sub-123'
 
 # HMAC-SHA256 of username + 'client-id', keyed with 'client-secret'
 EMAIL_HASH = 'NpqglvUHBpz0nyO+qeiUjlRR297+e+uA7UhuwY3pkSE='
+
+TOKENS = {
+    'AuthenticationResult': {
+        'AccessToken': 'access',
+        'ExpiresIn': 3600,
+        'RefreshToken': 'refresh',
+    }
+}
 
 
 # --- HELPERS ---
@@ -119,3 +130,65 @@ def test_resend_succeeds_without_an_account_waiting(code: str) -> None:
     idp = FakeIdp(error=_failure(code))
 
     asyncio.run(_cognito(idp).resend_confirmation_code(EMAIL))
+
+
+# --- SIGN IN ---
+def test_sign_in_returns_the_tokens() -> None:
+    idp = FakeIdp(TOKENS)
+
+    tokens = asyncio.run(_cognito(idp).sign_in(EMAIL, 'Passw0rd!'))
+
+    assert tokens.access_token == 'access'
+    assert tokens.refresh_token == 'refresh'
+    assert tokens.expires_in == 3600
+
+    operation, params = idp.calls[0]
+    assert operation == 'initiate_auth'
+    assert params['AuthFlow'] == 'USER_PASSWORD_AUTH'
+    assert params['AuthParameters']['SECRET_HASH'] == EMAIL_HASH
+
+
+@pytest.mark.parametrize(
+    ('code', 'message', 'expected'),
+    [
+        (
+            'NotAuthorizedException',
+            'Incorrect username or password.',
+            InvalidCredentialsError,
+        ),
+        ('UserNotFoundException', '', InvalidCredentialsError),
+        ('UserNotConfirmedException', '', EmailNotVerifiedError),
+        (
+            'NotAuthorizedException',
+            'Password attempts exceeded',
+            TooManyRequestsError,
+        ),
+        # our misconfiguration must not read as the caller's wrong password
+        (
+            'NotAuthorizedException',
+            'Unable to verify secret hash for client client-id',
+            AuthProviderError,
+        ),
+    ],
+)
+def test_sign_in_failures(
+    code: str, message: str, expected: type[Exception]
+) -> None:
+    idp = FakeIdp(error=_failure(code, message))
+
+    with pytest.raises(expected):
+        asyncio.run(_cognito(idp).sign_in(EMAIL, 'Passw0rd!'))
+
+
+def test_sign_in_rejects_a_challenge_it_cannot_answer() -> None:
+    idp = FakeIdp({'ChallengeName': 'SOFTWARE_TOKEN_MFA'})
+
+    with pytest.raises(AuthProviderError):
+        asyncio.run(_cognito(idp).sign_in(EMAIL, 'Passw0rd!'))
+
+
+def test_unreachable_cognito_is_a_provider_failure() -> None:
+    idp = FakeIdp(error=EndpointConnectionError(endpoint_url='http://x'))
+
+    with pytest.raises(AuthProviderError):
+        asyncio.run(_cognito(idp).sign_in(EMAIL, 'Passw0rd!'))

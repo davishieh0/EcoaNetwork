@@ -11,9 +11,11 @@ from src.err.email_already_registered_error import EmailAlreadyRegisteredError
 from src.err.email_not_verified_error import EmailNotVerifiedError
 from src.err.expired_code_error import ExpiredCodeError
 from src.err.invalid_code_error import InvalidCodeError
+from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_password_error import InvalidPasswordError
 from src.err.invalid_request_error import InvalidRequestError
 from src.err.too_many_requests_error import TooManyRequestsError
+from src.schemas.auth import Tokens
 from typing import Any
 
 import base64
@@ -157,6 +159,31 @@ class CognitoClient:
         return response
 
 
+    def _tokens(self, operation: str, response: dict[str, Any]) -> Tokens:
+        """
+        Reads the tokens out of an authentication response.
+
+        :param operation: The operation that produced the response.
+        :param response: Cognito's response.
+
+        :return: The tokens.
+        """
+        result = response.get('AuthenticationResult')
+
+        # no tokens means Cognito wants another step, e.g. an MFA code
+        if not result:
+            challenge = response.get('ChallengeName')
+            raise AuthProviderError(
+                f'{operation} asked for an unsupported challenge: {challenge}'
+            )
+
+        return Tokens(
+            access_token=result['AccessToken'],
+            expires_in=result['ExpiresIn'],
+            refresh_token=result.get('RefreshToken'),
+        )
+
+
     async def sign_up(self, email: str, password: str) -> str:
         """
         Creates an account and emails its confirmation code.
@@ -220,3 +247,30 @@ class CognitoClient:
             SecretHash=self._secret_hash(email),
             Username=email,
         )
+
+
+    async def sign_in(self, email: str, password: str) -> Tokens:
+        """
+        Signs an account in with its email and password.
+
+        :param email: The account's address.
+        :param password: The account's password.
+
+        :return: The session's tokens.
+        """
+        response = await self._call(
+            'initiate_auth',
+            errors={
+                'NotAuthorizedException': InvalidCredentialsError,
+                'UserNotFoundException': InvalidCredentialsError,
+            },
+            ClientId=self._client_id,
+            AuthFlow='USER_PASSWORD_AUTH',
+            AuthParameters={
+                'USERNAME': email,
+                'PASSWORD': password,
+                'SECRET_HASH': self._secret_hash(email),
+            },
+        )
+
+        return self._tokens('sign_in', response)
