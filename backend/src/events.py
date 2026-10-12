@@ -4,6 +4,8 @@ Startup and shutdown event handlers.
 
 # --- IMPORTS ---
 from fastapi import FastAPI
+from src.clients.aws import Aws
+from src.config import config
 from src.system import Health
 from src.system import Info
 
@@ -32,6 +34,9 @@ async def on_startup(app: FastAPI) -> None:
         extra={},
     )
 
+    # open the aws connection
+    app.state.aws = Aws(config.AWS_REGION, config.AWS_ENDPOINT_URL)
+
     # set app health as OK
     app.state.health.status = 'OK'
 
@@ -48,3 +53,6 @@ async def on_shutdown(app: FastAPI) -> None:
     :return: None.
     """
     logger.info('Service shutting down')
+
+    # close the aws connection
+    await app.state.aws.close()
