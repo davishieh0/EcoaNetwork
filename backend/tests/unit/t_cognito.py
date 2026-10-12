@@ -110,3 +110,12 @@ def test_confirm_sign_up_failures(
 
     with pytest.raises(expected):
         asyncio.run(_cognito(idp).confirm_sign_up(EMAIL, '123456'))
+
+
+@pytest.mark.parametrize(
+    'code', ['UserNotFoundException', 'InvalidParameterException']
+)
+def test_resend_succeeds_without_an_account_waiting(code: str) -> None:
+    idp = FakeIdp(error=_failure(code))
+
+    asyncio.run(_cognito(idp).resend_confirmation_code(EMAIL))

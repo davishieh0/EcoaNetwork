@@ -198,3 +198,25 @@ class CognitoClient:
             Username=email,
             ConfirmationCode=code,
         )
+
+
+    async def resend_confirmation_code(self, email: str) -> None:
+        """
+        Emails a new confirmation code, invalidating the previous one.
+
+        Succeeds whether or not there is an account waiting on a code.
+
+        :param email: The account's address.
+
+        :return: None.
+        """
+        await self._call(
+            'resend_confirmation_code',
+            errors={
+                'InvalidParameterException': None,
+                'UserNotFoundException': None,
+            },
+            ClientId=self._client_id,
+            SecretHash=self._secret_hash(email),
+            Username=email,
+        )
