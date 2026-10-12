@@ -324,3 +324,25 @@ class CognitoClient:
             ClientId=self._client_id,
             ClientSecret=self._client_secret,
         )
+
+
+    async def forgot_password(self, email: str) -> None:
+        """
+        Emails a code that lets the account choose a new password.
+
+        Succeeds whether or not an account uses the address.
+
+        :param email: The account's address.
+
+        :return: None.
+        """
+        await self._call(
+            'forgot_password',
+            errors={
+                'InvalidParameterException': None,
+                'UserNotFoundException': None,
+            },
+            ClientId=self._client_id,
+            SecretHash=self._secret_hash(email),
+            Username=email,
+        )

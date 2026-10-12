@@ -236,3 +236,13 @@ def test_sign_out_succeeds_with_a_token_that_was_never_valid() -> None:
     idp = FakeIdp(error=_failure('InvalidParameterException'))
 
     asyncio.run(_cognito(idp).sign_out('garbage'))
+
+
+# --- PASSWORD RESET ---
+@pytest.mark.parametrize(
+    'code', ['UserNotFoundException', 'InvalidParameterException']
+)
+def test_forgot_password_succeeds_without_an_account(code: str) -> None:
+    idp = FakeIdp(error=_failure(code))
+
+    asyncio.run(_cognito(idp).forgot_password(EMAIL))
