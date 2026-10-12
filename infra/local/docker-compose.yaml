@@ -1,0 +1,25 @@
+# --- Ecoa local services ---
+name: ecoa
+
+services:
+
+  # --- data services ---
+  postgres:
+    image: postgres:18-alpine
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      BACKEND_DB_PASSWORD: ${BACKEND_DB_PASSWORD:-goodpassword}
+    volumes:
+      - ./configs/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./configs/postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./data/postgres:/var/lib/postgresql
+    ports:
+      - "127.0.0.1:5432:5432"
