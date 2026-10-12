@@ -346,3 +346,29 @@ class CognitoClient:
             SecretHash=self._secret_hash(email),
             Username=email,
         )
+
+
+    async def reset_password(
+        self,
+        email: str,
+        code: str,
+        password: str,
+    ) -> None:
+        """
+        Sets a new password with the code the account was emailed.
+
+        :param email: The account's address.
+        :param code: The reset code.
+        :param password: The new password.
+
+        :return: None.
+        """
+        await self._call(
+            'confirm_forgot_password',
+            errors={'UserNotFoundException': InvalidCodeError},
+            ClientId=self._client_id,
+            SecretHash=self._secret_hash(email),
+            Username=email,
+            ConfirmationCode=code,
+            Password=password,
+        )

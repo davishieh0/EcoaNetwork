@@ -246,3 +246,21 @@ def test_forgot_password_succeeds_without_an_account(code: str) -> None:
     idp = FakeIdp(error=_failure(code))
 
     asyncio.run(_cognito(idp).forgot_password(EMAIL))
+
+
+@pytest.mark.parametrize(
+    ('code', 'expected'),
+    [
+        ('CodeMismatchException', InvalidCodeError),
+        ('ExpiredCodeException', ExpiredCodeError),
+        ('InvalidPasswordException', InvalidPasswordError),
+        ('UserNotFoundException', InvalidCodeError),
+    ],
+)
+def test_reset_password_failures(
+    code: str, expected: type[Exception]
+) -> None:
+    idp = FakeIdp(error=_failure(code))
+
+    with pytest.raises(expected):
+        asyncio.run(_cognito(idp).reset_password(EMAIL, '123456', 'New1!aaa'))
