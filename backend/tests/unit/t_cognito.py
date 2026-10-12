@@ -15,6 +15,7 @@ from src.err.expired_code_error import ExpiredCodeError
 from src.err.invalid_code_error import InvalidCodeError
 from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_password_error import InvalidPasswordError
+from src.err.invalid_session_error import InvalidSessionError
 from src.err.too_many_requests_error import TooManyRequestsError
 from typing import Any
 
@@ -28,6 +29,7 @@ SUB = 'sub-123'
 
 # HMAC-SHA256 of username + 'client-id', keyed with 'client-secret'
 EMAIL_HASH = 'NpqglvUHBpz0nyO+qeiUjlRR297+e+uA7UhuwY3pkSE='
+SUB_HASH = 'XLhAQJDyIlRwnmQ1Ka/pAjmq2QYB2s+Uld8cjW/QqNk='
 
 TOKENS = {
     'AuthenticationResult': {
@@ -192,3 +194,25 @@ def test_unreachable_cognito_is_a_provider_failure() -> None:
 
     with pytest.raises(AuthProviderError):
         asyncio.run(_cognito(idp).sign_in(EMAIL, 'Passw0rd!'))
+
+
+# --- SESSION ---
+def test_refresh_hashes_the_secret_against_the_sub() -> None:
+    idp = FakeIdp({'AuthenticationResult': {'AccessToken': 'new',
+                                            'ExpiresIn': 3600}})
+
+    tokens = asyncio.run(_cognito(idp).refresh('refresh', SUB))
+
+    assert tokens.access_token == 'new'
+    assert tokens.refresh_token is None
+
+    _, params = idp.calls[0]
+    assert params['AuthFlow'] == 'REFRESH_TOKEN_AUTH'
+    assert params['AuthParameters']['SECRET_HASH'] == SUB_HASH
+
+
+def test_refresh_with_a_dead_token_ends_the_session() -> None:
+    idp = FakeIdp(error=_failure('NotAuthorizedException', 'Token revoked'))
+
+    with pytest.raises(InvalidSessionError):
+        asyncio.run(_cognito(idp).refresh('refresh', SUB))

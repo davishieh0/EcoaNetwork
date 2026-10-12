@@ -14,6 +14,7 @@ from src.err.invalid_code_error import InvalidCodeError
 from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_password_error import InvalidPasswordError
 from src.err.invalid_request_error import InvalidRequestError
+from src.err.invalid_session_error import InvalidSessionError
 from src.err.too_many_requests_error import TooManyRequestsError
 from src.schemas.auth import Tokens
 from typing import Any
@@ -274,3 +275,30 @@ class CognitoClient:
         )
 
         return self._tokens('sign_in', response)
+
+
+    async def refresh(self, refresh_token: str, sub: str) -> Tokens:
+        """
+        Trades a refresh token for a new access token.
+
+        :param refresh_token: The session's refresh token.
+        :param sub: The account's permanent id. Cognito hashes the secret
+                    against it here, not against the email.
+
+        :return: The new tokens, without a refresh token.
+        """
+        response = await self._call(
+            'initiate_auth',
+            errors={
+                'NotAuthorizedException': InvalidSessionError,
+                'UserNotFoundException': InvalidSessionError,
+            },
+            ClientId=self._client_id,
+            AuthFlow='REFRESH_TOKEN_AUTH',
+            AuthParameters={
+                'REFRESH_TOKEN': refresh_token,
+                'SECRET_HASH': self._secret_hash(sub),
+            },
+        )
+
+        return self._tokens('refresh', response)
