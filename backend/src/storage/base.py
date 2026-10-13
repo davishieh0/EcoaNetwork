@@ -3,6 +3,7 @@ Base storage.
 """
 
 # --- IMPORTS ---
+from collections.abc import Mapping
 from sqlalchemy import inspect
 from sqlalchemy import select
 from src.clients.database import Database
@@ -31,6 +32,31 @@ class Storage[Model: Base]:
         :return: None.
         """
         self._database = database
+
+
+    async def _update(
+        self, key: Any, values: Mapping[str, Any]
+    ) -> Model | None:
+        """
+        Changes a row. Storages whose table has columns that may change
+        expose it as update, typed with those columns.
+
+        :param key: The primary key of the row to change.
+        :param values: Column names and their new values.
+
+        :return: The changed row, or None when there is none with that key.
+        """
+        async with self._database.session() as session:
+            instance = await session.get(self.model, key)
+
+            # nothing to change
+            if instance is None:
+                return None
+
+            for column, value in values.items():
+                setattr(instance, column, value)
+
+        return instance
 
 
     async def get(self, key: Any) -> Model | None:

@@ -103,3 +103,21 @@ def test_find_many_filters_and_pages_in_a_stable_order(run: Run) -> None:
         assert [n.title for n in page] == ['c', 'd']
 
     run(body)
+
+
+def test_update_changes_the_row_and_reports_a_missing_one(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        note = await notes.insert(Note(title='first'))
+
+        changed = await notes.update(note.id, body='changed')
+
+        stored = await notes.get(note.id)
+
+        assert changed is not None
+        assert changed.body == 'changed'
+        assert stored is not None
+        assert stored.body == 'changed'
+        assert await notes.update(note.id + 1, body='nobody') is None
+
+    run(body)

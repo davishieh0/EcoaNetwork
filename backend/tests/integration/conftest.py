@@ -17,6 +17,8 @@ from sqlalchemy.orm import mapped_column
 from src.clients.database import Database
 from src.models.base import Base
 from src.storage.base import Storage
+from typing import TypedDict
+from typing import Unpack
 
 import asyncio
 import os
@@ -56,10 +58,23 @@ class Note(Base):
     )
 
 
+class NoteChanges(TypedDict, total=False):
+    """The columns of a note that may change."""
+
+    title: str
+    body: str
+
+
 class NoteStorage(Storage[Note]):
     """The base storage, bound to the test table."""
 
     model = Note
+
+    async def update(
+        self, key: int, **changes: Unpack[NoteChanges]
+    ) -> Note | None:
+        """Changes a note."""
+        return await self._update(key, changes)
 
 
 # --- HELPERS ---
