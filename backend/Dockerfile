@@ -19,6 +19,10 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
 COPY scripts/init ./
 
+# copy the migrations, so the same image can migrate the database
+COPY alembic.ini ./
+COPY migrations ./migrations
+
 # install the project itself
 RUN uv sync --frozen --no-dev
 
