@@ -144,3 +144,23 @@ class Storage[Model: Base]:
             session.add_all(instances)
 
         return instances
+
+
+    async def delete(self, key: Any) -> bool:
+        """
+        Removes a row.
+
+        :param key: The primary key of the row to remove.
+
+        :return: True when a row was removed, False when there was none.
+        """
+        async with self._database.session() as session:
+            instance = await session.get(self.model, key)
+
+            # nothing to remove
+            if instance is None:
+                return False
+
+            await session.delete(instance)
+
+        return True

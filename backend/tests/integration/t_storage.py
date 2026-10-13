@@ -121,3 +121,15 @@ def test_update_changes_the_row_and_reports_a_missing_one(run: Run) -> None:
         assert await notes.update(note.id + 1, body='nobody') is None
 
     run(body)
+
+
+def test_delete_removes_the_row_and_reports_a_missing_one(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        note = await notes.insert(Note(title='first'))
+
+        assert await notes.delete(note.id) is True
+        assert await notes.get(note.id) is None
+        assert await notes.delete(note.id) is False
+
+    run(body)
