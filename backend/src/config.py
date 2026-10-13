@@ -24,6 +24,9 @@ class Config(BaseSettings):
     # cors
     CORS_ORIGINS: str = 'http://localhost:*'
 
+    # database
+    DATABASE_URL: SecretStr
+
     # aws (the endpoint is only set when pointing at LocalStack)
     AWS_REGION: str
     AWS_ENDPOINT_URL: str = ''
