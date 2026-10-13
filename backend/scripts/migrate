@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+# apply every pending migration
+echo "==> Migrating database..."
+exec uv run alembic upgrade head
