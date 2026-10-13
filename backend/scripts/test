@@ -2,7 +2,7 @@
 set -e
 
 # lint: rules, import ordering, line length and quote style
-uv run ruff check src tests
+uv run ruff check src tests migrations
 
 # check types
 uv run python -m mypy
