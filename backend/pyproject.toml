@@ -11,6 +11,8 @@ dependencies = [
     "uvicorn>=0.52.1",
     "colorlog>=6.12.0",
     "aioboto3>=15.5.0",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "asyncpg>=0.32.0",
 ]
 
 [dependency-groups]
