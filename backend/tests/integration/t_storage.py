@@ -19,3 +19,17 @@ def test_insert_returns_what_the_database_filled_in(run: Run) -> None:
         assert note.created_at.tzinfo is not None
 
     run(body)
+
+
+def test_get_finds_by_primary_key(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        note = await notes.insert(Note(title='first'))
+
+        found = await notes.get(note.id)
+
+        assert found is not None
+        assert found.title == 'first'
+        assert await notes.get(note.id + 1) is None
+
+    run(body)

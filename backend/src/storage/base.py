@@ -5,6 +5,7 @@ Base storage.
 # --- IMPORTS ---
 from src.clients.database import Database
 from src.models.base import Base
+from typing import Any
 
 
 # --- CODE ---
@@ -24,6 +25,18 @@ class Storage[Model: Base]:
         :return: None.
         """
         self._database = database
+
+
+    async def get(self, key: Any) -> Model | None:
+        """
+        Finds a row by its primary key.
+
+        :param key: The primary key.
+
+        :return: The row, or None when there is none.
+        """
+        async with self._database.session() as session:
+            return await session.get(self.model, key)
 
 
     async def insert(self, instance: Model) -> Model:
