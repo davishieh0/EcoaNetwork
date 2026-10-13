@@ -3,6 +3,7 @@ Base storage.
 """
 
 # --- IMPORTS ---
+from sqlalchemy import select
 from src.clients.database import Database
 from src.models.base import Base
 from typing import Any
@@ -37,6 +38,20 @@ class Storage[Model: Base]:
         """
         async with self._database.session() as session:
             return await session.get(self.model, key)
+
+
+    async def find_one(self, **filters: Any) -> Model | None:
+        """
+        Finds the first row whose columns equal the given values.
+
+        :param filters: Column names and the values they must equal.
+
+        :return: The row, or None when nothing matches.
+        """
+        statement = select(self.model).filter_by(**filters).limit(1)
+
+        async with self._database.session() as session:
+            return (await session.scalars(statement)).first()
 
 
     async def insert(self, instance: Model) -> Model:
