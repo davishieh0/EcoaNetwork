@@ -3,10 +3,15 @@ Base storage.
 """
 
 # --- IMPORTS ---
+from sqlalchemy import inspect
 from sqlalchemy import select
 from src.clients.database import Database
 from src.models.base import Base
 from typing import Any
+
+
+# --- GLOBALS ---
+DEFAULT_LIMIT = 50
 
 
 # --- CODE ---
@@ -52,6 +57,34 @@ class Storage[Model: Base]:
 
         async with self._database.session() as session:
             return (await session.scalars(statement)).first()
+
+
+    async def find_many(
+        self,
+        *,
+        limit: int = DEFAULT_LIMIT,
+        offset: int = 0,
+        **filters: Any,
+    ) -> list[Model]:
+        """
+        Finds the rows whose columns equal the given values.
+
+        :param limit: The most rows to return.
+        :param offset: How many matching rows to skip first.
+        :param filters: Column names and the values they must equal.
+
+        :return: The rows, ordered by primary key so pages do not overlap.
+        """
+        statement = (
+            select(self.model)
+            .filter_by(**filters)
+            .order_by(*inspect(self.model).primary_key)
+            .limit(limit)
+            .offset(offset)
+        )
+
+        async with self._database.session() as session:
+            return list(await session.scalars(statement))
 
 
     async def insert(self, instance: Model) -> Model:

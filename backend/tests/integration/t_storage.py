@@ -49,3 +49,21 @@ def test_find_one_matches_columns_by_equality(run: Run) -> None:
         assert await notes.find_one(title='missing') is None
 
     run(body)
+
+
+def test_find_many_filters_and_pages_in_a_stable_order(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+
+        for title, content in [('a', 'x'), ('b', 'y'), ('c', 'x'), ('d', 'x')]:
+            await notes.insert(Note(title=title, body=content))
+
+        everything = await notes.find_many()
+        matching = await notes.find_many(body='x')
+        page = await notes.find_many(body='x', limit=2, offset=1)
+
+        assert [n.title for n in everything] == ['a', 'b', 'c', 'd']
+        assert [n.title for n in matching] == ['a', 'c', 'd']
+        assert [n.title for n in page] == ['c', 'd']
+
+    run(body)
