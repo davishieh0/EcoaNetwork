@@ -3,12 +3,18 @@ Integration tests for the base storage and the database sessions.
 """
 
 # --- IMPORTS ---
+from sqlalchemy import text
 from src.clients.database import Database
 from src.err.data_integrity_error import DataIntegrityError
+from src.err.database_unavailable_error import DatabaseUnavailableError
+from src.err.invalid_request_error import InvalidRequestError
+from tests.integration.conftest import DATABASE_URL
+from tests.integration.conftest import SCHEMA
 from tests.integration.conftest import Note
 from tests.integration.conftest import NoteStorage
 from tests.integration.conftest import Run
 
+import asyncio
 import pytest
 
 
@@ -181,3 +187,116 @@ def test_delete_many_removes_only_the_given_rows(run: Run) -> None:
         assert len(await notes.find_many()) == 1
 
     run(body)
+
+
+# --- SESSIONS ---
+def test_session_commits_when_the_block_ends(run: Run) -> None:
+    async def body(database: Database) -> None:
+        async with database.session() as session:
+            await session.execute(
+                text(f"INSERT INTO {SCHEMA}.notes (title, body) "
+                     "VALUES ('kept', '')")
+            )
+
+        assert await NoteStorage(database).find_one(title='kept')
+
+    run(body)
+
+
+def test_session_rolls_back_when_the_block_raises(run: Run) -> None:
+    async def body(database: Database) -> None:
+        # an error the backend already knows keeps its own type
+        with pytest.raises(InvalidRequestError):
+            async with database.session() as session:
+                await session.execute(
+                    text(f"INSERT INTO {SCHEMA}.notes (title, body) "
+                         "VALUES ('lost', '')")
+                )
+                raise InvalidRequestError('the operation gave up')
+
+        assert await NoteStorage(database).find_one(title='lost') is None
+
+    run(body)
+
+
+def test_bug_inside_the_block_is_not_blamed_on_the_database(run: Run) -> None:
+    async def body(database: Database) -> None:
+        with pytest.raises(TypeError):
+            async with database.session() as session:
+                await session.execute(
+                    text(f"INSERT INTO {SCHEMA}.notes (title, body) "
+                         "VALUES ('lost', '')")
+                )
+                raise TypeError('a mistake in the code')
+
+        # the write that came before the bug was still rolled back
+        assert await NoteStorage(database).find_one(title='lost') is None
+
+    run(body)
+
+
+def test_broken_rule_is_a_conflict_with_a_predictable_name(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        await notes.insert(Note(title='taken'))
+
+        with pytest.raises(DataIntegrityError) as raised:
+            await notes.insert(Note(title='taken'))
+
+        # the name storage reads to tell which rule was broken
+        assert 'uq_notes_title' in str(raised.value)
+
+        # the failed write left nothing behind and broke nothing
+        assert len(await notes.find_many()) == 1
+
+    run(body)
+
+
+def test_value_the_column_cannot_hold_is_a_conflict(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+
+        # the title column holds 50 characters
+        with pytest.raises(DataIntegrityError):
+            await notes.insert(Note(title='x' * 51))
+
+        assert await notes.find_many() == []
+
+    run(body)
+
+
+def test_statement_that_fails_is_reported_as_unavailable(run: Run) -> None:
+    async def body(database: Database) -> None:
+        with pytest.raises(DatabaseUnavailableError):
+            async with database.session() as session:
+                await session.execute(text('SELECT * FROM no_such_table'))
+
+    run(body)
+
+
+# --- UNREACHABLE DATABASE ---
+@pytest.mark.parametrize(
+    'url',
+    [
+        DATABASE_URL.replace(':5432', ':5999'),
+        DATABASE_URL.replace('@localhost', '@no-such-host.invalid'),
+        DATABASE_URL.replace(':goodpassword@', ':wrong-password@'),
+        DATABASE_URL.replace('/ecoa_backend', '/no_such_database'),
+    ],
+    ids=['closed port', 'unknown host', 'wrong password', 'unknown database'],
+)
+def test_unreachable_database_is_reported_as_unavailable(url: str) -> None:
+    async def body() -> None:
+        database = Database(url)
+
+        try:
+            with pytest.raises(DatabaseUnavailableError) as raised:
+                await NoteStorage(database).find_one(title='any')
+
+            # the details are logged: they must never carry the password
+            assert 'goodpassword' not in str(raised.value)
+            assert 'wrong-password' not in str(raised.value)
+        finally:
+            await database.close()
+
+    asyncio.run(body())
