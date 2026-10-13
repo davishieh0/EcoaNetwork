@@ -164,3 +164,20 @@ def test_update_many_changes_nothing_when_one_row_is_refused(run: Run) -> None:
         assert [n.title for n in await notes.find_many()] == ['a', 'b']
 
     run(body)
+
+
+def test_delete_many_removes_only_the_given_rows(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        a, b, c = await notes.insert_many(
+            [Note(title='a'), Note(title='b'), Note(title='c')]
+        )
+
+        removed = await notes.delete_many([a.id, c.id, c.id + 100])
+
+        assert removed == 2
+        assert [n.title for n in await notes.find_many()] == ['b']
+        assert await notes.delete_many([]) == 0
+        assert len(await notes.find_many()) == 1
+
+    run(body)
