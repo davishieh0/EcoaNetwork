@@ -99,3 +99,22 @@ class Storage[Model: Base]:
             session.add(instance)
 
         return instance
+
+
+    async def insert_many(self, instances: list[Model]) -> list[Model]:
+        """
+        Adds several rows together: either all of them are stored, or none.
+
+        :param instances: The rows to add.
+
+        :return: The same rows, in the given order, with what the database
+                 filled in.
+        """
+        # nothing to add
+        if not instances:
+            return []
+
+        async with self._database.session() as session:
+            session.add_all(instances)
+
+        return instances

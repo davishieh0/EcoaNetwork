@@ -4,9 +4,12 @@ Integration tests for the base storage and the database sessions.
 
 # --- IMPORTS ---
 from src.clients.database import Database
+from src.err.data_integrity_error import DataIntegrityError
 from tests.integration.conftest import Note
 from tests.integration.conftest import NoteStorage
 from tests.integration.conftest import Run
+
+import pytest
 
 
 # --- STORAGE ---
@@ -17,6 +20,39 @@ def test_insert_returns_what_the_database_filled_in(run: Run) -> None:
         assert note.id is not None
         assert note.body == ''
         assert note.created_at.tzinfo is not None
+
+    run(body)
+
+
+def test_insert_many_stores_the_rows_in_order(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+
+        added = await notes.insert_many(
+            [Note(title='a'), Note(title='b', body='x'), Note(title='c')]
+        )
+
+        assert [n.title for n in added] == ['a', 'b', 'c']
+        assert [n.body for n in added] == ['', 'x', '']
+        assert all(n.id is not None for n in added)
+        assert all(n.created_at.tzinfo is not None for n in added)
+        assert [n.id for n in await notes.find_many()] == [n.id for n in added]
+        assert await notes.insert_many([]) == []
+
+    run(body)
+
+
+def test_insert_many_stores_nothing_when_one_row_is_refused(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        await notes.insert(Note(title='taken'))
+
+        with pytest.raises(DataIntegrityError):
+            await notes.insert_many(
+                [Note(title='new'), Note(title='taken'), Note(title='other')]
+            )
+
+        assert [n.title for n in await notes.find_many()] == ['taken']
 
     run(body)
 
