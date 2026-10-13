@@ -133,3 +133,34 @@ def test_delete_removes_the_row_and_reports_a_missing_one(run: Run) -> None:
         assert await notes.delete(note.id) is False
 
     run(body)
+
+
+def test_update_many_changes_only_the_given_rows(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        a, b, c = await notes.insert_many(
+            [Note(title='a'), Note(title='b'), Note(title='c')]
+        )
+
+        changed = await notes.update_many([a.id, c.id, c.id + 100], body='x')
+
+        assert changed == 2
+        assert [n.body for n in await notes.find_many()] == ['x', '', 'x']
+        assert await notes.update_many([], body='y') == 0
+        assert await notes.update_many([b.id]) == 0
+
+    run(body)
+
+
+def test_update_many_changes_nothing_when_one_row_is_refused(run: Run) -> None:
+    async def body(database: Database) -> None:
+        notes = NoteStorage(database)
+        a, b = await notes.insert_many([Note(title='a'), Note(title='b')])
+
+        # two rows cannot end up with the same unique title
+        with pytest.raises(DataIntegrityError):
+            await notes.update_many([a.id, b.id], title='same')
+
+        assert [n.title for n in await notes.find_many()] == ['a', 'b']
+
+    run(body)

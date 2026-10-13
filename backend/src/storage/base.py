@@ -4,11 +4,17 @@ Base storage.
 
 # --- IMPORTS ---
 from collections.abc import Mapping
+from collections.abc import Sequence
+from sqlalchemy import ColumnElement
+from sqlalchemy import CursorResult
 from sqlalchemy import inspect
 from sqlalchemy import select
+from sqlalchemy import tuple_
+from sqlalchemy import update
 from src.clients.database import Database
 from src.models.base import Base
 from typing import Any
+from typing import cast
 
 
 # --- GLOBALS ---
@@ -34,6 +40,22 @@ class Storage[Model: Base]:
         self._database = database
 
 
+    def _among(self, keys: Sequence[Any]) -> ColumnElement[bool]:
+        """
+        Builds the condition matching the rows with the given primary keys.
+
+        :param keys: The primary keys; tuples when the key spans columns.
+
+        :return: The condition.
+        """
+        columns = inspect(self.model).primary_key
+
+        if len(columns) == 1:
+            return columns[0].in_(keys)
+
+        return tuple_(*columns).in_(keys)
+
+
     async def _update(
         self, key: Any, values: Mapping[str, Any]
     ) -> Model | None:
@@ -57,6 +79,32 @@ class Storage[Model: Base]:
                 setattr(instance, column, value)
 
         return instance
+
+
+    async def _update_many(
+        self, keys: Sequence[Any], values: Mapping[str, Any]
+    ) -> int:
+        """
+        Changes several rows to the same values, in one statement: either all
+        of them change, or none. Exposed as update_many, like _update.
+
+        :param keys: The primary keys of the rows to change.
+        :param values: Column names and their new values.
+
+        :return: How many rows changed. Keys with no row are skipped.
+        """
+        # nothing to change
+        if not keys or not values:
+            return 0
+
+        statement = (
+            update(self.model).where(self._among(keys)).values(dict(values))
+        )
+
+        async with self._database.session() as session:
+            result = await session.execute(statement)
+
+        return cast(CursorResult[Any], result).rowcount
 
 
     async def get(self, key: Any) -> Model | None:

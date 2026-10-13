@@ -6,6 +6,7 @@ Shared fixtures for the tests that run against a real database.
 from collections.abc import Awaitable
 from collections.abc import Callable
 from collections.abc import Iterator
+from collections.abc import Sequence
 from datetime import datetime
 from sqlalchemy import DateTime
 from sqlalchemy import String
@@ -75,6 +76,12 @@ class NoteStorage(Storage[Note]):
     ) -> Note | None:
         """Changes a note."""
         return await self._update(key, changes)
+
+    async def update_many(
+        self, keys: Sequence[int], **changes: Unpack[NoteChanges]
+    ) -> int:
+        """Changes several notes to the same values."""
+        return await self._update_many(keys, changes)
 
 
 # --- HELPERS ---
