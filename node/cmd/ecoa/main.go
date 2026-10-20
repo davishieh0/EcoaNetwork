@@ -4,12 +4,14 @@ import (
 	"context"
 	"flag"
 	"log/slog"
+	"net"
 	"os"
 	"os/signal"
 	"strings"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/node"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
+	"github.com/eduardokairalla1/EcoaNetwork/internal/server"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 )
 
@@ -28,6 +30,10 @@ func main() {
 	listen := flag.String("listen",
 						  "/ip4/127.0.0.1/tcp/4001",
 						  "multiaddr to listen on")
+
+	grpcAddr := flag.String("grpc",
+							"127.0.0.1:50051",
+							"host:port the gateway submits events to")
 
 	bootstrapAddrs := flag.String(
 		"bootstrap",
@@ -87,6 +93,25 @@ func main() {
 	for _, addr := range n.Addrs() {
 		slog.Info("listening", "addr", addr)
 	}
+
+	lis, err := net.Listen("tcp", *grpcAddr)
+	if err != nil {
+		slog.Error("listen grpc", "addr", *grpcAddr, "err", err)
+		os.Exit(1)
+	}
+
+	g := server.New(ctx, n)
+
+	// Deferred after n.Close, so it stops before the node it calls into.
+	defer g.GracefulStop()
+
+	go func() {
+		if err := g.Serve(lis); err != nil {
+			slog.Error("serve grpc", "err", err)
+		}
+	}()
+
+	slog.Info("grpc", "addr", lis.Addr().String())
 
 	if *publish != "" {
 		raw, err := os.ReadFile(*publish)
