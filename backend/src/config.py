@@ -40,6 +40,9 @@ class Config(BaseSettings):
     # cookies
     COOKIE_SECURE: bool = True
 
+    # nodes (comma-separated host:port, primary first)
+    NODE_ADDRS: str
+
     @property
     def cors_origins(self) -> list[str]:
         """
@@ -84,6 +87,16 @@ class Config(BaseSettings):
         :return: The JWKS URL under the issuer.
         """
         return f'{self.cognito_issuer}/.well-known/jwks.json'
+
+
+    @property
+    def node_addrs(self) -> list[str]:
+        """
+        Parses NODE_ADDRS into a list.
+
+        :return: The node addresses, primary first.
+        """
+        return [a.strip() for a in self.NODE_ADDRS.split(',') if a.strip()]
 
     # pydantic settings
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
