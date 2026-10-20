@@ -26,6 +26,7 @@ from src.err.profile_exists_error import ProfileExistsError
 from src.err.too_many_requests_error import TooManyRequestsError
 from src.schemas.auth import AccessClaims
 from src.schemas.auth import Account
+from src.schemas.auth import DeleteAccountRequest
 from src.schemas.auth import EmailRequest
 from src.schemas.auth import LoginRequest
 from src.schemas.auth import ProfileRequest
@@ -266,3 +267,37 @@ async def create_profile(
     )
 
     return JSONResponse(created.model_dump(mode='json'), status_code=201)
+
+
+@router.post('/delete-account',
+             summary='Delete the account',
+             status_code=204,
+             responses={
+                 **VALIDATION_RESPONSE,
+                 **error_responses(
+                     InvalidCredentialsError,
+                     NotAuthenticatedError,
+                     AccessTokenExpiredError,
+                     DatabaseUnavailableError,
+                     *COMMON,
+                 ),
+             })
+async def delete_account(
+    body: DeleteAccountRequest,
+    request: Request,
+    account: AccessClaims = Depends(get_current_account),
+    auth: AuthService = Depends(get_auth),
+) -> Response:
+    """
+    Deletes the signed-in account for good: its profile.
+    """
+    await auth.delete_account(
+        account.sub,
+        request.cookies[ACCESS_TOKEN_COOKIE],
+        body.password
+    )
+
+    response = Response(status_code=204)
+    clear_session_cookies(response)
+
+    return response

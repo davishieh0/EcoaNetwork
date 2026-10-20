@@ -395,3 +395,55 @@ def test_route_needing_a_profile_turns_away_an_incomplete_one(
 
     assert response.status_code == 403
     assert response.json()['error'] == 'profile_incomplete_error'
+
+
+# --- DELETE ACCOUNT ---
+def test_delete_account_signs_out_and_removes_the_cookies(
+    client: TestClient, auth: FakeAuth
+) -> None:
+    client.post('/api/auth/login', json={'email': EMAIL, 'password': PASSWORD})
+
+    response = client.post('/api/auth/delete-account',
+                           json={'password': PASSWORD})
+
+    assert response.status_code == 204
+    assert auth.calls[-1] == (
+        'delete_account', (SUB, f'access-{SUB}', PASSWORD)
+    )
+    assert all('Max-Age=0' in h for h in _set_cookies(response).values())
+    assert not client.cookies
+
+
+def test_delete_account_needs_a_session(
+    client: TestClient, auth: FakeAuth
+) -> None:
+    response = client.post('/api/auth/delete-account',
+                           json={'password': PASSWORD})
+
+    assert response.status_code == 401
+    assert auth.calls == []
+
+
+def test_delete_account_needs_the_password(
+    client: TestClient, auth: FakeAuth
+) -> None:
+    client.cookies.set(ACCESS_TOKEN_COOKIE, f'access-{SUB}', path='/api')
+
+    response = client.post('/api/auth/delete-account', json={})
+
+    assert response.status_code == 422
+    assert auth.calls == []
+
+
+def test_delete_account_with_a_wrong_password_keeps_the_session(
+    client: TestClient, auth: FakeAuth
+) -> None:
+    client.cookies.set(ACCESS_TOKEN_COOKIE, f'access-{SUB}', path='/api')
+    auth.failure = InvalidCredentialsError()
+
+    response = client.post('/api/auth/delete-account',
+                           json={'password': 'Wr0ng-pass'})
+
+    assert response.status_code == 401
+    assert response.json()['error'] == 'invalid_credentials_error'
+    assert _set_cookies(response) == {}
