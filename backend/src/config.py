@@ -3,6 +3,7 @@ Application configuration.
 """
 
 # --- IMPORTS ---
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings
 from pydantic_settings import SettingsConfigDict
 
@@ -22,6 +23,15 @@ class Config(BaseSettings):
 
     # cors
     CORS_ORIGINS: str = 'http://localhost:*'
+
+    # aws (the endpoint is only set when pointing at LocalStack)
+    AWS_REGION: str
+    AWS_ENDPOINT_URL: str = ''
+
+    # cognito
+    COGNITO_USER_POOL_ID: str
+    COGNITO_CLIENT_ID: str
+    COGNITO_CLIENT_SECRET: SecretStr
 
     @property
     def cors_origins(self) -> list[str]:
