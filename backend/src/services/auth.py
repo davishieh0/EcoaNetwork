@@ -10,6 +10,8 @@ from src.models.user import User
 from src.schemas.auth import Account
 from src.storage.users import UserStorage
 
+import asyncio
+
 
 # --- CODE ---
 class AuthService:
@@ -117,3 +119,27 @@ class AuthService:
         :return: None.
         """
         await self._cognito.reset_password(email, code, password)
+
+
+    async def me(self, sub: str, access_token: str) -> Account:
+        """
+        Reads the signed-in account.
+
+        :param sub: The account's id, from its verified access token.
+        :param access_token: That same access token.
+
+        :raises NotAuthenticatedError: If the session was signed out.
+
+        :return: The account; its handle is None while it has no profile.
+        """
+        # the provider and the database answer independently: ask both at once
+        attributes, user = await asyncio.gather(
+            self._cognito.get_user(access_token),
+            self._users.find_by_sub(sub),
+        )
+
+        return Account(
+            sub=sub,
+            email=attributes.email,
+            handle=user.handle if user else None,
+        )

@@ -192,3 +192,30 @@ def test_operation_is_carried_out_by_the_provider(
     asyncio.run(getattr(auth, method)(*args))
 
     assert cognito.called(operation) == [args]
+
+
+# --- ME ---
+def test_me_combines_the_provider_and_the_profile(
+    auth: AuthService, cognito: FakeCognito, users: FakeUsers
+) -> None:
+    users.rows.append(User(sub=SUB, handle='eduardo'))
+
+    account = asyncio.run(auth.me(SUB, 'access'))
+
+    assert (account.sub, account.email, account.handle) == (
+        SUB, EMAIL, 'eduardo'
+    )
+    assert cognito.called('get_user') == [('access',)]
+
+
+def test_me_without_a_profile_has_no_handle(auth: AuthService) -> None:
+    assert asyncio.run(auth.me(SUB, 'access')).handle is None
+
+
+def test_me_after_sign_out_is_refused_by_the_provider(
+    auth: AuthService, cognito: FakeCognito
+) -> None:
+    cognito.failures['get_user'] = NotAuthenticatedError('revoked')
+
+    with pytest.raises(NotAuthenticatedError):
+        asyncio.run(auth.me(SUB, 'access'))
