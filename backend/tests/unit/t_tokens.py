@@ -7,12 +7,18 @@ from collections.abc import Callable
 from collections.abc import Iterator
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from fastapi import Depends
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 from http.server import BaseHTTPRequestHandler
 from http.server import ThreadingHTTPServer
 from jwt.algorithms import RSAAlgorithm
 from src.clients.tokens import TokenVerifier
+from src.dependencies.auth import ACCESS_TOKEN_COOKIE
+from src.dependencies.auth import get_current_account
 from src.err.access_token_expired_error import AccessTokenExpiredError
 from src.err.auth_provider_error import AuthProviderError
+from src.err.handlers import register_error_handlers
 from src.err.not_authenticated_error import NotAuthenticatedError
 from src.schemas.auth import AccessClaims
 from threading import Thread
@@ -218,3 +224,53 @@ def test_unreachable_keys_are_the_provider_failing() -> None:
 
     with pytest.raises(AuthProviderError):
         _verify(closed, mint())
+
+
+# --- DEPENDENCY ---
+def _client(verifier: TokenVerifier) -> TestClient:
+    app = FastAPI()
+    app.state.tokens = verifier
+    register_error_handlers(app)
+
+    @app.get('/whoami')
+    async def whoami(
+        account: AccessClaims = Depends(get_current_account),
+    ) -> dict[str, str]:
+        return {'sub': account.sub}
+
+    return TestClient(app)
+
+
+def test_route_reads_the_caller_from_the_cookie(
+    verifier: TokenVerifier,
+) -> None:
+    client = _client(verifier)
+    client.cookies.set(ACCESS_TOKEN_COOKIE, mint())
+
+    response = client.get('/whoami')
+
+    assert response.status_code == 200
+    assert response.json() == {'sub': SUB}
+
+
+@pytest.mark.parametrize(
+    ('cookie', 'slug'),
+    [
+        (None, 'not_authenticated_error'),
+        ('not-a-token', 'not_authenticated_error'),
+        ('expired', 'access_token_expired_error'),
+    ],
+)
+def test_route_refuses_a_caller_without_a_valid_token(
+    verifier: TokenVerifier, cookie: str | None, slug: str
+) -> None:
+    client = _client(verifier)
+    if cookie == 'expired':
+        cookie = mint(exp=int(time.time()) - 60)
+    if cookie:
+        client.cookies.set(ACCESS_TOKEN_COOKIE, cookie)
+
+    response = client.get('/whoami')
+
+    assert response.status_code == 401
+    assert response.json()['error'] == slug
