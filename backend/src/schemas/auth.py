@@ -77,6 +77,20 @@ class LoginRequest(BaseModel):
     password: Annotated[str, Field(min_length=1, max_length=256)]
 
 
+class ProfileRequest(BaseModel):
+    """
+    Completes an account that has no profile yet.
+    """
+    handle: Handle
+
+
+class DeleteAccountRequest(BaseModel):
+    """
+    Confirms, with the current password, that the account is to be deleted.
+    """
+    password: Annotated[str, Field(min_length=1, max_length=256)]
+
+
 class ResetPasswordRequest(BaseModel):
     """
     Sets a new password with the code the account was sent.

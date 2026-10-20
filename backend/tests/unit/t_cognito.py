@@ -290,3 +290,18 @@ def test_get_user_with_a_dead_token_is_not_authenticated(message: str) -> None:
 
     with pytest.raises(NotAuthenticatedError):
         asyncio.run(_cognito(idp).get_user('access'))
+
+
+def test_delete_user_deletes_with_the_access_token() -> None:
+    idp = FakeIdp()
+
+    asyncio.run(_cognito(idp).delete_user('access'))
+
+    assert idp.calls == [('delete_user', {'AccessToken': 'access'})]
+
+
+def test_delete_user_with_a_dead_token_is_not_authenticated() -> None:
+    idp = FakeIdp(error=_failure('NotAuthorizedException', 'revoked'))
+
+    with pytest.raises(NotAuthenticatedError):
+        asyncio.run(_cognito(idp).delete_user('access'))

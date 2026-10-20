@@ -7,6 +7,7 @@ from fastapi import Depends
 from fastapi import Request
 from src.clients.tokens import TokenVerifier
 from src.err.not_authenticated_error import NotAuthenticatedError
+from src.models.user import User
 from src.schemas.auth import AccessClaims
 from src.services.auth import AuthService
 from src.utils.cookies import ACCESS_TOKEN_COOKIE
@@ -61,3 +62,21 @@ async def get_current_account(
         raise NotAuthenticatedError('no access token cookie')
 
     return await tokens.verify(token)
+
+
+async def get_current_user(
+    account: AccessClaims = Depends(get_current_account),
+    auth: AuthService = Depends(get_auth),
+) -> User:
+    """
+    Provides the signed-in user, for the routes that need a complete
+    profile.
+
+    :param account: The caller's verified claims.
+    :param auth: The authentication service.
+
+    :raises ProfileIncompleteError: If the account has no handle yet.
+
+    :return: The caller's user.
+    """
+    return await auth.profile(account.sub)

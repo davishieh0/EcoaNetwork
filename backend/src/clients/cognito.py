@@ -359,6 +359,27 @@ class CognitoClient:
         )
 
 
+    async def delete_user(self, access_token: str) -> None:
+        """
+        Deletes the signed-in account from the identity provider, and with it
+        every session it had.
+
+        :param access_token: The account's access token.
+
+        :raises NotAuthenticatedError: If the token is revoked or invalid.
+
+        :return: None.
+        """
+        await self._call(
+            'delete_user',
+            errors={
+                'NotAuthorizedException': NotAuthenticatedError,
+                'UserNotFoundException': NotAuthenticatedError,
+            },
+            AccessToken=access_token,
+        )
+
+
     async def forgot_password(self, email: str) -> None:
         """
         Emails a code that lets the account choose a new password.

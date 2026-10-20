@@ -4,9 +4,9 @@ Integration tests for the users storage.
 
 # --- IMPORTS ---
 from src.clients.database import Database
-from src.err.data_integrity_error import DataIntegrityError
 from src.err.handle_taken_error import HandleTakenError
 from src.err.invalid_request_error import InvalidRequestError
+from src.err.profile_exists_error import ProfileExistsError
 from src.models.user import User
 from src.storage.users import UserStorage
 from tests.integration.conftest import Run
@@ -86,10 +86,9 @@ def test_account_cannot_have_two_profiles(run: Run) -> None:
         users = UserStorage(database)
         await users.insert(User(sub=SUB, handle='eduardo'))
 
-        with pytest.raises(DataIntegrityError) as raised:
+        with pytest.raises(ProfileExistsError):
             await users.insert(User(sub=SUB, handle='another'))
 
-        assert 'uq_users_sub' in str(raised.value)
         assert await users.find_by_handle('another') is None
 
     run(body)
