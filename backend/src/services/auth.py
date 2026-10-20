@@ -8,6 +8,7 @@ from src.clients.tokens import TokenVerifier
 from src.err.handle_taken_error import HandleTakenError
 from src.err.invalid_session_error import InvalidSessionError
 from src.err.profile_exists_error import ProfileExistsError
+from src.err.profile_incomplete_error import ProfileIncompleteError
 from src.models.user import User
 from src.schemas.auth import Account
 from src.schemas.auth import Session
@@ -239,3 +240,22 @@ class AuthService:
         await self._users.insert(User(sub=sub, handle=handle))
 
         return await self.me(sub, access_token)
+
+
+    async def profile(self, sub: str) -> User:
+        """
+        Reads an account's profile, for the routes that need one.
+
+        :param sub: The account's id, from its verified access token.
+
+        :raises ProfileIncompleteError: If the account has no handle yet.
+
+        :return: The account's user.
+        """
+        user = await self._users.find_by_sub(sub)
+
+        # signed in, but the handle was never chosen
+        if user is None:
+            raise ProfileIncompleteError(sub)
+
+        return user

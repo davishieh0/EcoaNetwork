@@ -9,6 +9,7 @@ from src.err.handle_taken_error import HandleTakenError
 from src.err.invalid_session_error import InvalidSessionError
 from src.err.not_authenticated_error import NotAuthenticatedError
 from src.err.profile_exists_error import ProfileExistsError
+from src.err.profile_incomplete_error import ProfileIncompleteError
 from src.models.user import User
 from src.schemas.auth import AccessClaims
 from src.schemas.auth import AccountAttributes
@@ -325,3 +326,18 @@ def test_create_profile_with_a_taken_handle_stores_nothing(
         asyncio.run(auth.create_profile(SUB, 'access', 'eduardo'))
 
     assert [u.sub for u in users.rows] == ['someone']
+
+
+def test_profile_of_an_account_with_a_handle(
+    auth: AuthService, users: FakeUsers
+) -> None:
+    users.rows.append(User(sub=SUB, handle='eduardo'))
+
+    assert asyncio.run(auth.profile(SUB)).handle == 'eduardo'
+
+
+def test_profile_of_an_account_without_a_handle_is_incomplete(
+    auth: AuthService,
+) -> None:
+    with pytest.raises(ProfileIncompleteError):
+        asyncio.run(auth.profile(SUB))
