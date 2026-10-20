@@ -14,13 +14,13 @@ from http.server import BaseHTTPRequestHandler
 from http.server import ThreadingHTTPServer
 from jwt.algorithms import RSAAlgorithm
 from src.clients.tokens import TokenVerifier
-from src.dependencies.auth import ACCESS_TOKEN_COOKIE
 from src.dependencies.auth import get_current_account
 from src.err.access_token_expired_error import AccessTokenExpiredError
 from src.err.auth_provider_error import AuthProviderError
 from src.err.handlers import register_error_handlers
 from src.err.not_authenticated_error import NotAuthenticatedError
 from src.schemas.auth import AccessClaims
+from src.utils.cookies import ACCESS_TOKEN_COOKIE
 from threading import Thread
 from typing import Any
 

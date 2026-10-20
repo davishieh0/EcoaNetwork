@@ -37,6 +37,9 @@ class Config(BaseSettings):
     COGNITO_CLIENT_SECRET: SecretStr
     COGNITO_ISSUER: str = ''
 
+    # cookies
+    COOKIE_SECURE: bool = True
+
     @property
     def cors_origins(self) -> list[str]:
         """

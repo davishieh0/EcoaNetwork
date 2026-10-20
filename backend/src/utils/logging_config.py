@@ -49,6 +49,8 @@ def setup_logger() -> logging.Logger:
     logging.getLogger('httpx').setLevel(logging.WARNING)
     logging.getLogger('httpcore').setLevel(logging.WARNING)
     logging.getLogger('asyncio').setLevel(logging.WARNING)
+    logging.getLogger('botocore').setLevel(logging.WARNING)
+    logging.getLogger('aiobotocore').setLevel(logging.WARNING)
 
     # return the configured root logger
     return root_logger

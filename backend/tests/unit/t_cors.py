@@ -10,6 +10,7 @@ import re
 
 
 ACAO = 'access-control-allow-origin'
+ACAC = 'access-control-allow-credentials'
 
 
 # --- INTEGRATION ---
@@ -44,6 +45,34 @@ def test_preflight_from_allowed_origin_is_answered(client: TestClient) -> None:
     )
     assert response.status_code == 200
     assert response.headers[ACAO] == 'http://localhost:5173'
+
+
+def test_allowed_origin_may_send_and_receive_cookies(
+    client: TestClient,
+) -> None:
+    origin = 'http://localhost:5173'
+
+    preflight = client.options(
+        '/api/system/health',
+        headers={'Origin': origin, 'Access-Control-Request-Method': 'POST'},
+    )
+    request = client.get('/api/system/health', headers={'Origin': origin})
+
+    for response in (preflight, request):
+        assert response.headers[ACAO] == origin
+        assert response.headers[ACAC] == 'true'
+
+
+def test_unknown_origin_cannot_read_a_response_made_with_cookies(
+    client: TestClient,
+) -> None:
+    response = client.get(
+        '/api/system/health', headers={'Origin': 'https://evil.com'}
+    )
+
+    # the browser only hands the page a response that names its origin;
+    # allow-credentials alone, which Starlette always sends, grants nothing
+    assert ACAO not in response.headers
 
 
 # --- UNIT (origin_regex) ---

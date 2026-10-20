@@ -7,11 +7,7 @@ from fastapi import Request
 from src.clients.tokens import TokenVerifier
 from src.err.not_authenticated_error import NotAuthenticatedError
 from src.schemas.auth import AccessClaims
-
-
-# --- GLOBALS ---
-# the cookie the access token travels in
-ACCESS_TOKEN_COOKIE = 'access_token'
+from src.utils.cookies import ACCESS_TOKEN_COOKIE
 
 
 # --- CODE ---
