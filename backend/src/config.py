@@ -31,10 +31,11 @@ class Config(BaseSettings):
     AWS_REGION: str
     AWS_ENDPOINT_URL: str = ''
 
-    # cognito
+    # cognito (the issuer is only set when pointing at LocalStack)
     COGNITO_USER_POOL_ID: str
     COGNITO_CLIENT_ID: str
     COGNITO_CLIENT_SECRET: SecretStr
+    COGNITO_ISSUER: str = ''
 
     @property
     def cors_origins(self) -> list[str]:
@@ -54,6 +55,32 @@ class Config(BaseSettings):
         :return: True when ENVIRONMENT is 'production'.
         """
         return self.ENVIRONMENT.strip().lower() == 'production'
+
+
+    @property
+    def cognito_issuer(self) -> str:
+        """
+        The issuer every token from the user pool must carry.
+
+        :return: COGNITO_ISSUER when set, otherwise the pool's AWS issuer.
+        """
+        if self.COGNITO_ISSUER.strip():
+            return self.COGNITO_ISSUER.strip()
+
+        return (
+            f'https://cognito-idp.{self.AWS_REGION}.amazonaws.com/'
+            f'{self.COGNITO_USER_POOL_ID}'
+        )
+
+
+    @property
+    def cognito_jwks_uri(self) -> str:
+        """
+        Where the user pool publishes the keys that sign its tokens.
+
+        :return: The JWKS URL under the issuer.
+        """
+        return f'{self.cognito_issuer}/.well-known/jwks.json'
 
     # pydantic settings
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
