@@ -15,7 +15,9 @@ from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_password_error import InvalidPasswordError
 from src.err.invalid_request_error import InvalidRequestError
 from src.err.invalid_session_error import InvalidSessionError
+from src.err.not_authenticated_error import NotAuthenticatedError
 from src.err.too_many_requests_error import TooManyRequestsError
+from src.schemas.auth import AccountAttributes
 from src.schemas.auth import Tokens
 from typing import Any
 
@@ -323,6 +325,37 @@ class CognitoClient:
             Token=refresh_token,
             ClientId=self._client_id,
             ClientSecret=self._client_secret,
+        )
+
+
+    async def get_user(self, access_token: str) -> AccountAttributes:
+        """
+        Reads what the identity provider holds about the signed-in account.
+
+        :param access_token: The account's access token.
+
+        :raises NotAuthenticatedError: If the token is revoked or invalid.
+
+        :return: The account's attributes.
+        """
+        response = await self._call(
+            'get_user',
+            errors={
+                'NotAuthorizedException': NotAuthenticatedError,
+                'UserNotFoundException': NotAuthenticatedError,
+            },
+            AccessToken=access_token,
+        )
+
+        # get the user attributes
+        attributes = {
+            attribute['Name']: attribute['Value']
+            for attribute in response['UserAttributes']
+        }
+
+        return AccountAttributes(
+            email=attributes['email'],
+            email_verified=attributes.get('email_verified') == 'true',
         )
 
 
