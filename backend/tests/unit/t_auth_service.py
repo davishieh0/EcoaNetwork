@@ -248,6 +248,23 @@ def test_refresh_without_a_genuine_session_is_refused(
     assert cognito.called('refresh') == []
 
 
+# --- LOGOUT ---
+def test_logout_revokes_the_session(
+    auth: AuthService, cognito: FakeCognito
+) -> None:
+    asyncio.run(auth.logout('refresh'))
+
+    assert cognito.called('sign_out') == [('refresh',)]
+
+
+def test_logout_without_a_session_has_nothing_to_revoke(
+    auth: AuthService, cognito: FakeCognito
+) -> None:
+    asyncio.run(auth.logout(None))
+
+    assert cognito.called('sign_out') == []
+
+
 # --- ME ---
 def test_me_combines_the_provider_and_the_profile(
     auth: AuthService, cognito: FakeCognito, users: FakeUsers

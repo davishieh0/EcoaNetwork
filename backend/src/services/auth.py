@@ -144,6 +144,18 @@ class AuthService:
         return await self._cognito.refresh(refresh_token, claims.sub)
 
 
+    async def logout(self, refresh_token: str | None) -> None:
+        """
+        Ends a session with the identity provider.
+
+        :param refresh_token: The session's refresh token, if there is one.
+
+        :return: None.
+        """
+        if refresh_token:
+            await self._cognito.sign_out(refresh_token)
+
+
     async def forgot_password(self, email: str) -> None:
         """
         Emails a code that lets the account choose a new password.
