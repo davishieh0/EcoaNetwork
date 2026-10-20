@@ -43,6 +43,7 @@ def add_cors(app: FastAPI) -> None:
         CORSMiddleware,
         allow_origins=[o for o in origins if not o.endswith(':*')],
         allow_origin_regex=origin_regex(origins),
+        allow_credentials=True,
         allow_methods=['*'],
         allow_headers=['*'],
     )
