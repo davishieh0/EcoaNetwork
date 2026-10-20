@@ -173,3 +173,19 @@ def test_register_when_the_handle_is_taken_mid_way(
     # the account exists without a profile: it is asked for a handle later
     assert cognito.called('sign_up') == [(EMAIL, PASSWORD)]
     assert users.rows == []
+
+
+# --- OPERATIONS THE PROVIDER CARRIES OUT ---
+@pytest.mark.parametrize(
+    ('method', 'args', 'operation'),
+    [
+        ('verify', (EMAIL, '123456'), 'confirm_sign_up'),
+    ],
+)
+def test_operation_is_carried_out_by_the_provider(
+    auth: AuthService, cognito: FakeCognito,
+    method: str, args: tuple[str, ...], operation: str,
+) -> None:
+    asyncio.run(getattr(auth, method)(*args))
+
+    assert cognito.called(operation) == [args]

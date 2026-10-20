@@ -65,3 +65,15 @@ class AuthService:
         await self._users.insert(User(sub=sub, handle=handle))
 
         return Account(sub=sub, email=email, handle=handle)
+
+
+    async def verify(self, email: str, code: str) -> None:
+        """
+        Confirms an account's email with the code it was sent.
+
+        :param email: The account's address.
+        :param code: The confirmation code.
+
+        :return: None.
+        """
+        await self._cognito.confirm_sign_up(email, code)
