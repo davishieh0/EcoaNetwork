@@ -7,6 +7,7 @@ from src.clients.cognito import CognitoClient
 from src.clients.tokens import TokenVerifier
 from src.err.handle_taken_error import HandleTakenError
 from src.err.invalid_session_error import InvalidSessionError
+from src.err.profile_exists_error import ProfileExistsError
 from src.models.user import User
 from src.schemas.auth import Account
 from src.schemas.auth import Session
@@ -207,3 +208,34 @@ class AuthService:
             email=attributes.email,
             handle=user.handle if user else None,
         )
+
+
+    async def create_profile(
+        self,
+        sub: str,
+        access_token: str,
+        handle: str,
+    ) -> Account:
+        """
+        Completes an account that has no profile yet, by choosing its handle.
+
+        :param sub: The account's id, from its verified access token.
+        :param access_token: That same access token.
+        :param handle: The public name, chosen once.
+
+        :raises ProfileExistsError: If the account already has a profile.
+        :raises HandleTakenError: If another account already uses the handle.
+
+        :return: The account, now with its handle.
+        """
+        # the handle never changes once chosen
+        if await self._users.find_by_sub(sub):
+            raise ProfileExistsError(sub)
+
+        # fail before writing when the handle is already in use
+        if await self._users.find_by_handle(handle):
+            raise HandleTakenError(handle)
+
+        await self._users.insert(User(sub=sub, handle=handle))
+
+        return await self.me(sub, access_token)

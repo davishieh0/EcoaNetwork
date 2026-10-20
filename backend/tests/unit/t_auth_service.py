@@ -8,6 +8,7 @@ from src.err.email_already_registered_error import EmailAlreadyRegisteredError
 from src.err.handle_taken_error import HandleTakenError
 from src.err.invalid_session_error import InvalidSessionError
 from src.err.not_authenticated_error import NotAuthenticatedError
+from src.err.profile_exists_error import ProfileExistsError
 from src.models.user import User
 from src.schemas.auth import AccessClaims
 from src.schemas.auth import AccountAttributes
@@ -290,3 +291,37 @@ def test_me_after_sign_out_is_refused_by_the_provider(
 
     with pytest.raises(NotAuthenticatedError):
         asyncio.run(auth.me(SUB, 'access'))
+
+
+# --- PROFILE ---
+def test_create_profile_completes_an_account_without_a_handle(
+    auth: AuthService, cognito: FakeCognito, users: FakeUsers
+) -> None:
+    account = asyncio.run(auth.create_profile(SUB, 'access', 'eduardo'))
+
+    assert (account.sub, account.email, account.handle) == (
+        SUB, EMAIL, 'eduardo'
+    )
+    assert [(u.sub, u.handle) for u in users.rows] == [(SUB, 'eduardo')]
+
+
+def test_create_profile_never_changes_a_handle_already_chosen(
+    auth: AuthService, users: FakeUsers
+) -> None:
+    users.rows.append(User(sub=SUB, handle='eduardo'))
+
+    with pytest.raises(ProfileExistsError):
+        asyncio.run(auth.create_profile(SUB, 'access', 'another'))
+
+    assert [u.handle for u in users.rows] == ['eduardo']
+
+
+def test_create_profile_with_a_taken_handle_stores_nothing(
+    auth: AuthService, users: FakeUsers
+) -> None:
+    users.rows.append(User(sub='someone', handle='eduardo'))
+
+    with pytest.raises(HandleTakenError):
+        asyncio.run(auth.create_profile(SUB, 'access', 'eduardo'))
+
+    assert [u.sub for u in users.rows] == ['someone']
