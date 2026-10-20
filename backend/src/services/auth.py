@@ -6,9 +6,11 @@ Authentication service.
 from src.clients.cognito import CognitoClient
 from src.clients.tokens import TokenVerifier
 from src.err.handle_taken_error import HandleTakenError
+from src.err.invalid_session_error import InvalidSessionError
 from src.models.user import User
 from src.schemas.auth import Account
 from src.schemas.auth import Session
+from src.schemas.auth import Tokens
 from src.storage.users import UserStorage
 
 import asyncio
@@ -114,6 +116,32 @@ class AuthService:
             tokens=tokens,
             account=await self.me(claims.sub, tokens.access_token),
         )
+
+
+    async def refresh(
+        self,
+        access_token: str | None,
+        refresh_token: str | None,
+    ) -> Tokens:
+        """
+        Renews a session.
+
+        :param access_token: The session's access token, usually expired.
+        :param refresh_token: The session's refresh token.
+
+        :raises InvalidSessionError: If there is no session to renew.
+        :raises NotAuthenticatedError: If the access token is not genuine.
+
+        :return: A new access token, without a refresh token.
+        """
+        # nothing to renew
+        if not access_token or not refresh_token:
+            raise InvalidSessionError('no session to renew')
+
+        # the access token is expired, but we still need to know whose it is
+        claims = await self._tokens.verify(access_token, allow_expired=True)
+
+        return await self._cognito.refresh(refresh_token, claims.sub)
 
 
     async def forgot_password(self, email: str) -> None:

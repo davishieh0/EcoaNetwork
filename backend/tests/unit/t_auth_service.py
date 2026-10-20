@@ -6,6 +6,7 @@ Unit tests for the authentication service.
 from src.err.access_token_expired_error import AccessTokenExpiredError
 from src.err.email_already_registered_error import EmailAlreadyRegisteredError
 from src.err.handle_taken_error import HandleTakenError
+from src.err.invalid_session_error import InvalidSessionError
 from src.err.not_authenticated_error import NotAuthenticatedError
 from src.models.user import User
 from src.schemas.auth import AccessClaims
@@ -214,6 +215,37 @@ def test_login_of_an_account_without_a_profile(auth: AuthService) -> None:
     session = asyncio.run(auth.login(EMAIL, PASSWORD))
 
     assert session.account.handle is None
+
+
+# --- REFRESH ---
+def test_refresh_renews_with_the_sub_of_the_expired_token(
+    auth: AuthService, cognito: FakeCognito
+) -> None:
+    tokens = asyncio.run(auth.refresh(f'expired-{SUB}', 'refresh'))
+
+    assert tokens.access_token == 'renewed'
+    assert cognito.called('refresh') == [('refresh', SUB)]
+
+
+@pytest.mark.parametrize(
+    ('access', 'refresh', 'error'),
+    [
+        (f'expired-{SUB}', None, InvalidSessionError),
+        (None, 'refresh', InvalidSessionError),
+        (None, None, InvalidSessionError),
+        ('forged', 'refresh', NotAuthenticatedError),
+    ],
+    ids=['no refresh token', 'no access token', 'nothing',
+         'forged access token'],
+)
+def test_refresh_without_a_genuine_session_is_refused(
+    auth: AuthService, cognito: FakeCognito,
+    access: str | None, refresh: str | None, error: type[Exception],
+) -> None:
+    with pytest.raises(error):
+        asyncio.run(auth.refresh(access, refresh))
+
+    assert cognito.called('refresh') == []
 
 
 # --- ME ---
