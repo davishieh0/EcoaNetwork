@@ -11,6 +11,7 @@ from src.schemas.auth import Tokens
 from src.utils.cookies import ACCESS_TOKEN_COOKIE
 from src.utils.cookies import REFRESH_TOKEN_COOKIE
 from src.utils.cookies import SESSION_MAX_AGE
+from src.utils.cookies import clear_session_cookies
 from src.utils.cookies import set_session_cookies
 
 
@@ -31,6 +32,10 @@ def _client() -> TestClient:
         set_session_cookies(
             response, Tokens(access_token='a2', expires_in=3600)
         )
+
+    @app.post('/api/auth/logout')
+    def logout(response: Response) -> None:
+        clear_session_cookies(response)
 
     @app.get('/api/auth/cookies')
     def auth_cookies(request: Request) -> dict[str, str]:
@@ -106,3 +111,18 @@ def test_secure_cookies_are_never_sent_over_plain_http() -> None:
     insecure.cookies = client.cookies
 
     assert insecure.get('/api/auth/cookies').json() == {}
+
+
+# --- CLEARING ---
+def test_sign_out_removes_both_cookies() -> None:
+    client = _client()
+    client.post('/api/auth/login')
+
+    headers = _set_cookie_headers(client, '/api/auth/logout')
+
+    # a removal only works with the path the cookie was set with
+    assert 'Max-Age=0' in headers[ACCESS_TOKEN_COOKIE]
+    assert 'Path=/api;' in headers[ACCESS_TOKEN_COOKIE]
+    assert 'Max-Age=0' in headers[REFRESH_TOKEN_COOKIE]
+    assert 'Path=/api/auth;' in headers[REFRESH_TOKEN_COOKIE]
+    assert client.get('/api/auth/cookies').json() == {}

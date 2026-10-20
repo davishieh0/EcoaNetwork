@@ -58,3 +58,24 @@ def set_session_cookies(response: Response, tokens: Tokens) -> None:
             tokens.refresh_token,
             REFRESH_TOKEN_PATH,
         )
+
+
+def clear_session_cookies(response: Response) -> None:
+    """
+    Removes a session's tokens from the browser.
+
+    :param response: The response that carries the removal.
+
+    :return: None.
+    """
+    for name, path in (
+        (ACCESS_TOKEN_COOKIE, ACCESS_TOKEN_PATH),
+        (REFRESH_TOKEN_COOKIE, REFRESH_TOKEN_PATH),
+    ):
+        response.delete_cookie(
+            name,
+            path=path,
+            httponly=True,
+            secure=config.COOKIE_SECURE,
+            samesite='lax',
+        )
