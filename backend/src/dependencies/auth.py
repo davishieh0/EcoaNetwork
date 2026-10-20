@@ -8,6 +8,7 @@ from fastapi import Request
 from src.clients.tokens import TokenVerifier
 from src.err.not_authenticated_error import NotAuthenticatedError
 from src.schemas.auth import AccessClaims
+from src.services.auth import AuthService
 from src.utils.cookies import ACCESS_TOKEN_COOKIE
 
 
@@ -23,6 +24,19 @@ def get_tokens(request: Request) -> TokenVerifier:
     tokens: TokenVerifier = request.app.state.tokens
 
     return tokens
+
+
+def get_auth(request: Request) -> AuthService:
+    """
+    Provides the authentication service set up at startup.
+
+    :param request: FastAPI request object.
+
+    :return: The application's authentication service.
+    """
+    auth: AuthService = request.app.state.auth
+
+    return auth
 
 
 async def get_current_account(
