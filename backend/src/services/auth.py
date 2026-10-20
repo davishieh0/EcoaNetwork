@@ -99,3 +99,21 @@ class AuthService:
         :return: None.
         """
         await self._cognito.forgot_password(email)
+
+
+    async def reset_password(
+        self,
+        email: str,
+        code: str,
+        password: str,
+    ) -> None:
+        """
+        Sets a new password with the code the account was sent.
+
+        :param email: The account's address.
+        :param code: The reset code.
+        :param password: The new password.
+
+        :return: None.
+        """
+        await self._cognito.reset_password(email, code, password)
