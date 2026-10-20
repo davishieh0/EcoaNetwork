@@ -4,16 +4,22 @@ Unit tests for the authentication endpoints: the HTTP side only.
 
 # --- IMPORTS ---
 from collections.abc import Iterator
+from fastapi import Depends
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from src.app import app
 from src.dependencies.auth import get_auth
+from src.dependencies.auth import get_current_user
 from src.dependencies.auth import get_tokens
 from src.err.email_already_registered_error import EmailAlreadyRegisteredError
 from src.err.email_not_verified_error import EmailNotVerifiedError
 from src.err.handle_taken_error import HandleTakenError
+from src.err.handlers import register_error_handlers
 from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_session_error import InvalidSessionError
 from src.err.not_authenticated_error import NotAuthenticatedError
+from src.err.profile_incomplete_error import ProfileIncompleteError
+from src.models.user import User
 from src.schemas.auth import Account
 from src.schemas.auth import Session
 from src.schemas.auth import Tokens
@@ -61,6 +67,8 @@ class FakeAuth:
                 return Tokens(access_token='renewed', expires_in=3600)
             if method == 'me':
                 return Account(sub=args[0], email=EMAIL, handle='eduardo')
+            if method == 'profile':
+                return User(sub=args[0], handle='eduardo')
             return None
 
         return call
@@ -293,3 +301,41 @@ def test_me_of_a_signed_out_session(
     response = client.get('/api/auth/me')
 
     assert response.status_code == 401
+
+
+# --- ROUTES THAT NEED A PROFILE ---
+def _needs_profile(auth: FakeAuth) -> TestClient:
+    """Builds an app with one route that only a complete profile reaches."""
+    other = FastAPI()
+    register_error_handlers(other)
+    other.dependency_overrides[get_auth] = lambda: auth
+    other.dependency_overrides[get_tokens] = FakeTokens
+
+    @other.get('/api/reviews/mine')
+    async def mine(user: User = Depends(get_current_user)) -> dict[str, str]:
+        return {'handle': user.handle}
+
+    return TestClient(other, base_url='https://testserver')
+
+
+def test_route_needing_a_profile_gets_the_user(auth: FakeAuth) -> None:
+    client = _needs_profile(auth)
+    client.cookies.set(ACCESS_TOKEN_COOKIE, f'access-{SUB}', path='/api')
+
+    response = client.get('/api/reviews/mine')
+
+    assert response.status_code == 200
+    assert response.json() == {'handle': 'eduardo'}
+
+
+def test_route_needing_a_profile_turns_away_an_incomplete_one(
+    auth: FakeAuth,
+) -> None:
+    auth.failure = ProfileIncompleteError()
+    client = _needs_profile(auth)
+    client.cookies.set(ACCESS_TOKEN_COOKIE, f'access-{SUB}', path='/api')
+
+    response = client.get('/api/reviews/mine')
+
+    assert response.status_code == 403
+    assert response.json()['error'] == 'profile_incomplete_error'
