@@ -17,6 +17,7 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from src.clients.database import Database
 from src.models.base import Base
+from src.models.user import User  # noqa: F401
 from src.storage.base import Storage
 from typing import TypedDict
 from typing import Unpack

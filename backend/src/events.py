@@ -8,6 +8,7 @@ from src.clients.aws import Aws
 from src.clients.cognito import CognitoClient
 from src.clients.database import Database
 from src.config import config
+from src.storage.users import UserStorage
 from src.system import Health
 from src.system import Info
 
@@ -38,6 +39,9 @@ async def on_startup(app: FastAPI) -> None:
 
     # set up the database connection (it opens on the first query)
     app.state.database = Database(config.DATABASE_URL.get_secret_value())
+
+    # initialize the storages
+    app.state.users = UserStorage(app.state.database)
 
     # open the aws connection
     app.state.aws = Aws(config.AWS_REGION, config.AWS_ENDPOINT_URL)
