@@ -5,6 +5,7 @@ Authentication schemas.
 # --- IMPORTS ---
 from datetime import datetime
 from pydantic import BaseModel
+from pydantic import Field
 
 
 # --- CODE ---
@@ -31,3 +32,15 @@ class AccountAttributes(BaseModel):
     """
     email: str
     email_verified: bool
+
+
+class Account(BaseModel):
+    """
+    An account as the platform sees it.
+    """
+    sub: str = Field(description="The account's permanent id.")
+    email: str
+    handle: str | None = Field(
+        description='None while the account has no profile yet: the client '
+                    'should ask for a handle before anything else.',
+    )

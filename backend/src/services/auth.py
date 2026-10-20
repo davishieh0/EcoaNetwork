@@ -1,0 +1,67 @@
+"""
+Authentication service.
+"""
+
+# --- IMPORTS ---
+from src.clients.cognito import CognitoClient
+from src.clients.tokens import TokenVerifier
+from src.err.handle_taken_error import HandleTakenError
+from src.models.user import User
+from src.schemas.auth import Account
+from src.storage.users import UserStorage
+
+
+# --- CODE ---
+class AuthService:
+    """
+    Accounts and sessions: the rules, whatever carries the request.
+    """
+
+    def __init__(
+        self,
+        cognito: CognitoClient,
+        users: UserStorage,
+        tokens: TokenVerifier,
+    ) -> None:
+        """
+        Initialize the service.
+
+        :param cognito: The identity provider.
+        :param users: The users storage.
+        :param tokens: The access token verifier.
+
+        :return: None.
+        """
+        self._cognito = cognito
+        self._users = users
+        self._tokens = tokens
+
+
+    # --- ACCOUNT ---
+    async def register(
+        self,
+        handle: str,
+        email: str,
+        password: str,
+    ) -> Account:
+        """
+        Creates an account, reserves its handle and emails the confirmation
+        code.
+
+        :param handle: The public name.
+        :param email: The address the account signs in with.
+        :param password: The account's password.
+
+        :raises HandleTakenError: If another account already uses the handle.
+        :raises EmailAlreadyRegisteredError: If the email has an account.
+
+        :return: The account created.
+        """
+        if await self._users.find_by_handle(handle):
+            raise HandleTakenError(handle)
+
+        sub = await self._cognito.sign_up(email, password)
+
+        await self._users.insert(User(sub=sub, handle=handle))
+
+        return Account(sub=sub, email=email, handle=handle)
