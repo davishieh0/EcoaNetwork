@@ -88,3 +88,14 @@ class AuthService:
         :return: None.
         """
         await self._cognito.resend_confirmation_code(email)
+
+
+    async def forgot_password(self, email: str) -> None:
+        """
+        Emails a code that lets the account choose a new password.
+
+        :param email: The account's address.
+
+        :return: None.
+        """
+        await self._cognito.forgot_password(email)
