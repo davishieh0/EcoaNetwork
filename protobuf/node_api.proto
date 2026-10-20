@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+// Contract between a gateway and a node; node-to-node sync is a separate file.
+package node_api;
+
+option go_package = "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf";
+
+
+// One signed event on its way from the gateway to the node.
+message Event {
+    bytes envelope = 1;
+}
+
+
+// What became of a submitted event.
+enum Outcome {
+    OUTCOME_UNSPECIFIED = 0;
+    ACCEPTED = 1;
+    ALREADY_EXISTS = 2;
+    ORPHAN = 3;
+    REJECTED = 4;
+}
+
+
+// The node's answer to a Publish.
+message PublishResponse {
+    Outcome outcome = 1;
+    string reason = 2;
+}
+
+
+// The interface the gateway uses to submit events to a node.
+service NodeService {
+    rpc Publish(Event) returns (PublishResponse);
+}

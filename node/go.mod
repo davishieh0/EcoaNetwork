@@ -9,6 +9,8 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.17.0
 	github.com/mr-tron/base58 v1.3.0
 	go.etcd.io/bbolt v1.5.0
+	google.golang.org/grpc v1.84.0
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
@@ -96,6 +98,6 @@ require (
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
