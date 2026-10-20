@@ -9,6 +9,7 @@ from src.clients.cognito import CognitoClient
 from src.clients.database import Database
 from src.clients.tokens import TokenVerifier
 from src.config import config
+from src.services.auth import AuthService
 from src.storage.users import UserStorage
 from src.system import Health
 from src.system import Info
@@ -59,6 +60,13 @@ async def on_startup(app: FastAPI) -> None:
         config.cognito_issuer,
         config.cognito_jwks_uri,
         config.COGNITO_CLIENT_ID,
+    )
+
+    # initialize the services
+    app.state.auth = AuthService(
+        app.state.cognito,
+        app.state.users,
+        app.state.tokens
     )
 
     # set app health as OK
