@@ -6,6 +6,7 @@ Startup and shutdown event handlers.
 from fastapi import FastAPI
 from src.clients.aws import Aws
 from src.clients.cognito import CognitoClient
+from src.clients.database import Database
 from src.config import config
 from src.system import Health
 from src.system import Info
@@ -34,6 +35,9 @@ async def on_startup(app: FastAPI) -> None:
         version=app.version,
         extra={},
     )
+
+    # set up the database connection (it opens on the first query)
+    app.state.database = Database(config.DATABASE_URL.get_secret_value())
 
     # open the aws connection
     app.state.aws = Aws(config.AWS_REGION, config.AWS_ENDPOINT_URL)
@@ -64,3 +68,6 @@ async def on_shutdown(app: FastAPI) -> None:
 
     # close the aws connection
     await app.state.aws.close()
+
+    # close the database connections
+    await app.state.database.close()

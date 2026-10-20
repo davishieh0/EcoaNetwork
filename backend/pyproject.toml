@@ -1,6 +1,6 @@
 [project]
 name = "ecoa-backend"
-version = "0.2.0"
+version = "0.3.0"
 description = "Ecoa platform backend API"
 authors = [{ name = "Eduardo Kairalla", email = "eduardokairalla123@gmail.com" }]
 requires-python = ">=3.12,<4.0"
@@ -11,6 +11,9 @@ dependencies = [
     "uvicorn>=0.52.1",
     "colorlog>=6.12.0",
     "aioboto3>=15.5.0",
+    "sqlalchemy[asyncio]>=2.1.4",
+    "asyncpg>=0.32.0",
+    "alembic>=1.20.0",
 ]
 
 [dependency-groups]
