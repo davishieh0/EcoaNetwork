@@ -180,6 +180,7 @@ def test_register_when_the_handle_is_taken_mid_way(
     ('method', 'args', 'operation'),
     [
         ('verify', (EMAIL, '123456'), 'confirm_sign_up'),
+        ('resend_verification', (EMAIL,), 'resend_confirmation_code'),
     ],
 )
 def test_operation_is_carried_out_by_the_provider(

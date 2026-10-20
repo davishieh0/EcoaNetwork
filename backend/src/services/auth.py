@@ -77,3 +77,14 @@ class AuthService:
         :return: None.
         """
         await self._cognito.confirm_sign_up(email, code)
+
+
+    async def resend_verification(self, email: str) -> None:
+        """
+        Emails a new confirmation code. The previous one stops working.
+
+        :param email: The account's address.
+
+        :return: None.
+        """
+        await self._cognito.resend_confirmation_code(email)
