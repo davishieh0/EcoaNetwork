@@ -18,6 +18,7 @@ from src.err.handlers import register_error_handlers
 from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_session_error import InvalidSessionError
 from src.err.not_authenticated_error import NotAuthenticatedError
+from src.err.profile_exists_error import ProfileExistsError
 from src.err.profile_incomplete_error import ProfileIncompleteError
 from src.models.user import User
 from src.schemas.auth import Account
@@ -67,6 +68,8 @@ class FakeAuth:
                 return Tokens(access_token='renewed', expires_in=3600)
             if method == 'me':
                 return Account(sub=args[0], email=EMAIL, handle='eduardo')
+            if method == 'create_profile':
+                return Account(sub=args[0], email=EMAIL, handle=args[2])
             if method == 'profile':
                 return User(sub=args[0], handle='eduardo')
             return None
@@ -301,6 +304,59 @@ def test_me_of_a_signed_out_session(
     response = client.get('/api/auth/me')
 
     assert response.status_code == 401
+
+
+# --- PROFILE ---
+def test_profile_completes_the_signed_in_account(
+    client: TestClient, auth: FakeAuth
+) -> None:
+    client.cookies.set(ACCESS_TOKEN_COOKIE, f'access-{SUB}', path='/api')
+
+    response = client.post('/api/auth/profile', json={'handle': 'eduardo'})
+
+    assert response.status_code == 201
+    assert response.json() == {'sub': SUB, 'email': EMAIL,
+                               'handle': 'eduardo'}
+    assert auth.calls == [
+        ('create_profile', (SUB, f'access-{SUB}', 'eduardo'))
+    ]
+
+
+def test_profile_needs_a_session(client: TestClient, auth: FakeAuth) -> None:
+    response = client.post('/api/auth/profile', json={'handle': 'eduardo'})
+
+    assert response.status_code == 401
+    assert auth.calls == []
+
+
+def test_profile_refuses_a_malformed_handle(
+    client: TestClient, auth: FakeAuth
+) -> None:
+    client.cookies.set(ACCESS_TOKEN_COOKIE, f'access-{SUB}', path='/api')
+
+    response = client.post('/api/auth/profile', json={'handle': 'Edu.K'})
+
+    assert response.status_code == 422
+    assert auth.calls == []
+
+
+@pytest.mark.parametrize(
+    ('failure', 'slug'),
+    [
+        (ProfileExistsError(), 'profile_exists_error'),
+        (HandleTakenError(), 'handle_taken_error'),
+    ],
+)
+def test_profile_conflicts(
+    client: TestClient, auth: FakeAuth, failure: Exception, slug: str
+) -> None:
+    auth.failure = failure
+    client.cookies.set(ACCESS_TOKEN_COOKIE, f'access-{SUB}', path='/api')
+
+    response = client.post('/api/auth/profile', json={'handle': 'eduardo'})
+
+    assert response.status_code == 409
+    assert response.json()['error'] == slug
 
 
 # --- ROUTES THAT NEED A PROFILE ---

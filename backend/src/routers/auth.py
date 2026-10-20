@@ -22,11 +22,13 @@ from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_password_error import InvalidPasswordError
 from src.err.invalid_session_error import InvalidSessionError
 from src.err.not_authenticated_error import NotAuthenticatedError
+from src.err.profile_exists_error import ProfileExistsError
 from src.err.too_many_requests_error import TooManyRequestsError
 from src.schemas.auth import AccessClaims
 from src.schemas.auth import Account
 from src.schemas.auth import EmailRequest
 from src.schemas.auth import LoginRequest
+from src.schemas.auth import ProfileRequest
 from src.schemas.auth import RegisterRequest
 from src.schemas.auth import ResetPasswordRequest
 from src.schemas.auth import VerifyRequest
@@ -231,3 +233,36 @@ async def me(
     found = await auth.me(account.sub, request.cookies[ACCESS_TOKEN_COOKIE])
 
     return JSONResponse(found.model_dump(mode='json'))
+
+
+@router.post('/profile',
+             summary='Choose the handle',
+             status_code=201,
+             response_model=Account,
+             responses={
+                 **VALIDATION_RESPONSE,
+                 **error_responses(
+                     ProfileExistsError,
+                     HandleTakenError,
+                     NotAuthenticatedError,
+                     AccessTokenExpiredError,
+                     DatabaseUnavailableError,
+                     *COMMON,
+                 ),
+             })
+async def create_profile(
+    body: ProfileRequest,
+    request: Request,
+    account: AccessClaims = Depends(get_current_account),
+    auth: AuthService = Depends(get_auth),
+) -> JSONResponse:
+    """
+    Completes an account that has no profile yet, by choosing its handle.
+    """
+    created = await auth.create_profile(
+        account.sub,
+        request.cookies[ACCESS_TOKEN_COOKIE],
+        body.handle
+    )
+
+    return JSONResponse(created.model_dump(mode='json'), status_code=201)
