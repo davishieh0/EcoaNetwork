@@ -4,8 +4,10 @@ Unit tests for the authentication service.
 
 # --- IMPORTS ---
 from src.err.access_token_expired_error import AccessTokenExpiredError
+from src.err.auth_provider_error import AuthProviderError
 from src.err.email_already_registered_error import EmailAlreadyRegisteredError
 from src.err.handle_taken_error import HandleTakenError
+from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_session_error import InvalidSessionError
 from src.err.not_authenticated_error import NotAuthenticatedError
 from src.err.profile_exists_error import ProfileExistsError
@@ -20,6 +22,7 @@ from typing import Any
 import asyncio
 import datetime
 import pytest
+import uuid
 
 
 # --- GLOBALS ---
@@ -76,6 +79,9 @@ class FakeCognito:
         self._record('get_user', access_token)
         return AccountAttributes(email=EMAIL, email_verified=True)
 
+    async def delete_user(self, access_token: str) -> None:
+        self._record('delete_user', access_token)
+
 
 class FakeUsers:
     """Stands in for the users storage, in memory."""
@@ -94,8 +100,14 @@ class FakeUsers:
         # someone took the handle between the check and the write
         if self.taken_on_insert:
             raise HandleTakenError(instance.handle)
+        instance.id = uuid.uuid4()
         self.rows.append(instance)
         return instance
+
+    async def delete(self, key: uuid.UUID) -> bool:
+        found = [u for u in self.rows if u.id == key]
+        self.rows = [u for u in self.rows if u.id != key]
+        return bool(found)
 
 
 class FakeTokens:
@@ -341,3 +353,56 @@ def test_profile_of_an_account_without_a_handle_is_incomplete(
 ) -> None:
     with pytest.raises(ProfileIncompleteError):
         asyncio.run(auth.profile(SUB))
+
+
+# --- DELETE ACCOUNT ---
+def test_delete_account_removes_the_profile_and_the_account(
+    auth: AuthService, cognito: FakeCognito, users: FakeUsers
+) -> None:
+    asyncio.run(users.insert(User(sub=SUB, handle='eduardo')))
+
+    asyncio.run(auth.delete_account(SUB, 'access', PASSWORD))
+
+    # the password is checked against the account's own email first
+    assert cognito.called('sign_in') == [(EMAIL, PASSWORD)]
+    assert users.rows == []
+    assert cognito.called('delete_user') == [('access',)]
+
+
+def test_delete_account_with_a_wrong_password_deletes_nothing(
+    auth: AuthService, cognito: FakeCognito, users: FakeUsers
+) -> None:
+    asyncio.run(users.insert(User(sub=SUB, handle='eduardo')))
+    cognito.failures['sign_in'] = InvalidCredentialsError()
+
+    with pytest.raises(InvalidCredentialsError):
+        asyncio.run(auth.delete_account(SUB, 'access', 'Wr0ng-pass'))
+
+    assert [u.handle for u in users.rows] == ['eduardo']
+    assert cognito.called('delete_user') == []
+
+
+def test_delete_account_without_a_profile_still_deletes_the_account(
+    auth: AuthService, cognito: FakeCognito
+) -> None:
+    asyncio.run(auth.delete_account(SUB, 'access', PASSWORD))
+
+    assert cognito.called('delete_user') == [('access',)]
+
+
+def test_delete_account_that_fails_half_way_can_be_finished(
+    auth: AuthService, cognito: FakeCognito, users: FakeUsers
+) -> None:
+    asyncio.run(users.insert(User(sub=SUB, handle='eduardo')))
+    cognito.failures['delete_user'] = AuthProviderError()
+
+    with pytest.raises(AuthProviderError):
+        asyncio.run(auth.delete_account(SUB, 'access', PASSWORD))
+
+    # the profile went first, so the handle is already free
+    assert users.rows == []
+
+    # trying again, once the provider is back, finishes the deletion
+    del cognito.failures['delete_user']
+    asyncio.run(auth.delete_account(SUB, 'access', PASSWORD))
+    assert len(cognito.called('delete_user')) == 2

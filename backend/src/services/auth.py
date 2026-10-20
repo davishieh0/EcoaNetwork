@@ -259,3 +259,37 @@ class AuthService:
             raise ProfileIncompleteError(sub)
 
         return user
+
+
+    async def delete_account(
+        self,
+        sub: str,
+        access_token: str,
+        password: str,
+    ) -> None:
+        """
+        Deletes the signed-in account, its profile and every session.
+
+        The password is asked again: the deletion cannot be undone, and a
+        stolen session alone must not be enough to do it.
+
+        :param sub: The account's id, from its verified access token.
+        :param access_token: That same access token.
+        :param password: The account's current password.
+
+        :raises InvalidCredentialsError: If the password is wrong.
+        :raises NotAuthenticatedError: If the session was signed out.
+
+        :return: None.
+        """
+        # the provider knows the account by its email, not by the token
+        attributes = await self._cognito.get_user(access_token)
+        await self._cognito.sign_in(attributes.email, password)
+
+        # the profile goes first: if the account then fails to go, it is left
+        # without a profile, and deleting again finishes the job
+        user = await self._users.find_by_sub(sub)
+        if user:
+            await self._users.delete(user.id)
+
+        await self._cognito.delete_user(access_token)
