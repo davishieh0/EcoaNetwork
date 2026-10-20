@@ -44,3 +44,12 @@ class Account(BaseModel):
         description='None while the account has no profile yet: the client '
                     'should ask for a handle before anything else.',
     )
+
+
+class Session(BaseModel):
+    """
+    What signing in hands back: the tokens, which travel in cookies, and the
+    account, which the client shows.
+    """
+    tokens: Tokens
+    account: Account

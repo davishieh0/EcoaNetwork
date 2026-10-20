@@ -194,6 +194,28 @@ def test_operation_is_carried_out_by_the_provider(
     assert cognito.called(operation) == [args]
 
 
+# --- LOGIN ---
+def test_login_returns_the_tokens_and_the_account(
+    auth: AuthService, cognito: FakeCognito, users: FakeUsers
+) -> None:
+    users.rows.append(User(sub=SUB, handle='eduardo'))
+
+    session = asyncio.run(auth.login(EMAIL, PASSWORD))
+
+    assert session.tokens.refresh_token == 'refresh'
+    assert (session.account.sub, session.account.email,
+            session.account.handle) == (SUB, EMAIL, 'eduardo')
+    # the account comes from the token just issued
+    assert cognito.called('sign_in') == [(EMAIL, PASSWORD)]
+    assert cognito.called('get_user') == [(f'access-{SUB}',)]
+
+
+def test_login_of_an_account_without_a_profile(auth: AuthService) -> None:
+    session = asyncio.run(auth.login(EMAIL, PASSWORD))
+
+    assert session.account.handle is None
+
+
 # --- ME ---
 def test_me_combines_the_provider_and_the_profile(
     auth: AuthService, cognito: FakeCognito, users: FakeUsers

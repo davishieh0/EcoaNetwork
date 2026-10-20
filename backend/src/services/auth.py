@@ -8,6 +8,7 @@ from src.clients.tokens import TokenVerifier
 from src.err.handle_taken_error import HandleTakenError
 from src.models.user import User
 from src.schemas.auth import Account
+from src.schemas.auth import Session
 from src.storage.users import UserStorage
 
 import asyncio
@@ -90,6 +91,29 @@ class AuthService:
         :return: None.
         """
         await self._cognito.resend_confirmation_code(email)
+
+
+    async def login(self, email: str, password: str) -> Session:
+        """
+        Signs an account in.
+
+        :param email: The account's address.
+        :param password: The account's password.
+
+        :raises InvalidCredentialsError: If they do not match an account.
+        :raises EmailNotVerifiedError: If the email is not confirmed yet.
+
+        :return: The new session's tokens, and the account signed in.
+        """
+        tokens = await self._cognito.sign_in(email, password)
+
+        # the provider hands back tokens only: read whose they are
+        claims = await self._tokens.verify(tokens.access_token)
+
+        return Session(
+            tokens=tokens,
+            account=await self.me(claims.sub, tokens.access_token),
+        )
 
 
     async def forgot_password(self, email: str) -> None:
