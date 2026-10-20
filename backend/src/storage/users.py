@@ -7,6 +7,7 @@ from src.err.data_integrity_error import DataIntegrityError
 from src.err.ecoa_error import EcoaError
 from src.err.handle_taken_error import HandleTakenError
 from src.err.invalid_request_error import InvalidRequestError
+from src.err.profile_exists_error import ProfileExistsError
 from src.models.user import User
 from src.storage.base import Storage
 
@@ -14,6 +15,7 @@ from src.storage.base import Storage
 # --- GLOBALS ---
 BROKEN_RULES: dict[str, type[EcoaError]] = {
     'uq_users_handle': HandleTakenError,
+    'uq_users_sub': ProfileExistsError,
     'ck_users_handle_format': InvalidRequestError,
 }
 
@@ -55,6 +57,7 @@ class UserStorage(Storage[User]):
         :param instance: The user to add.
 
         :raises HandleTakenError: If another account already uses the handle.
+        :raises ProfileExistsError: If the account already has a profile.
         :raises InvalidRequestError: If the handle is not in the right format.
 
         :return: The user, with what the database filled in.
