@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from src.clients.aws import Aws
 from src.clients.cognito import CognitoClient
 from src.clients.database import Database
+from src.clients.tokens import TokenVerifier
 from src.config import config
 from src.storage.users import UserStorage
 from src.system import Health
@@ -51,6 +52,13 @@ async def on_startup(app: FastAPI) -> None:
         await app.state.aws.client('cognito-idp', signed=False),
         config.COGNITO_CLIENT_ID,
         config.COGNITO_CLIENT_SECRET.get_secret_value(),
+    )
+
+    # set up the access token checks
+    app.state.tokens = TokenVerifier(
+        config.cognito_issuer,
+        config.cognito_jwks_uri,
+        config.COGNITO_CLIENT_ID,
     )
 
     # set app health as OK
