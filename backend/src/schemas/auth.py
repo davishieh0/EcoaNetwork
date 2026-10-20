@@ -23,3 +23,11 @@ class AccessClaims(BaseModel):
     """
     sub: str
     expires_at: datetime
+
+
+class AccountAttributes(BaseModel):
+    """
+    What the identity provider holds about an account.
+    """
+    email: str
+    email_verified: bool

@@ -16,6 +16,7 @@ from src.err.invalid_code_error import InvalidCodeError
 from src.err.invalid_credentials_error import InvalidCredentialsError
 from src.err.invalid_password_error import InvalidPasswordError
 from src.err.invalid_session_error import InvalidSessionError
+from src.err.not_authenticated_error import NotAuthenticatedError
 from src.err.too_many_requests_error import TooManyRequestsError
 from typing import Any
 
@@ -264,3 +265,28 @@ def test_reset_password_failures(
 
     with pytest.raises(expected):
         asyncio.run(_cognito(idp).reset_password(EMAIL, '123456', 'New1!aaa'))
+
+
+# --- ACCOUNT ---
+def test_get_user_reads_the_email_with_the_access_token() -> None:
+    idp = FakeIdp({'Username': SUB, 'UserAttributes': [
+        {'Name': 'sub', 'Value': SUB},
+        {'Name': 'email', 'Value': EMAIL},
+        {'Name': 'email_verified', 'Value': 'true'},
+    ]})
+
+    attributes = asyncio.run(_cognito(idp).get_user('access'))
+
+    assert attributes.email == EMAIL
+    assert attributes.email_verified is True
+    assert idp.calls[0] == ('get_user', {'AccessToken': 'access'})
+
+
+@pytest.mark.parametrize(
+    'message', ['Access Token has been revoked', 'Invalid Access Token']
+)
+def test_get_user_with_a_dead_token_is_not_authenticated(message: str) -> None:
+    idp = FakeIdp(error=_failure('NotAuthorizedException', message))
+
+    with pytest.raises(NotAuthenticatedError):
+        asyncio.run(_cognito(idp).get_user('access'))
