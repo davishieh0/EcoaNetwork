@@ -1,6 +1,6 @@
 [project]
 name = "ecoa-backend"
-version = "0.8.0"
+version = "0.9.0"
 description = "Ecoa platform backend API"
 authors = [{ name = "Eduardo Kairalla", email = "eduardokairalla123@gmail.com" }]
 requires-python = ">=3.12,<4.0"
