@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from fastapi import FastAPI
 from src.config import config
 from src.routers import auth
+from src.routers import events
 from src.routers import system
 
 
@@ -23,5 +24,6 @@ def mount(app: FastAPI) -> None:
 
     api.include_router(system.router, tags=['system'], prefix='/system')
     api.include_router(auth.router, tags=['auth'], prefix='/auth')
+    api.include_router(events.router, tags=['events'], prefix='/events')
 
     app.include_router(api)
