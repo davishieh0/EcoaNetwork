@@ -11,6 +11,7 @@ from src.clients.node import NodeClient
 from src.clients.tokens import TokenVerifier
 from src.config import config
 from src.services.auth import AuthService
+from src.services.events import EventService
 from src.storage.users import UserStorage
 from src.system import Health
 from src.system import Info
@@ -72,6 +73,9 @@ async def on_startup(app: FastAPI) -> None:
 
     # open the node connections
     app.state.node = NodeClient(config.node_addrs)
+
+    # initialize the event service
+    app.state.events = EventService(app.state.node)
 
     # set app health as OK
     app.state.health.status = 'OK'
