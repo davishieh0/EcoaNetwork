@@ -46,9 +46,11 @@ No `pattern` uses lookahead or lookbehind. The node is written in Go, and Go's `
 which supports neither. A schema that relied on them would compile under a JavaScript validator
 and fail in the reference implementation.
 
-Two more habits keep the verdict the same under other engines. Whitespace is an explicit list of
+Three more habits keep the verdict the same under other engines. Whitespace is an explicit list of
 `\uXXXX` escapes, because `\s` means different sets in RE2 and Python. No pattern uses `\p` or
-`\x{...}`, which Python `re` lacks.
+`\x{...}`, which Python `re` lacks. And `$` means the true end of the string: Python's `re` also
+lets it match before a final newline, so a validator built on it has to anchor at the real end, or
+it accepts what `vectors/rejections.json` refuses.
 
 ## Validating
 
