@@ -32,4 +32,18 @@ func TestRunRefusesArguments(t *testing.T) {
 }
 
 
+func TestRunRefusesANetworkOutsideTheProtocolPattern(t *testing.T) {
+	// Arrange
+	t.Setenv("NETWORK", "foo")
+
+	// Act
+	err := run(nil)
+
+	// Assert
+	if err == nil || !strings.Contains(err.Error(), "NETWORK") {
+		t.Fatalf("run = %v, want a NETWORK error", err)
+	}
+}
+
+
 

@@ -43,8 +43,14 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	network := envOr("NETWORK", "ecoa-dev")
+	if !envelope.ValidProtocol(network) {
+		return Config{}, fmt.Errorf("NETWORK: %q is not ecoa or ecoa-<name>",
+		                            network)
+	}
+
 	cfg := Config{
-		Network:        envOr("NETWORK", "ecoa-dev"),
+		Network:        network,
 		ListenAddr:     envOr("LISTEN_ADDR", "/ip4/127.0.0.1/tcp/4001"),
 		GRPCAddr:       envOr("GRPC_ADDR", "127.0.0.1:50051"),
 		BootstrapAddrs: splitAddrs(os.Getenv("BOOTSTRAP_ADDRS")),

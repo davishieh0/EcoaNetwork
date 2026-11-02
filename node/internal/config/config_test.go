@@ -139,6 +139,25 @@ func TestLoadReadsEachVariable(t *testing.T) {
 }
 
 
+func TestLoadRefusesANetworkOutsideTheProtocolPattern(t *testing.T) {
+	for _, value := range []string{"foo", "ecoa-", "ECOA", "ecoa_dev"} {
+		t.Run(value, func(t *testing.T) {
+			// Arrange
+			clearEnv(t)
+			t.Setenv("NETWORK", value)
+
+			// Act
+			_, err := Load()
+
+			// Assert
+			if err == nil {
+				t.Fatalf("Load accepted NETWORK=%s", value)
+			}
+		})
+	}
+}
+
+
 func TestLoadAcceptsTheEdgesOfMaxEventSize(t *testing.T) {
 	for value, want := range map[string]int{"1": 1, "16384": 16384} {
 		t.Run(value, func(t *testing.T) {
