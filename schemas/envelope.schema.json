@@ -31,8 +31,8 @@
     },
     "eventType": {
       "type": "string",
-      "$comment": "namespace.verb. An unrecognized value is structurally valid and still relayed; it just skips the type-specific checks.",
-      "pattern": "^[a-z]+\\.[a-z_]+$"
+      "$comment": "namespace.verb, with digits allowed after the dot, as in review.created_v2. An unrecognized value is structurally valid and still relayed; it just skips the type-specific checks.",
+      "pattern": "^[a-z]+\\.[a-z0-9_]+$"
     },
     "createdAt": {
       "$ref": "common.schema.json#/$defs/timestamp"
