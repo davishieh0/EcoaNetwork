@@ -17,6 +17,7 @@ var names = []string{
 	"GRPC_ADDR",
 	"BOOTSTRAP_ADDRS",
 	"BOLT_DB_PATH",
+	"MAX_EVENT_SIZE",
 }
 
 
@@ -41,10 +42,11 @@ func TestLoadAppliesTheDefaultsToAnEmptyEnvironment(t *testing.T) {
 	clearEnv(t)
 
 	want := Config{
-		Network:    "ecoa-dev",
-		ListenAddr: "/ip4/127.0.0.1/tcp/4001",
-		GRPCAddr:   "127.0.0.1:50051",
-		BoltDBPath: "data/bbolt/bolt.db",
+		Network:      "ecoa-dev",
+		ListenAddr:   "/ip4/127.0.0.1/tcp/4001",
+		GRPCAddr:     "127.0.0.1:50051",
+		BoltDBPath:   "data/bbolt/bolt.db",
+		MaxEventSize: 16384,
 	}
 
 	// Act
@@ -105,6 +107,10 @@ func TestLoadReadsEachVariable(t *testing.T) {
 			func(c Config) any { return c.BoltDBPath }, "x.db",
 		},
 		{
+			"MAX_EVENT_SIZE", "4096",
+			func(c Config) any { return c.MaxEventSize }, 4096,
+		},
+		{
 			"BOOTSTRAP_ADDRS", "/ip4/1.1.1.1/tcp/1,/ip4/2.2.2.2/tcp/2",
 			func(c Config) any { return c.BootstrapAddrs },
 			[]string{"/ip4/1.1.1.1/tcp/1", "/ip4/2.2.2.2/tcp/2"},
@@ -127,6 +133,44 @@ func TestLoadReadsEachVariable(t *testing.T) {
 
 			if !reflect.DeepEqual(c.read(got), c.want) {
 				t.Fatalf("%s = %v, want %v", c.name, c.read(got), c.want)
+			}
+		})
+	}
+}
+
+
+func TestLoadAcceptsTheEdgesOfMaxEventSize(t *testing.T) {
+	for value, want := range map[string]int{"1": 1, "16384": 16384} {
+		t.Run(value, func(t *testing.T) {
+			// Arrange
+			clearEnv(t)
+			t.Setenv("MAX_EVENT_SIZE", value)
+
+			// Act
+			got, err := Load()
+
+			// Assert
+			if err != nil || got.MaxEventSize != want {
+				t.Fatalf("Load = %d, %v, want %d", got.MaxEventSize, err, want)
+			}
+		})
+	}
+}
+
+
+func TestLoadRefusesAnInvalidMaxEventSize(t *testing.T) {
+	for _, value := range []string{"16385", "0", "-1", "big"} {
+		t.Run(value, func(t *testing.T) {
+			// Arrange
+			clearEnv(t)
+			t.Setenv("MAX_EVENT_SIZE", value)
+
+			// Act
+			_, err := Load()
+
+			// Assert
+			if err == nil {
+				t.Fatalf("Load accepted MAX_EVENT_SIZE=%s", value)
 			}
 		})
 	}

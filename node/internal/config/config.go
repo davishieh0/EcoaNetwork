@@ -3,8 +3,12 @@ package config
 
 
 import (
+	"fmt"
 	"os"
+	"strconv"
 	"strings"
+
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 )
 
 
@@ -26,17 +30,26 @@ type Config struct {
 
 	// BoltDBPath is the path of the bbolt file holding the event log.
 	BoltDBPath string
+
+	// MaxEventSize is this node's limit per event, in bytes.
+	MaxEventSize int
 }
 
 
 // Load reads the environment and applies the default of each unset variable.
 func Load() (Config, error) {
+	size, err := loadMaxEventSize()
+	if err != nil {
+		return Config{}, err
+	}
+
 	cfg := Config{
 		Network:        envOr("NETWORK", "ecoa-dev"),
 		ListenAddr:     envOr("LISTEN_ADDR", "/ip4/127.0.0.1/tcp/4001"),
 		GRPCAddr:       envOr("GRPC_ADDR", "127.0.0.1:50051"),
 		BootstrapAddrs: splitAddrs(os.Getenv("BOOTSTRAP_ADDRS")),
 		BoltDBPath:     envOr("BOLT_DB_PATH", "data/bbolt/bolt.db"),
+		MaxEventSize:   size,
 	}
 
 	return cfg, nil
@@ -60,4 +73,26 @@ func splitAddrs(list string) []string {
 	}
 
 	return strings.Split(list, ",")
+}
+
+
+// loadMaxEventSize reads MAX_EVENT_SIZE, or an error outside the range.
+func loadMaxEventSize() (int, error) {
+	value := os.Getenv("MAX_EVENT_SIZE")
+	if value == "" {
+		return envelope.MaxSize, nil
+	}
+
+	size, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("MAX_EVENT_SIZE: %w", err)
+	}
+
+	if size <= 0 || size > envelope.MaxSize {
+		return 0, fmt.Errorf("MAX_EVENT_SIZE: %d is outside 1..%d",
+		                     size,
+		                     envelope.MaxSize)
+	}
+
+	return size, nil
 }
