@@ -4,6 +4,30 @@ package envelope
 import "fmt"
 
 
+// --- CONSTANTS ---
+
+const (
+	// RequiredFieldAbsent is a required field that is absent.
+	RequiredFieldAbsent FieldFault = iota + 1
+
+	// FieldOutsideEnvelope is a top-level field outside the closed set.
+	FieldOutsideEnvelope
+
+	// FieldBreaksItsRule is a present field that breaks its rule.
+	FieldBreaksItsRule
+)
+
+
+// --- GLOBALS ---
+
+// faultTexts is the text of each field fault.
+var faultTexts = map[FieldFault]string{
+	RequiredFieldAbsent:  "missing",
+	FieldOutsideEnvelope: "unknown",
+	FieldBreaksItsRule:   "malformed",
+}
+
+
 // --- CODE ---
 
 // MalformedJSONError is input that is not one well-formed JSON object.
@@ -30,6 +54,17 @@ type UnsafeNumberError struct {
 }
 
 
+// FieldFault is what is wrong with an envelope field.
+type FieldFault int
+
+
+// FieldError is an envelope field that is missing, unknown or invalid.
+type FieldError struct {
+	Field string
+	Fault FieldFault
+}
+
+
 // Error returns where the input stops being JSON.
 func (e *MalformedJSONError) Error() string {
 	return "envelope: malformed JSON: " + e.Detail
@@ -51,4 +86,12 @@ func (e *TooDeepError) Error() string {
 // Error returns the number as written.
 func (e *UnsafeNumberError) Error() string {
 	return "envelope: number is not a safe integer: " + e.Number
+}
+
+
+// Error returns the fault and the field.
+func (e *FieldError) Error() string {
+	fault := faultTexts[e.Fault]
+
+	return fmt.Sprintf("envelope: %s field %q", fault, e.Field)
 }
