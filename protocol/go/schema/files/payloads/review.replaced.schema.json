@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/review.replaced.schema.json",
+  "title": "Payload — review.replaced",
+  "$comment": "Total replacement, not a patch. `entity` is explicitly forbidden, not merely undefined: a review's subject is fixed by the root of its chain and is immutable. `replaces` names the immediately preceding version. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "replaces": {
+      "$ref": "../common.schema.json#/$defs/eventId"
+    },
+    "rating": {
+      "$ref": "../common.schema.json#/$defs/rating"
+    },
+    "body": {
+      "$ref": "../common.schema.json#/$defs/multiLineText",
+      "maxLength": 5000,
+      "type": "string"
+    },
+    "title": {
+      "$ref": "../common.schema.json#/$defs/singleLineText",
+      "maxLength": 120,
+      "type": "string"
+    },
+    "lang": {
+      "$ref": "../common.schema.json#/$defs/langTag"
+    },
+    "entity": false,
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "replaces",
+    "rating",
+    "body"
+  ],
+  "additionalProperties": true
+}

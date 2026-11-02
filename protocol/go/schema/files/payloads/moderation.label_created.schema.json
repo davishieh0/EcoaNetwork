@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/moderation.label_created.schema.json",
+  "title": "Payload — moderation.label_created",
+  "$comment": "A verdict, publishable by anyone — authority comes from who follows the signer. There is no action field: a label says what something IS, never what to do about it. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$ref": "../common.schema.json#/$defs/eventId"
+    },
+    "label": {
+      "$ref": "../common.schema.json#/$defs/moderationReason"
+    },
+    "note": {
+      "$ref": "../common.schema.json#/$defs/multiLineText",
+      "maxLength": 280,
+      "type": "string"
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "target",
+    "label"
+  ],
+  "additionalProperties": true
+}

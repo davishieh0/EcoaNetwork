@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/verification.claim_revoked.schema.json",
+  "title": "Payload — verification.claim_revoked",
+  "$comment": "Must carry the same author as the claim it revokes: a verifier retracts its own word. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$ref": "../common.schema.json#/$defs/eventId"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "superseded",
+        "no-longer-valid",
+        "issued-in-error",
+        "other"
+      ]
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "target"
+  ],
+  "additionalProperties": true
+}

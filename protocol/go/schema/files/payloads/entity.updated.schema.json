@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/entity.updated.schema.json",
+  "title": "Payload — entity.updated",
+  "$comment": "The deliberate exception to total replacement: resolved PER FIELD, so an omitted field means 'said nothing about', not 'clear it'. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "entity": {
+      "$ref": "../common.schema.json#/$defs/entityId"
+    },
+    "name": {
+      "$ref": "../common.schema.json#/$defs/singleLineText",
+      "maxLength": 120,
+      "type": "string"
+    },
+    "category": {
+      "$ref": "../common.schema.json#/$defs/entityCategory"
+    },
+    "description": {
+      "$ref": "../common.schema.json#/$defs/multiLineText",
+      "maxLength": 1000,
+      "type": "string"
+    },
+    "descriptor": {
+      "$ref": "../common.schema.json#/$defs/entityDescriptor"
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "entity"
+  ],
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "entity": {
+            "type": "string",
+            "pattern": "^entity:"
+          }
+        },
+        "required": [
+          "entity"
+        ]
+      },
+      "then": {
+        "required": [
+          "descriptor"
+        ],
+        "properties": {
+          "descriptor": {
+            "$ref": "../common.schema.json#/$defs/entityDescriptor"
+          }
+        },
+        "$comment": "A derived identifier without its descriptor is indistinguishable from a random one."
+      },
+      "else": {
+        "properties": {
+          "descriptor": false
+        },
+        "$comment": "A descriptor only means anything for entity: identifiers."
+      }
+    }
+  ]
+}

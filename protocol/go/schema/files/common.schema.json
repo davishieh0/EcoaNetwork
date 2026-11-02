@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/common.schema.json",
+  "title": "Ecoa Network — shared definitions",
+  "$comment": "Patterns here avoid lookahead and lookbehind so they work under RE2, which is what Go's regexp uses. See docs/protocol.md.",
+  "$defs": {
+    "eventId": {
+      "type": "string",
+      "$comment": "evt_ + base32 lowercase unpadded of SHA-256 (32 bytes -> 52 chars).",
+      "pattern": "^evt_[a-z2-7]{52}$"
+    },
+    "did": {
+      "type": "string",
+      "$comment": "did:key for Ed25519. Multicodec 0xed01 in base58btc always renders as the z6Mk prefix.",
+      "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]{44}$"
+    },
+    "signature": {
+      "type": "string",
+      "$comment": "Ed25519 signature, base64url unpadded (64 bytes -> 86 chars).",
+      "pattern": "^[A-Za-z0-9_-]{86}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "$comment": "RFC 3339 UTC, literal Z, second precision. One spelling per instant, so no leap second and no year 0000. A date like February 30 passes this pattern.",
+      "pattern": "^([1-9][0-9]{3}|0[1-9][0-9]{2}|00[1-9][0-9]|000[1-9])-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$"
+    },
+    "entityId": {
+      "$comment": "Already normalized. A node rejects an unnormalized identifier rather than fixing it, because normalizing on receipt would change the signed bytes.",
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^cnpj:[0-9]{14}$"
+        },
+        {
+          "type": "string",
+          "pattern": "^gtin:[0-9]{14}$"
+        },
+        {
+          "type": "string",
+          "pattern": "^domain:[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
+          "not": { "pattern": "^domain:www\\." }
+        },
+        {
+          "type": "string",
+          "pattern": "^place:osm:[nwr][1-9][0-9]*$"
+        },
+        {
+          "type": "string",
+          "pattern": "^entity:[a-z2-7]{52}$"
+        }
+      ]
+    },
+    "derivedEntityId": {
+      "type": "string",
+      "pattern": "^entity:[a-z2-7]{52}$"
+    },
+    "langTag": {
+      "type": "string",
+      "$comment": "BCP 47. Loose on purpose: an indexer that cannot parse it loses only search quality.",
+      "pattern": "^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})*$",
+      "maxLength": 35
+    },
+    "singleLineText": {
+      "$comment": "Trimmed of Unicode White_Space, listed explicitly so every regex engine agrees; non-empty, no control characters at all, C1 included.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F](?:[^\\x00-\\x1F\\x7F-\\x9F]*[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F])?$"
+    },
+    "multiLineText": {
+      "$comment": "Trimmed of Unicode White_Space, listed explicitly so every regex engine agrees; non-empty, no control characters, C1 included, except newline (\\x0A), which review bodies legitimately contain.",
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F](?:[^\\x00-\\x09\\x0B-\\x1F\\x7F-\\x9F]*[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F])?$"
+    },
+    "rating": {
+      "$comment": "1 is the worst, 5 is the best. The direction is normative, not a display convention.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "entityCategory": {
+      "type": "string",
+      "enum": [
+        "retail",
+        "food-and-drink",
+        "financial-services",
+        "telecom",
+        "utilities",
+        "transport",
+        "travel-and-lodging",
+        "health",
+        "education",
+        "government",
+        "real-estate",
+        "professional-services",
+        "entertainment",
+        "technology",
+        "manufacturing",
+        "nonprofit",
+        "other"
+      ]
+    },
+    "moderationReason": {
+      "$comment": "Shared by moderation.label_created and moderation.report_created.",
+      "type": "string",
+      "enum": [
+        "spam",
+        "off-topic",
+        "illegal",
+        "personal-data",
+        "impersonation",
+        "harassment",
+        "other"
+      ]
+    },
+    "entityDescriptor": {
+      "$comment": "Hashed to produce an entity: identifier. Fixed shape; adding a field would change every derived id.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/singleLineText",
+          "maxLength": 120,
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "business",
+            "place",
+            "product",
+            "service",
+            "other"
+          ]
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$"
+        },
+        "locality": {
+          "$ref": "#/$defs/singleLineText",
+          "maxLength": 120,
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "country"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

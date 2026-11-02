@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/profile.updated.schema.json",
+  "title": "Payload — profile.updated",
+  "$comment": "Total replacement: an omitted field is cleared. No avatar and no links — an unverified link field on a public profile is a phishing surface that costs nothing to omit. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "displayName": {
+      "$ref": "../common.schema.json#/$defs/singleLineText",
+      "maxLength": 60,
+      "type": "string"
+    },
+    "bio": {
+      "$ref": "../common.schema.json#/$defs/multiLineText",
+      "maxLength": 500,
+      "type": "string"
+    },
+    "lang": {
+      "$ref": "../common.schema.json#/$defs/langTag"
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [],
+  "additionalProperties": true
+}

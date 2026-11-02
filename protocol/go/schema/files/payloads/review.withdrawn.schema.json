@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/review.withdrawn.schema.json",
+  "title": "Payload — review.withdrawn",
+  "$comment": "Withdraws the whole chain, whichever link it targets. `reason` is an enum, not free text: this is the one event whose purpose is to retract content, so it must not itself carry permanent user text. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$ref": "../common.schema.json#/$defs/eventId"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "mistake",
+        "resolved",
+        "duplicate",
+        "privacy",
+        "other"
+      ]
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "target"
+  ],
+  "additionalProperties": true
+}

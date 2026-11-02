@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/verification.claim_created.schema.json",
+  "title": "Payload — verification.claim_created",
+  "$comment": "Signed by a verifier for delegated types, by the subject itself for self-verifiable ones. Publishing grants nothing — authority lives in whether a consumer recognizes the signer. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "claimType": {
+      "type": "string",
+      "enum": [
+        "domain",
+        "cnpj",
+        "email",
+        "human",
+        "purchase"
+      ]
+    },
+    "subject": {
+      "$ref": "../common.schema.json#/$defs/did"
+    },
+    "entity": {
+      "$ref": "../common.schema.json#/$defs/entityId"
+    },
+    "evidenceRef": {
+      "$ref": "../common.schema.json#/$defs/singleLineText",
+      "maxLength": 200,
+      "type": "string"
+    },
+    "expiresAt": {
+      "$ref": "../common.schema.json#/$defs/timestamp"
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "claimType",
+    "subject",
+    "expiresAt"
+  ],
+  "additionalProperties": true,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "claimType": {
+            "enum": [
+              "domain",
+              "cnpj"
+            ]
+          }
+        },
+        "required": [
+          "claimType"
+        ]
+      },
+      "then": {
+        "required": [
+          "entity"
+        ],
+        "properties": {
+          "entity": {
+            "$ref": "../common.schema.json#/$defs/entityId"
+          }
+        },
+        "$comment": "A claim grants authority over the identifier it names, and nothing else."
+      },
+      "else": {
+        "properties": {
+          "entity": false
+        },
+        "$comment": "email, human and purchase are about a subject, not about an entity."
+      }
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/envelope.schema.json",
+  "title": "Ecoa Network — event envelope",
+  "$comment": "The envelope is a CLOSED set: additionalProperties is false on purpose. A node that dropped an unknown field would compute a different digest than one that kept it, and the two would disagree about whether a valid event is valid. See docs/protocol.md.",
+
+  "type": "object",
+  "properties": {
+    "protocol": {
+      "type": "string",
+      "$comment": "Names the network, not just the protocol. `ecoa` is the main network; anything else is `ecoa-<name>`. Inside the signed bytes, so a test-network event is never valid in production.",
+      "pattern": "^ecoa(-[a-z0-9]([a-z0-9-]*[a-z0-9])?)?$"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "eventId": {
+      "$ref": "common.schema.json#/$defs/eventId"
+    },
+    "author": {
+      "$comment": "The identity. Every \"same author\" comparison in the protocol is against this field, never against the key that signed.",
+      "$ref": "common.schema.json#/$defs/did"
+    },
+    "deviceKey": {
+      "$comment": "Required but nullable, never omitted: under JCS a null-valued key and an absent key hash differently.",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "common.schema.json#/$defs/did" }
+      ]
+    },
+    "eventType": {
+      "type": "string",
+      "$comment": "namespace.verb, with digits allowed after the dot, as in review.created_v2. An unrecognized value is structurally valid and still relayed; it just skips the type-specific checks.",
+      "pattern": "^[a-z]+\\.[a-z0-9_]+$"
+    },
+    "createdAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "signature": {
+      "$ref": "common.schema.json#/$defs/signature"
+    }
+  },
+  "required": ["protocol", "version", "eventId", "author", "deviceKey", "eventType", "createdAt", "payload", "signature"],
+  "additionalProperties": false
+}

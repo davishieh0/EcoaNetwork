@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/entity.alias_proposed.schema.json",
+  "title": "Payload — entity.alias_proposed",
+  "$comment": "Asserts two identifiers name the same thing. The lexicographically smaller identifier goes in `entity`; without that rule the same pair yields two events nothing can deduplicate. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "entity": {
+      "$ref": "../common.schema.json#/$defs/entityId"
+    },
+    "alias": {
+      "$ref": "../common.schema.json#/$defs/entityId"
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "entity",
+    "alias"
+  ],
+  "additionalProperties": true
+}

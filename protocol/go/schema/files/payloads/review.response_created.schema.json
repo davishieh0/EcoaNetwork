@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/review.response_created.schema.json",
+  "title": "Payload — review.response_created",
+  "$comment": "`target` may be a review or another response. A response is a new statement by its own author, so there is no authorship restriction. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$ref": "../common.schema.json#/$defs/eventId"
+    },
+    "body": {
+      "$ref": "../common.schema.json#/$defs/multiLineText",
+      "maxLength": 5000,
+      "type": "string"
+    },
+    "lang": {
+      "$ref": "../common.schema.json#/$defs/langTag"
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "target",
+    "body"
+  ],
+  "additionalProperties": true
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ecoa.network/schemas/payloads/review.disputed.schema.json",
+  "title": "Payload — review.disputed",
+  "$comment": "Binds to the exact eventId it targets: a vote does not follow an edit. Only a review or a response is a meaningful target; anything else is stored and ignored at projection. additionalProperties is true by design: the versioning rules require that a new optional field survives a node that cannot interpret it, preserved byte-exactly for the digest. Every envelope field name is forbidden here (set to false): the convention that a payload never duplicates the envelope is enforced by the schema, not left to prose.",
+  "type": "object",
+  "properties": {
+    "target": {
+      "$ref": "../common.schema.json#/$defs/eventId"
+    },
+    "reason": {
+      "$ref": "../common.schema.json#/$defs/multiLineText",
+      "maxLength": 280,
+      "type": "string"
+    },
+    "protocol": false,
+    "version": false,
+    "eventId": false,
+    "author": false,
+    "deviceKey": false,
+    "eventType": false,
+    "createdAt": false,
+    "signature": false
+  },
+  "required": [
+    "target"
+  ],
+  "additionalProperties": true
+}
