@@ -13,15 +13,13 @@ import (
 )
 
 
-// --- GLOBALS ---
+// --- CODE ---
 
 type Node struct {
 	store *store.Store
 	peer  *p2p.Peer
 }
 
-
-// --- CODE ---
 
 func New(ctx context.Context, s *store.Store, cfg p2p.Config) (*Node, error) {
 	p, err := p2p.New(ctx, cfg)

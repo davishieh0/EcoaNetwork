@@ -13,7 +13,7 @@ import (
 )
 
 
-// --- GLOBALS ---
+// --- CONSTANTS ---
 
 // loopback lets the kernel pick a free port, so tests never collide.
 const loopback = "/ip4/127.0.0.1/tcp/0"
@@ -25,14 +25,14 @@ const deadEnd = "/ip4/127.0.0.1/tcp/1/p2p/" +
 	"12D3KooWL8WucnuP3YZ7yh2E8bNggmBsqhGs4PxXrxTZaEF7DH1j"
 
 
+// --- CODE ---
+
 // safeBuffer collects log output written from another goroutine.
 type safeBuffer struct {
 	mu  sync.Mutex
 	buf bytes.Buffer
 }
 
-
-// --- CODE ---
 
 func (b *safeBuffer) Write(p []byte) (int, error) {
 	b.mu.Lock()

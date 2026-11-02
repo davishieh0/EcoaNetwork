@@ -14,11 +14,13 @@ import (
 )
 
 
-// --- GLOBALS ---
+// --- CONSTANTS ---
 
 // MaxMessage is the 16 KB envelope ceiling plus its protobuf field header.
 const MaxMessage = 16<<10 + 8
 
+
+// --- CODE ---
 
 // Server answers Publish by handing the envelope to the node.
 type Server struct {
@@ -29,8 +31,6 @@ type Server struct {
 	node *node.Node
 }
 
-
-// --- CODE ---
 
 // New returns a gRPC server with the node service registered on it.
 func New(ctx context.Context, n *node.Node) *grpc.Server {

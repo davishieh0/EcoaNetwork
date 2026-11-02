@@ -16,10 +16,6 @@ import (
 )
 
 
-// --- GLOBALS ---
-
-
-
 // --- CODE ---
 
 func main() {

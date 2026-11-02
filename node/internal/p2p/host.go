@@ -19,6 +19,8 @@ import (
 var DefaultBootstrapAddrs []string
 
 
+// --- CODE ---
+
 // Config is what the node needs to join the network.
 type Config struct {
 	// Network is the network name, such as "ecoa-dev". It names the topic.
@@ -39,8 +41,6 @@ type Peer struct {
 	sub   *pubsub.Subscription
 }
 
-
-// --- CODE ---
 
 // New builds the peer: host, bootstrap connections, Gossipsub and the
 // subscription. It does not start receiving events; call Run for that.

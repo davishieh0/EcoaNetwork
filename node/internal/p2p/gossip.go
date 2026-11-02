@@ -10,7 +10,7 @@ import (
 )
 
 
-// --- GLOBALS ---
+// --- CONSTANTS ---
 
 // pollInterval is how often WaitForPeers rechecks the topic.
 const pollInterval = 50 * time.Millisecond

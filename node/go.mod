@@ -3,11 +3,9 @@ module github.com/eduardokairalla1/EcoaNetwork
 go 1.26.5
 
 require (
-	github.com/gowebpki/jcs v1.0.2
-	github.com/hdevalence/ed25519consensus v0.2.0
+	github.com/eduardokairalla1/EcoaNetwork/protocol/go v0.0.0
 	github.com/libp2p/go-libp2p v0.50.0
 	github.com/libp2p/go-libp2p-pubsub v0.17.0
-	github.com/mr-tron/base58 v1.3.0
 	go.etcd.io/bbolt v1.5.0
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
@@ -45,6 +43,7 @@ require (
 	github.com/mikioh/tcpinfo v0.0.0-20190314235526-30a79bb1804b // indirect
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
+	github.com/mr-tron/base58 v1.3.0 // indirect
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
 	github.com/multiformats/go-multiaddr v0.16.1 // indirect
@@ -101,3 +100,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
 	lukechampine.com/blake3 v1.4.1 // indirect
 )
+
+replace github.com/eduardokairalla1/EcoaNetwork/protocol/go => ../protocol/go
