@@ -24,6 +24,10 @@ const createdAtLayout = "2006-01-02T15:04:05Z"
 const MaxSize = 16 << 10
 
 
+// supportedVersion is the only envelope version v1 implements.
+const supportedVersion = 1
+
+
 // maxDepth is the nesting cap of the protocol.
 const maxDepth = 32
 
@@ -80,6 +84,16 @@ type Envelope struct {
 	CreatedAt string
 	Payload   json.RawMessage
 	Signature string
+}
+
+
+// header is the protocol and version of raw, nil where Decode reports.
+type header struct {
+	// Protocol is nil when absent or not a string
+	Protocol *string
+
+	// Version is nil when absent or not an integer
+	Version *int
 }
 
 
@@ -268,6 +282,62 @@ func checkSize(raw []byte, limit int) error {
 
 	if len(raw) > limit {
 		return &TooLargeError{Size: len(raw), Limit: limit}
+	}
+
+	return nil
+}
+
+
+// readHeader reads protocol and version, under their exact keys.
+func readHeader(raw []byte) (header, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return header{}, &MalformedJSONError{Detail: err.Error()}
+	}
+
+	return header{
+		Protocol: headerProtocol(fields["protocol"]),
+		Version:  headerVersion(fields["version"]),
+	}, nil
+}
+
+
+// headerProtocol returns raw when it is a string, or else nil.
+func headerProtocol(raw json.RawMessage) *string {
+	var protocol *string
+	if err := json.Unmarshal(raw, &protocol); err != nil {
+		return nil
+	}
+
+	return protocol
+}
+
+
+// headerVersion returns raw when it is an integer of the protocol, or else nil.
+func headerVersion(raw json.RawMessage) *int {
+	version, err := strconv.Atoi(string(raw))
+	if err != nil || checkNumber(json.Number(raw)) != nil {
+		return nil
+	}
+
+	return &version
+}
+
+
+// checkNetwork rejects a protocol that is not this network.
+func checkNetwork(protocol *string, network string) error {
+	if protocol != nil && *protocol != network {
+		return &OtherNetworkError{Protocol: *protocol}
+	}
+
+	return nil
+}
+
+
+// checkVersion rejects a version this implementation does not support.
+func checkVersion(version *int) error {
+	if version != nil && *version != supportedVersion {
+		return &OtherNetworkError{Version: version}
 	}
 
 	return nil

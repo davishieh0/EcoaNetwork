@@ -40,6 +40,9 @@ var (
 	// tooLarge tells whether an error is a TooLargeError
 	tooLarge = is[*TooLargeError]
 
+	// otherNetwork tells whether an error is an OtherNetworkError
+	otherNetwork = is[*OtherNetworkError]
+
 	// malformed tells whether an error is a MalformedJSONError
 	malformed = is[*MalformedJSONError]
 
@@ -396,6 +399,152 @@ func TestCheckSize(t *testing.T) {
 				t.Fatalf("checkSize = %v, want another error", err)
 			}
 		})
+	}
+}
+
+
+func TestReadHeader(t *testing.T) {
+	// Arrange
+	raw := []byte(`{"version":1,"protocol":"ecoa-dev","payload":{"x":[[1]]}}`)
+
+	// Act
+	header, err := readHeader(raw)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("readHeader: %v", err)
+	}
+
+	if *header.Protocol != "ecoa-dev" || *header.Version != 1 {
+		t.Fatalf("readHeader = %q, %d", *header.Protocol, *header.Version)
+	}
+}
+
+
+func TestReadHeaderLeavesToDecodeWhatItCannotCompare(t *testing.T) {
+	cases := []struct {
+		name         string
+		raw          string
+		wantProtocol bool
+		wantVersion  bool
+	}{
+		{"protocol absent", `{"version":1}`, false, true},
+		{"protocol not text", `{"protocol":1,"version":1}`, false, true},
+		{"protocol null", `{"protocol":null,"version":1}`, false, true},
+		{"protocol in capitals", `{"PROTOCOL":"e","version":1}`, false, true},
+		{"version absent", `{"protocol":"e"}`, true, false},
+		{"version in capitals", `{"protocol":"e","VERSION":1}`, true, false},
+		{"version text", `{"protocol":"e","version":"1"}`, true, false},
+		{"version null", `{"protocol":"e","version":null}`, true, false},
+		{"version fraction", `{"protocol":"e","version":1.5}`, true, false},
+		{"version 1.0", `{"protocol":"e","version":1.0}`, true, false},
+		{"version -0", `{"protocol":"e","version":-0}`, true, false},
+		{
+			"version past the safe range",
+			`{"protocol":"e","version":9007199254740992}`, true, false,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			raw := []byte(c.raw)
+
+			// Act
+			header, err := readHeader(raw)
+
+			// Assert
+			if err != nil {
+				t.Fatalf("readHeader: %v", err)
+			}
+
+			if (header.Protocol != nil) != c.wantProtocol {
+				t.Fatalf("Protocol = %v", header.Protocol)
+			}
+
+			if (header.Version != nil) != c.wantVersion {
+				t.Fatalf("Version = %v", header.Version)
+			}
+		})
+	}
+}
+
+
+func TestReadHeaderRejects(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  string
+		want func(error) bool
+	}{
+		{"not json", `not json`, malformed},
+		{"not an object", `[]`, malformed},
+		{"byte order mark", "\xef\xbb\xbf{}", malformed},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			raw := []byte(c.raw)
+
+			// Act
+			_, err := readHeader(raw)
+
+			// Assert
+			if !matches(err, c.want) {
+				t.Fatalf("readHeader = %v, want another error", err)
+			}
+		})
+	}
+}
+
+
+func TestCheckNetwork(t *testing.T) {
+	// Arrange
+	network := "ecoa-dev"
+	mine, theirs, sameLength := "ecoa-dev", "ecoa-testnet", "ecoa-foo"
+
+	// Act
+	same := checkNetwork(&mine, network)
+	other := checkNetwork(&theirs, network)
+	close := checkNetwork(&sameLength, network)
+	unread := checkNetwork(nil, network)
+
+	// Assert
+	if same != nil || unread != nil {
+		t.Fatalf("same network: %v, unread: %v", same, unread)
+	}
+
+	if !otherNetwork(other) {
+		t.Fatalf("other network = %v, want otherNetwork", other)
+	}
+
+	if !otherNetwork(close) {
+		t.Fatalf("same length = %v, want otherNetwork", close)
+	}
+}
+
+
+func TestCheckVersion(t *testing.T) {
+	// Arrange
+	supported, later, earlier := 1, 2, 0
+
+	// Act
+	current := checkVersion(&supported)
+	next := checkVersion(&later)
+	before := checkVersion(&earlier)
+	unread := checkVersion(nil)
+
+	// Assert
+	if current != nil || unread != nil {
+		t.Fatalf("version 1: %v, unread: %v", current, unread)
+	}
+
+	if !otherNetwork(next) {
+		t.Fatalf("version 2 = %v, want otherNetwork", next)
+	}
+
+	if !otherNetwork(before) {
+		t.Fatalf("version 0 = %v, want otherNetwork", before)
 	}
 }
 

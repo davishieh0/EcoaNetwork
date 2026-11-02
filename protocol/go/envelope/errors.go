@@ -37,6 +37,13 @@ type TooLargeError struct {
 }
 
 
+// OtherNetworkError is an event of another network or an unknown version.
+type OtherNetworkError struct {
+	Protocol string
+	Version  *int
+}
+
+
 // MalformedJSONError is input that is not one well-formed JSON object.
 type MalformedJSONError struct {
 	Detail string
@@ -75,6 +82,16 @@ type FieldError struct {
 // Error returns the size and the limit.
 func (e *TooLargeError) Error() string {
 	return fmt.Sprintf("envelope: %d bytes, limit %d", e.Size, e.Limit)
+}
+
+
+// Error returns the network or the version the event names.
+func (e *OtherNetworkError) Error() string {
+	if e.Version != nil {
+		return fmt.Sprintf("envelope: unsupported version %d", *e.Version)
+	}
+
+	return fmt.Sprintf("envelope: event from network %q", e.Protocol)
 }
 
 
