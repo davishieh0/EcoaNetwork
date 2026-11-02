@@ -23,7 +23,7 @@ func main() {
 	// The composition root installs the default logger.
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	if err := run(); err != nil {
+	if err := run(os.Args[1:]); err != nil {
 		slog.Error("start", "err", err)
 		os.Exit(1)
 	}
@@ -31,7 +31,13 @@ func main() {
 
 
 // run starts the node and holds until an interrupt ends it.
-func run() error {
+func run(args []string) error {
+	if len(args) > 0 {
+		return fmt.Errorf("unexpected arguments %q: "+
+		                  "the node is configured by environment variables",
+		                  args)
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
