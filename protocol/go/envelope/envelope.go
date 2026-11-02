@@ -28,6 +28,10 @@ const MaxSize = 16 << 10
 const supportedVersion = 1
 
 
+// maxClockSkew is how far ahead of the local clock createdAt may be.
+const maxClockSkew = 5 * time.Minute
+
+
 // maxDepth is the nesting cap of the protocol.
 const maxDepth = 32
 
@@ -338,6 +342,21 @@ func checkNetwork(protocol *string, network string) error {
 func checkVersion(version *int) error {
 	if version != nil && *version != supportedVersion {
 		return &OtherNetworkError{Version: version}
+	}
+
+	return nil
+}
+
+
+// checkCreatedAt rejects a createdAt more than 5 minutes ahead of now.
+func checkCreatedAt(createdAt string, now time.Time) error {
+	at, err := time.Parse(createdAtLayout, createdAt)
+	if err != nil {
+		return &FieldError{Field: "createdAt", Fault: FieldBreaksItsRule}
+	}
+
+	if at.After(now.Add(maxClockSkew)) {
+		return &FutureCreatedAtError{CreatedAt: createdAt}
 	}
 
 	return nil

@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 
@@ -63,6 +64,9 @@ var (
 
 	// badField tells whether an error is a FieldError of that fault
 	badField = isField(FieldBreaksItsRule)
+
+	// futureCreatedAt tells whether an error is a FutureCreatedAtError
+	futureCreatedAt = is[*FutureCreatedAtError]
 )
 
 
@@ -545,6 +549,39 @@ func TestCheckVersion(t *testing.T) {
 
 	if !otherNetwork(before) {
 		t.Fatalf("version 0 = %v, want otherNetwork", before)
+	}
+}
+
+
+func TestCheckCreatedAt(t *testing.T) {
+	now := time.Date(2026, 8, 5, 17, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		name      string
+		createdAt string
+		want      func(error) bool
+	}{
+		{"now", "2026-08-05T17:00:00Z", nil},
+		{"five minutes ahead", "2026-08-05T17:05:00Z", nil},
+		{"five minutes and a second", "2026-08-05T17:05:01Z",
+			futureCreatedAt},
+		{"years ago", "2020-01-01T00:00:00Z", nil},
+		{"not a date", "yesterday", badField},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			createdAt := c.createdAt
+
+			// Act
+			err := checkCreatedAt(createdAt, now)
+
+			// Assert
+			if !matches(err, c.want) {
+				t.Fatalf("checkCreatedAt = %v, want another error", err)
+			}
+		})
 	}
 }
 

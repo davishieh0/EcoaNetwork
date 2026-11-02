@@ -79,6 +79,12 @@ type FieldError struct {
 }
 
 
+// FutureCreatedAtError is a createdAt too far ahead of the local clock.
+type FutureCreatedAtError struct {
+	CreatedAt string
+}
+
+
 // Error returns the size and the limit.
 func (e *TooLargeError) Error() string {
 	return fmt.Sprintf("envelope: %d bytes, limit %d", e.Size, e.Limit)
@@ -124,4 +130,10 @@ func (e *FieldError) Error() string {
 	fault := faultTexts[e.Fault]
 
 	return fmt.Sprintf("envelope: %s field %q", fault, e.Field)
+}
+
+
+// Error returns the declared createdAt.
+func (e *FutureCreatedAtError) Error() string {
+	return "envelope: createdAt too far in the future: " + e.CreatedAt
 }
