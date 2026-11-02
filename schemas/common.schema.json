@@ -61,16 +61,16 @@
       "maxLength": 35
     },
     "singleLineText": {
-      "$comment": "Trimmed, non-empty, no control characters at all.",
+      "$comment": "Trimmed of Unicode White_Space, listed explicitly so every regex engine agrees; non-empty, no control characters at all, C1 included.",
       "type": "string",
       "minLength": 1,
-      "pattern": "^[^\\s\\x00-\\x1F\\x7F](?:[^\\x00-\\x1F\\x7F]*[^\\s\\x00-\\x1F\\x7F])?$"
+      "pattern": "^[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F](?:[^\\x00-\\x1F\\x7F-\\x9F]*[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F])?$"
     },
     "multiLineText": {
-      "$comment": "Trimmed, non-empty, no control characters except newline (\\x0A), which review bodies legitimately contain.",
+      "$comment": "Trimmed of Unicode White_Space, listed explicitly so every regex engine agrees; non-empty, no control characters, C1 included, except newline (\\x0A), which review bodies legitimately contain.",
       "type": "string",
       "minLength": 1,
-      "pattern": "^[^\\s\\x00-\\x1F\\x7F](?:[^\\x00-\\x09\\x0B-\\x1F\\x7F]*[^\\s\\x00-\\x1F\\x7F])?$"
+      "pattern": "^[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F](?:[^\\x00-\\x09\\x0B-\\x1F\\x7F-\\x9F]*[^ \u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\\x00-\\x1F\\x7F-\\x9F])?$"
     },
     "rating": {
       "$comment": "1 is the worst, 5 is the best. The direction is normative, not a display convention.",
