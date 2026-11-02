@@ -1,0 +1,1476 @@
+{
+  "source": [
+    {
+      "name": "ed25519consensus",
+      "url": "https://raw.githubusercontent.com/hdevalence/ed25519consensus/v0.2.0/zip215_test.go",
+      "revision": "v0.2.0",
+      "sha256": "7008831b7a73cd5143e5f26d5db28a508c679e6a87f799104241c9ff44c834bd",
+      "note": "Message is the bytes \"Zcash\"; every case is accepted by the source's own test."
+    },
+    {
+      "name": "ed25519-speccheck",
+      "url": "https://raw.githubusercontent.com/novifinancial/ed25519-speccheck/65519336fda78a3d016e947df6d82848aca0c9da/cases.json",
+      "revision": "65519336fda78a3d016e947df6d82848aca0c9da",
+      "sha256": "08e47a36d9aead288664930505584f353fff113ab854f2800db1e4f5b3540450",
+      "note": "The source has no ZIP-215 column; the verdicts of these 12 were taken from the reference implementation, ed25519consensus.Verify v0.2.0."
+    }
+  ],
+  "cases": [
+    {
+      "name": "ed25519consensus-000",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-001",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-002",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-003",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-004",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-005",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-006",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-007",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-008",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-009",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-010",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-011",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-012",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-013",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-014",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-015",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-016",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-017",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-018",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-019",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-020",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-021",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-022",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-023",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-024",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-025",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-026",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-027",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-028",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-029",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-030",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-031",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-032",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-033",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-034",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-035",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-036",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-037",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-038",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-039",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-040",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-041",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-042",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-043",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-044",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-045",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-046",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-047",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-048",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-049",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-050",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-051",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-052",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-053",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-054",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-055",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc05",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-056",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-057",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-058",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-059",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-060",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-061",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-062",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-063",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-064",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-065",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-066",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-067",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-068",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-069",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-070",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-071",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-072",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-073",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-074",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-075",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-076",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-077",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-078",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-079",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-080",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-081",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-082",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-083",
+      "publicKey": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc85",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-084",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-085",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-086",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-087",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-088",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-089",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-090",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-091",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-092",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-093",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-094",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-095",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-096",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-097",
+      "publicKey": "0000000000000000000000000000000000000000000000000000000000000000",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-098",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-099",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-100",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-101",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-102",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-103",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-104",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-105",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-106",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-107",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-108",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-109",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-110",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-111",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-112",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-113",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-114",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-115",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-116",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-117",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-118",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-119",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-120",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-121",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-122",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-123",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-124",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-125",
+      "publicKey": "0100000000000000000000000000000000000000000000000000000000000080",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-126",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-127",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-128",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-129",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-130",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-131",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-132",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-133",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-134",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-135",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-136",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-137",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-138",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-139",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-140",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-141",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-142",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-143",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-144",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-145",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-146",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-147",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-148",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-149",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-150",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-151",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-152",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-153",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-154",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-155",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-156",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-157",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-158",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-159",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-160",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-161",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-162",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-163",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-164",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-165",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-166",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-167",
+      "publicKey": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-168",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-169",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-170",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-171",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-172",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-173",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-174",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-175",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-176",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-177",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-178",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-179",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-180",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-181",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-182",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-183",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-184",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-185",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc050000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-186",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-187",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "26e8958fc2b227b045c3f489f2ef98f0d5dfac05d3c63339b13802886d53fc850000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-188",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-189",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-190",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "01000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-191",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-192",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-193",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "edffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-194",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "ed25519consensus-195",
+      "publicKey": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "5a63617368",
+      "signature": "eeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-00",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "8c93255d71dcab10e8f379c26200f3c7bd5f09d9bc3068d3ef4edeb4853022b6",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac037a0000000000000000000000000000000000000000000000000000000000000000",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-01",
+      "publicKey": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa",
+      "message": "9bd9f44f4dcc75bd531b56b2cd280b0bb38fc1cd6d1230e14861d861de092e79",
+      "signature": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43a5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-02",
+      "publicKey": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+      "message": "aebf3f2601a0c8c5d39cc7d8911642f740b78168218da8471772b35f9d35b9ab",
+      "signature": "c7176a703d4dd84fba3c0b760d10670f2a2053fa2c39ccc64ec7fd7792ac03fa8c4bd45aecaca5b24fb97bc10ac27ac8751a7dfe1baff8b953ec9f5833ca260e",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-03",
+      "publicKey": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+      "message": "9bd9f44f4dcc75bd531b56b2cd280b0bb38fc1cd6d1230e14861d861de092e79",
+      "signature": "9046a64750444938de19f227bb80485e92b83fdb4b6506c160484c016cc1852f87909e14428a7a1d62e9f22f3d3ad7802db02eb2e688b6c52fcd6648a98bd009",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-04",
+      "publicKey": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+      "message": "e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec4011eaccd55b53f56c",
+      "signature": "160a1cb0dc9c0258cd0a7d23e94d8fa878bcb1925f2c64246b2dee1796bed5125ec6bc982a269b723e0668e540911a9a6a58921d6925e434ab10aa7940551a09",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-05",
+      "publicKey": "cdb267ce40c5cd45306fa5d2f29731459387dbf9eb933b7bd5aed9a765b88d4d",
+      "message": "e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec4011eaccd55b53f56c",
+      "signature": "21122a84e0b5fca4052f5b1235c80a537878b38f3142356b2c2384ebad4668b7e40bc836dac0f71076f9abe3a53f9c03c1ceeeddb658d0030494ace586687405",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-06",
+      "publicKey": "442aad9f089ad9e14647b1ef9099a1ff4798d78589e66f28eca69c11f582a623",
+      "message": "85e241a07d148b41e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec40",
+      "signature": "e96f66be976d82e60150baecff9906684aebb1ef181f67a7189ac78ea23b6c0e547f7690a0e2ddcd04d87dbc3490dc19b3b3052f7ff0538cb68afb369ba3a514",
+      "expect": "reject"
+    },
+    {
+      "name": "speccheck-07",
+      "publicKey": "442aad9f089ad9e14647b1ef9099a1ff4798d78589e66f28eca69c11f582a623",
+      "message": "85e241a07d148b41e47d62c63f830dc7a6851a0b1f33ae4bb2f507fb6cffec40",
+      "signature": "8ce5b96c8f26d0ab6c47958c9e68b937104cd36e13c33566acd2fe8d38aa19427e71f98a473474f2f13f06f97c20d58cc3f54b8bd0d272f42b695dd7e89a8c22",
+      "expect": "reject"
+    },
+    {
+      "name": "speccheck-08",
+      "publicKey": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+      "message": "9bedc267423725d473888631ebf45988bad3db83851ee85c85e241a07d148b41",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff03be9678ac102edcd92b0210bb34d7428d12ffc5df5f37e359941266a4e35f0f",
+      "expect": "reject"
+    },
+    {
+      "name": "speccheck-09",
+      "publicKey": "f7badec5b8abeaf699583992219b7b223f1df3fbbea919844e3f7c554a43dd43",
+      "message": "9bedc267423725d473888631ebf45988bad3db83851ee85c85e241a07d148b41",
+      "signature": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffca8c5b64cd208982aa38d4936621a4775aa233aa0505711d8fdcfdaa943d4908",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-10",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "e96b7021eb39c1a163b6da4e3093dcd3f21387da4cc4572be588fafae23c155b",
+      "signature": "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dca5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04",
+      "expect": "accept"
+    },
+    {
+      "name": "speccheck-11",
+      "publicKey": "ecffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "message": "39a591f5321bbe07fd5a23dc2f39d025d74526615746727ceefd6e82ae65c06f",
+      "signature": "a9d55260f765261eb9b84e106f665e00b867287a761990d7135963ee0a7d59dca5bb704786be79fc476f91d3f3f89b03984d8068dcf1bb7dfc6637b45450ac04",
+      "expect": "accept"
+    }
+  ]
+}
