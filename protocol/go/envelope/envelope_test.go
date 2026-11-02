@@ -37,6 +37,9 @@ const signature86 = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
 // --- GLOBALS ---
 
 var (
+	// tooLarge tells whether an error is a TooLargeError
+	tooLarge = is[*TooLargeError]
+
 	// malformed tells whether an error is a MalformedJSONError
 	malformed = is[*MalformedJSONError]
 
@@ -347,6 +350,50 @@ func TestDecodeRejectsWhatIsNotAnObject(t *testing.T) {
 			// Assert
 			if err == nil {
 				t.Fatal("Decode accepted it")
+			}
+		})
+	}
+}
+
+
+func TestMaxSizeIsSixteenKibibytes(t *testing.T) {
+	// Arrange
+	want := 16384
+
+	// Act
+	got := MaxSize
+
+	// Assert
+	if got != want {
+		t.Fatalf("MaxSize = %d, want %d", got, want)
+	}
+}
+
+
+func TestCheckSize(t *testing.T) {
+	cases := []struct {
+		name  string
+		size  int
+		limit int
+		want  func(error) bool
+	}{
+		{"exactly 16 KB", MaxSize, MaxSize, nil},
+		{"16 KB plus one", MaxSize + 1, MaxSize, tooLarge},
+		{"stricter node limit", 4097, 4096, tooLarge},
+		{"limit above the ceiling", MaxSize + 1, MaxSize * 2, tooLarge},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			raw := make([]byte, c.size)
+
+			// Act
+			err := checkSize(raw, c.limit)
+
+			// Assert
+			if !matches(err, c.want) {
+				t.Fatalf("checkSize = %v, want another error", err)
 			}
 		})
 	}

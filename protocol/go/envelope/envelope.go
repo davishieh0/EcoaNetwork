@@ -20,6 +20,10 @@ import (
 const createdAtLayout = "2006-01-02T15:04:05Z"
 
 
+// MaxSize is the 16 KB protocol ceiling, in bytes.
+const MaxSize = 16 << 10
+
+
 // maxDepth is the nesting cap of the protocol.
 const maxDepth = 32
 
@@ -252,6 +256,20 @@ func readPayload(raw json.RawMessage, env *Envelope) error {
 	}
 
 	env.Payload = raw
+	return nil
+}
+
+
+// checkSize rejects raw above limit, which never exceeds the protocol ceiling.
+func checkSize(raw []byte, limit int) error {
+	if limit > MaxSize {
+		limit = MaxSize
+	}
+
+	if len(raw) > limit {
+		return &TooLargeError{Size: len(raw), Limit: limit}
+	}
+
 	return nil
 }
 

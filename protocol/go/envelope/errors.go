@@ -30,6 +30,13 @@ var faultTexts = map[FieldFault]string{
 
 // --- CODE ---
 
+// TooLargeError is an event above the size limit.
+type TooLargeError struct {
+	Size  int
+	Limit int
+}
+
+
 // MalformedJSONError is input that is not one well-formed JSON object.
 type MalformedJSONError struct {
 	Detail string
@@ -62,6 +69,12 @@ type FieldFault int
 type FieldError struct {
 	Field string
 	Fault FieldFault
+}
+
+
+// Error returns the size and the limit.
+func (e *TooLargeError) Error() string {
+	return fmt.Sprintf("envelope: %d bytes, limit %d", e.Size, e.Limit)
 }
 
 
