@@ -19,6 +19,9 @@ var (
 
 	// tooDeep tells whether an error is a TooDeepError
 	tooDeep = is[*TooDeepError]
+
+	// badNumber tells whether an error is an UnsafeNumberError
+	badNumber = is[*UnsafeNumberError]
 )
 
 
@@ -78,6 +81,22 @@ func TestCheckStructure(t *testing.T) {
 		{"trailing comma", `{"a":1,}`, malformed},
 		{"invalid UTF-8", "{\"a\":\"\xff\"}", malformed},
 		{"byte order mark", "\xef\xbb\xbf{\"a\":1}", malformed},
+		{"largest integer", `{"n":9007199254740991}`, nil},
+		{"smallest integer", `{"n":-9007199254740991}`, nil},
+		{"zero", `{"n":0}`, nil},
+		{"negative zero", `{"n":-0}`, badNumber},
+		{"integer past the top", `{"n":9007199254740992}`,
+			badNumber},
+		{"integer past the bottom", `{"n":-9007199254740992}`,
+			badNumber},
+		{"integer rounded by the canonicalizer", `{"n":9007199254740993}`,
+			badNumber},
+		{"integer past 64 bits", `{"n":99999999999999999999}`,
+			badNumber},
+		{"fraction", `{"n":1.5}`, badNumber},
+		{"integral fraction", `{"n":1.0}`, badNumber},
+		{"exponent", `{"n":1e2}`, badNumber},
+		{"deep in a payload", `{"p":{"q":[{"n":1.0}]}}`, badNumber},
 	}
 
 	for _, c := range cases {

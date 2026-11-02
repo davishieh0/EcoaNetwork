@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strconv"
 	"unicode/utf8"
 )
 
@@ -14,6 +15,10 @@ import (
 
 // maxDepth is the nesting cap of the protocol.
 const maxDepth = 32
+
+
+// maxInteger is the largest number magnitude the protocol accepts, 2^53-1.
+const maxInteger = 1<<53 - 1
 
 
 // --- CODE ---
@@ -94,6 +99,11 @@ func (w *walker) visit(token json.Token) error {
 
 	case string:
 		return w.text(t)
+
+	case json.Number:
+		if err := checkNumber(t); err != nil {
+			return err
+		}
 	}
 
 	w.valueDone()
@@ -152,4 +162,15 @@ func (w *walker) valueDone() {
 	if len(w.frames) > 0 && w.frames[len(w.frames)-1].isObject {
 		w.frames[len(w.frames)-1].expectKey = true
 	}
+}
+
+
+// checkNumber accepts only an integer spelling within the safe range.
+func checkNumber(n json.Number) error {
+	value, err := strconv.ParseInt(n.String(), 10, 64)
+	if err != nil || value > maxInteger || value < -maxInteger || n == "-0" {
+		return &UnsafeNumberError{Number: n.String()}
+	}
+
+	return nil
 }

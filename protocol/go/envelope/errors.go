@@ -24,6 +24,12 @@ type TooDeepError struct {
 }
 
 
+// UnsafeNumberError is a number that is not a safe integer.
+type UnsafeNumberError struct {
+	Number string
+}
+
+
 // Error returns where the input stops being JSON.
 func (e *MalformedJSONError) Error() string {
 	return "envelope: malformed JSON: " + e.Detail
@@ -39,4 +45,10 @@ func (e *DuplicateKeyError) Error() string {
 // Error returns the nesting limit.
 func (e *TooDeepError) Error() string {
 	return fmt.Sprintf("envelope: nesting deeper than %d", e.Limit)
+}
+
+
+// Error returns the number as written.
+func (e *UnsafeNumberError) Error() string {
+	return "envelope: number is not a safe integer: " + e.Number
 }
