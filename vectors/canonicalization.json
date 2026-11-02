@@ -1,0 +1,268 @@
+{
+  "cases": [
+    {
+      "name": "device-key-null",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MkfDmGCtpNCyEhZpem4tHcCmQ7HJPagguTuwEeJ19tbd8f",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 4,
+          "body": "ok"
+        },
+        "eventId": "evt_ld2sebgxyj4fjmppzm3vt5p352tun3llc3xxuujgmilhqwumozwa",
+        "signature": "LxaQ1Y6cLC3OTT37rT3WCUm3aDzSO5agqUeHPXWq7uC8Rl8GvPDJLcSo5zN1dkPexxEq6vXVCkQ436V6_XAABA"
+      },
+      "canonical": "{\"author\":\"did:key:z6MkfDmGCtpNCyEhZpem4tHcCmQ7HJPagguTuwEeJ19tbd8f\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"ok\",\"entity\":\"cnpj:12345678000199\",\"rating\":4},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b66446d474374704e437945685a70656d34744863436d5137484a506167677554757745654a31397462643866222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a226f6b222c22656e74697479223a22636e706a3a3132333435363738303030313939222c22726174696e67223a347d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_ld2sebgxyj4fjmppzm3vt5p352tun3llc3xxuujgmilhqwumozwa",
+      "signingKey": "11f5fe7e7cab0156ab44371ab4f18c00da83831462a5c82020169b1f420d6c2b",
+      "signature": "LxaQ1Y6cLC3OTT37rT3WCUm3aDzSO5agqUeHPXWq7uC8Rl8GvPDJLcSo5zN1dkPexxEq6vXVCkQ436V6_XAABA"
+    },
+    {
+      "name": "unknown-payload-field",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MkehBUAR2dp48KZUtbv524ZkAEoPNkkdvKbWLjtozoUWTz",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 4,
+          "body": "ok",
+          "futureField": "kept"
+        },
+        "eventId": "evt_h4vc5lfljzsilvfqey4adji3pq7o6heysxod2cwax6qnekwranwa",
+        "signature": "Q_4lzV-Gb8AUgefxzLIZ0wJeOO4YKkXbgUetlwoDJYKlyQQhrHvUBiFlySymRP-AFC2TTRPwA0Y289A4Zg9SAA"
+      },
+      "canonical": "{\"author\":\"did:key:z6MkehBUAR2dp48KZUtbv524ZkAEoPNkkdvKbWLjtozoUWTz\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"ok\",\"entity\":\"cnpj:12345678000199\",\"futureField\":\"kept\",\"rating\":4},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b65684255415232647034384b5a557462763532345a6b41456f504e6b6b64764b62574c6a746f7a6f5557547a222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a226f6b222c22656e74697479223a22636e706a3a3132333435363738303030313939222c226675747572654669656c64223a226b657074222c22726174696e67223a347d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_h4vc5lfljzsilvfqey4adji3pq7o6heysxod2cwax6qnekwranwa",
+      "signingKey": "fd6bcdf215b820b90d6e79363530e493c6ac6b41a65d56a4399ddb3713d7c350",
+      "signature": "Q_4lzV-Gb8AUgefxzLIZ0wJeOO4YKkXbgUetlwoDJYKlyQQhrHvUBiFlySymRP-AFC2TTRPwA0Y289A4Zg9SAA"
+    },
+    {
+      "name": "non-ascii-nfc",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6Mkoc77zyn6DsZVMXBmiqiTr16RJB5jdytBuaNFApbLh9UV",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 5,
+          "body": "Ótimo, açaí 😀"
+        },
+        "eventId": "evt_i5vclmulceg6ysjzbzczdpzepntlxewdzbrzvm2yurzygnh2inda",
+        "signature": "XvnAcyG18Lmz0ySfA-BsaUoVzW3vBpG1OyIKbaJZ_fsKSnA-N29iZ8mzY9oa2pYF9ZgrnOBBxS9y2_RScDLKDg"
+      },
+      "canonical": "{\"author\":\"did:key:z6Mkoc77zyn6DsZVMXBmiqiTr16RJB5jdytBuaNFApbLh9UV\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"Ótimo, açaí 😀\",\"entity\":\"cnpj:12345678000199\",\"rating\":5},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b6f6337377a796e3644735a564d58426d69716954723136524a42356a6479744275614e464170624c68395556222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a22c39374696d6f2c2061c3a761c3ad20f09f9880222c22656e74697479223a22636e706a3a3132333435363738303030313939222c22726174696e67223a357d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_i5vclmulceg6ysjzbzczdpzepntlxewdzbrzvm2yurzygnh2inda",
+      "signingKey": "c2684ecd6df1b2b1a5a5add61b8d42b13887a8c3e2d63b8c7e9c0852ace50871",
+      "signature": "XvnAcyG18Lmz0ySfA-BsaUoVzW3vBpG1OyIKbaJZ_fsKSnA-N29iZ8mzY9oa2pYF9ZgrnOBBxS9y2_RScDLKDg"
+    },
+    {
+      "name": "not-nfc-stays-as-signed",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MketqAfR3YmgyVmQJfpNcYy8kFT47K6UjKmY6vS39QzQD7",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 5,
+          "body": "Ótimo"
+        },
+        "eventId": "evt_kqxe3uk5gx7hdnzo5b7pqzaskj4fpv2sf4xi6yzbhrqepo7bzeaa",
+        "signature": "CiXnEIk1YRkkMmYRtvP4wxE2gLSO14jKGXrtLFf7FhsImhQbBLErmqO79QhZfVv3xZ4ined1u5Lmlgmkg6tzBA"
+      },
+      "canonical": "{\"author\":\"did:key:z6MketqAfR3YmgyVmQJfpNcYy8kFT47K6UjKmY6vS39QzQD7\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"Ótimo\",\"entity\":\"cnpj:12345678000199\",\"rating\":5},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b65747141665233596d6779566d514a66704e635979386b465434374b36556a4b6d593676533339517a514437222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a224fcc8174696d6f222c22656e74697479223a22636e706a3a3132333435363738303030313939222c22726174696e67223a357d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_kqxe3uk5gx7hdnzo5b7pqzaskj4fpv2sf4xi6yzbhrqepo7bzeaa",
+      "signingKey": "5a59a906715a7664ec8c220c519f5228527fd9b6d2bfa888412389fddd7d6f1a",
+      "signature": "CiXnEIk1YRkkMmYRtvP4wxE2gLSO14jKGXrtLFf7FhsImhQbBLErmqO79QhZfVv3xZ4ined1u5Lmlgmkg6tzBA"
+    },
+    {
+      "name": "max-safe-integer",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MkwApDn4Gtr7ejAkcJQcNGKpfeqY8gtXeLSbmXdXzAqdjv",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 1,
+          "body": "x",
+          "n": 9007199254740991
+        },
+        "eventId": "evt_k6xsooeyhhxrzhu6afi6xxqdvyfkji6dctu66yyvmm4zbwpbc3wq",
+        "signature": "PYMEPw_f7xyAjwoE9DLB1BLoUJevxlp5iB_Q_OYiPgj4jaLys-VFLelDIi-Se8JEHDlXtOTwdY39XbB1u76aCg"
+      },
+      "canonical": "{\"author\":\"did:key:z6MkwApDn4Gtr7ejAkcJQcNGKpfeqY8gtXeLSbmXdXzAqdjv\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"x\",\"entity\":\"cnpj:12345678000199\",\"n\":9007199254740991,\"rating\":1},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b774170446e3447747237656a416b634a51634e474b706665715938677458654c53626d5864587a4171646a76222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a2278222c22656e74697479223a22636e706a3a3132333435363738303030313939222c226e223a393030373139393235343734303939312c22726174696e67223a317d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_k6xsooeyhhxrzhu6afi6xxqdvyfkji6dctu66yyvmm4zbwpbc3wq",
+      "signingKey": "c7257360d905c9ef4110d712a409f0253fefc9e25a6f9646c685f874d1f20b5b",
+      "signature": "PYMEPw_f7xyAjwoE9DLB1BLoUJevxlp5iB_Q_OYiPgj4jaLys-VFLelDIi-Se8JEHDlXtOTwdY39XbB1u76aCg"
+    },
+    {
+      "name": "min-safe-integer",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6Mkqmr51giY9bKDpVGWuoCKZNWdi5iZsaMTqpzcVdxfMENy",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 1,
+          "body": "x",
+          "n": -9007199254740991
+        },
+        "eventId": "evt_xaszy7zrqfyzrtazudacj626bjnd5dkzn4qkf6lebuwyagz66b4q",
+        "signature": "MVfIvOgkEL4di6bLDLuhoPcqaX5jS7a8_LigDgZyeDThC1vaVGG5WJAzM3uoDVQEz531wEBhEJH3X8O8Wi83Cg"
+      },
+      "canonical": "{\"author\":\"did:key:z6Mkqmr51giY9bKDpVGWuoCKZNWdi5iZsaMTqpzcVdxfMENy\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"x\",\"entity\":\"cnpj:12345678000199\",\"n\":-9007199254740991,\"rating\":1},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b716d72353167695939624b4470564757756f434b5a4e57646935695a73614d5471707a63566478664d454e79222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a2278222c22656e74697479223a22636e706a3a3132333435363738303030313939222c226e223a2d393030373139393235343734303939312c22726174696e67223a317d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_xaszy7zrqfyzrtazudacj626bjnd5dkzn4qkf6lebuwyagz66b4q",
+      "signingKey": "2c2b4e81a7664ff0982908ae45b9b2eb831279f3c646a11b73e5d3bf6e210517",
+      "signature": "MVfIvOgkEL4di6bLDLuhoPcqaX5jS7a8_LigDgZyeDThC1vaVGG5WJAzM3uoDVQEz531wEBhEJH3X8O8Wi83Cg"
+    },
+    {
+      "name": "keys-out-of-order",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MkgyYyz4xmpVtMyV8t3kWWvs2SZgZ5kkxAqDRMyuzNbtW3",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "rating": 3,
+          "entity": "cnpj:12345678000199",
+          "body": "x",
+          "z": 1,
+          "a": {
+            "y": 2,
+            "b": 3
+          }
+        },
+        "eventId": "evt_qoyb6se45ybfo3k5ki3xdqwtwilfin3m3fazc4q7ti2r3ytjrrkq",
+        "signature": "lA-lBoeGLMNuEaGQmAOwfwdMMN1znDnqov9VmDxf4YaxjErEfla8cZDnD8njb0C8i519_xlWI0RqWroQ7eDwAw"
+      },
+      "canonical": "{\"author\":\"did:key:z6MkgyYyz4xmpVtMyV8t3kWWvs2SZgZ5kkxAqDRMyuzNbtW3\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"a\":{\"b\":3,\"y\":2},\"body\":\"x\",\"entity\":\"cnpj:12345678000199\",\"rating\":3,\"z\":1},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b677959797a34786d7056744d79563874336b5757767332535a675a356b6b78417144524d79757a4e62745733222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b2261223a7b2262223a332c2279223a327d2c22626f6479223a2278222c22656e74697479223a22636e706a3a3132333435363738303030313939222c22726174696e67223a332c227a223a317d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_qoyb6se45ybfo3k5ki3xdqwtwilfin3m3fazc4q7ti2r3ytjrrkq",
+      "signingKey": "c32607f9c1ce5d1c3eee7f33569b2b104e7e8925549ae8c9ba4ce6e0a9fdd351",
+      "signature": "lA-lBoeGLMNuEaGQmAOwfwdMMN1znDnqov9VmDxf4YaxjErEfla8cZDnD8njb0C8i519_xlWI0RqWroQ7eDwAw"
+    },
+    {
+      "name": "keys-sorted-by-utf16",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MkwL3Juo57aTRNbSqtdx9xuRVfNmwy2GPziwSmpx9ULPqS",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 3,
+          "body": "x",
+          "�": 1,
+          "😀": 2
+        },
+        "eventId": "evt_2uh2yzuewgovhh54qycjx5i2xbdtuvevnwjbkp5s3xxepitkmlcq",
+        "signature": "LeOr7fywOS-K1A94Z14LfUQ-jI-r-1pFktYhLT8I2T3ht87E0thyKAyKCVUJSe2sqQsaR6FeOzOt8yguMvo9Dw"
+      },
+      "canonical": "{\"author\":\"did:key:z6MkwL3Juo57aTRNbSqtdx9xuRVfNmwy2GPziwSmpx9ULPqS\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"x\",\"entity\":\"cnpj:12345678000199\",\"rating\":3,\"😀\":2,\"�\":1},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b774c334a756f35376154524e6253717464783978755256664e6d77793247507a6977536d707839554c507153222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a2278222c22656e74697479223a22636e706a3a3132333435363738303030313939222c22726174696e67223a332c22f09f9880223a322c22efbfbd223a317d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_2uh2yzuewgovhh54qycjx5i2xbdtuvevnwjbkp5s3xxepitkmlcq",
+      "signingKey": "1acdba689d541f1d6c24e549ca689bcbfd34bcbe3d1b900b8a04ba6278b43d73",
+      "signature": "LeOr7fywOS-K1A94Z14LfUQ-jI-r-1pFktYhLT8I2T3ht87E0thyKAyKCVUJSe2sqQsaR6FeOzOt8yguMvo9Dw"
+    },
+    {
+      "name": "unknown-event-type",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MkjH676vgEpT3bce7fq5DBmR5M4oDcChApcQiQCfFoGgBF",
+        "deviceKey": null,
+        "eventType": "future.thing",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "anything": [
+            1,
+            {
+              "b": 2,
+              "a": null
+            }
+          ]
+        },
+        "eventId": "evt_73o74rb6i5yst6fro2o6t7xcd7ylnug24o6b66nrkzqjravhn3rq",
+        "signature": "S570sG39MtG0WC0ghQdUbUw27OnItZ21q-Axfys5f8lhVNRu-RxNZXkdvNKoki24aY6vSqFGfNTzQnjNI4YbCA"
+      },
+      "canonical": "{\"author\":\"did:key:z6MkjH676vgEpT3bce7fq5DBmR5M4oDcChApcQiQCfFoGgBF\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"future.thing\",\"payload\":{\"anything\":[1,{\"a\":null,\"b\":2}]},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b6a483637367667457054336263653766713544426d52354d346f446343684170635169514366466f47674246222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a226675747572652e7468696e67222c227061796c6f6164223a7b22616e797468696e67223a5b312c7b2261223a6e756c6c2c2262223a327d5d7d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_73o74rb6i5yst6fro2o6t7xcd7ylnug24o6b66nrkzqjravhn3rq",
+      "signingKey": "9338411dcddd06c38da976f4da01f8c83550be73b6622a7aa227c8f73f48d110",
+      "signature": "S570sG39MtG0WC0ghQdUbUw27OnItZ21q-Axfys5f8lhVNRu-RxNZXkdvNKoki24aY6vSqFGfNTzQnjNI4YbCA"
+    },
+    {
+      "name": "empty-payload",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6Mkmp46dS9LbsbZe6XgVeZpnJHFERp4AqoVzbAY2HsURbBh",
+        "deviceKey": null,
+        "eventType": "identity.key_revoked",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {},
+        "eventId": "evt_nbsiids5gemh4ubswgz4gbcgrvtkwuumzx5y65oiltilks4lciva",
+        "signature": "XPonv5N1yzWeY1puFuz-bEeWP2LP_VLH5RXkwKjaI-9afJaf6Lk__0OSeOfusBm1hkVIvCLVqvmtPRacr1TRBg"
+      },
+      "canonical": "{\"author\":\"did:key:z6Mkmp46dS9LbsbZe6XgVeZpnJHFERp4AqoVzbAY2HsURbBh\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"identity.key_revoked\",\"payload\":{},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b6d7034366453394c6273625a6536586756655a706e4a48464552703441716f567a6241593248735552624268222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a226964656e746974792e6b65795f7265766f6b6564222c227061796c6f6164223a7b7d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_nbsiids5gemh4ubswgz4gbcgrvtkwuumzx5y65oiltilks4lciva",
+      "signingKey": "5aa7a75e889e94f37c75b1e731f31b8364bd82c654648815e457073a835afc53",
+      "signature": "XPonv5N1yzWeY1puFuz-bEeWP2LP_VLH5RXkwKjaI-9afJaf6Lk__0OSeOfusBm1hkVIvCLVqvmtPRacr1TRBg"
+    },
+    {
+      "name": "characters-a-json-encoder-may-escape",
+      "envelope": {
+        "protocol": "ecoa-dev",
+        "version": 1,
+        "author": "did:key:z6MknHxYWxsrEX7S29CafF6hdyhstgRoCQ3U8phy9V8dkkWd",
+        "deviceKey": null,
+        "eventType": "review.created",
+        "createdAt": "2026-08-05T17:00:00Z",
+        "payload": {
+          "entity": "cnpj:12345678000199",
+          "rating": 2,
+          "body": "x",
+          "note": "<a&b> "
+        },
+        "eventId": "evt_4pxradkdwiuu6pjyonwjkbaedfpsj4bsadglgmbozp3s6jappkyq",
+        "signature": "4aZ7iOvuHbhpKgPXPhDZ4KLDRhL6wbSPu9LeWxP1oURxCn4HXKJi5Tix3AFRTIBCer0WMCpVOjCw-mbf5GYTAg"
+      },
+      "canonical": "{\"author\":\"did:key:z6MknHxYWxsrEX7S29CafF6hdyhstgRoCQ3U8phy9V8dkkWd\",\"createdAt\":\"2026-08-05T17:00:00Z\",\"deviceKey\":null,\"eventType\":\"review.created\",\"payload\":{\"body\":\"x\",\"entity\":\"cnpj:12345678000199\",\"note\":\"<a&b> \",\"rating\":2},\"protocol\":\"ecoa-dev\",\"version\":1}",
+      "signingInput": "65636f612d6576656e742d7631007b22617574686f72223a226469643a6b65793a7a364d6b6e48785957787372455837533239436166463668647968737467526f4351335538706879395638646b6b5764222c22637265617465644174223a22323032362d30382d30355431373a30303a30305a222c226465766963654b6579223a6e756c6c2c226576656e7454797065223a227265766965772e63726561746564222c227061796c6f6164223a7b22626f6479223a2278222c22656e74697479223a22636e706a3a3132333435363738303030313939222c226e6f7465223a223c6126623ee280a8222c22726174696e67223a327d2c2270726f746f636f6c223a2265636f612d646576222c2276657273696f6e223a317d",
+      "eventId": "evt_4pxradkdwiuu6pjyonwjkbaedfpsj4bsadglgmbozp3s6jappkyq",
+      "signingKey": "225fd97ba84b79ff28d643826ec06ee072c8d7f9f951b1c09160f455bd97e195",
+      "signature": "4aZ7iOvuHbhpKgPXPhDZ4KLDRhL6wbSPu9LeWxP1oURxCn4HXKJi5Tix3AFRTIBCer0WMCpVOjCw-mbf5GYTAg"
+    }
+  ]
+}
