@@ -50,7 +50,7 @@ func New(ctx context.Context, cfg Config) (*Peer, error) {
 		return nil, err
 	}
 
-	connectBootstrap(ctx, h, cfg.BootstrapAddrs)
+	connectBootstrap(ctx, h, bootstrapList(cfg))
 
 	topic, sub, err := joinTopic(ctx, h, cfg.Network)
 	if err != nil {
@@ -59,6 +59,16 @@ func New(ctx context.Context, cfg Config) (*Peer, error) {
 	}
 
 	return &Peer{host: h, topic: topic, sub: sub}, nil
+}
+
+
+// bootstrapList returns the configured peers, or else the embedded list.
+func bootstrapList(cfg Config) []string {
+	if len(cfg.BootstrapAddrs) > 0 {
+		return cfg.BootstrapAddrs
+	}
+
+	return DefaultBootstrapAddrs
 }
 
 

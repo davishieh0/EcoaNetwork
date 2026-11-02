@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -94,6 +95,40 @@ func TestNewSurvivesDeadBootstrap(t *testing.T) {
 		t.Fatalf("New with a dead bootstrap peer: %v", err)
 	}
 	defer p.Close()
+}
+
+
+func TestBootstrapListFallsBackToTheEmbeddedList(t *testing.T) {
+	// Arrange
+	previous := DefaultBootstrapAddrs
+	DefaultBootstrapAddrs = []string{"embedded"}
+	t.Cleanup(func() { DefaultBootstrapAddrs = previous })
+
+	// Act
+	got := bootstrapList(Config{})
+
+	// Assert
+	if !reflect.DeepEqual(got, []string{"embedded"}) {
+		t.Fatalf("bootstrapList = %v, want the embedded list", got)
+	}
+}
+
+
+func TestBootstrapListPrefersTheConfiguredList(t *testing.T) {
+	// Arrange
+	previous := DefaultBootstrapAddrs
+	DefaultBootstrapAddrs = []string{"embedded"}
+	t.Cleanup(func() { DefaultBootstrapAddrs = previous })
+
+	cfg := Config{BootstrapAddrs: []string{"configured"}}
+
+	// Act
+	got := bootstrapList(cfg)
+
+	// Assert
+	if !reflect.DeepEqual(got, []string{"configured"}) {
+		t.Fatalf("bootstrapList = %v, want the configured list", got)
+	}
 }
 
 

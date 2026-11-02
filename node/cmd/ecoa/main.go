@@ -1,14 +1,15 @@
 package main
 
+
 import (
 	"context"
-	"flag"
+	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 
+	"github.com/eduardokairalla1/EcoaNetwork/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/node"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/server"
@@ -19,81 +20,51 @@ import (
 // --- CODE ---
 
 func main() {
-	network := flag.String("network",
-						   "ecoa-dev",
-						   "network this node belongs to")
-
-	listen := flag.String("listen",
-						  "/ip4/127.0.0.1/tcp/4001",
-						  "multiaddr to listen on")
-
-	grpcAddr := flag.String("grpc",
-							"127.0.0.1:50051",
-							"host:port the gateway submits events to")
-
-	bootstrapAddrs := flag.String(
-		"bootstrap",
-		"",
-		"comma-separated peer multiaddrs; replaces the default list",
-	)
-
-	publish := flag.String("publish",
-						   "",
-						   "event file to publish after connecting")
-	flag.Parse()
-
-	addrs := p2p.DefaultBootstrapAddrs
-
-	// The flag replaces the default list, it does not extend it.
-	if *bootstrapAddrs != "" {
-		addrs = strings.Split(*bootstrapAddrs, ",")
-	}
-
 	// The composition root installs the default logger.
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
+	if err := run(); err != nil {
+		slog.Error("start", "err", err)
+		os.Exit(1)
+	}
+}
+
+
+// run starts the node and holds until an interrupt ends it.
+func run() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	boltDbPath := os.Getenv("BOLT_DB_PATH")
-	if boltDbPath == "" {
-		boltDbPath = "data/bbolt/bolt.db"
-	}
-
-	db, err := store.New(boltDbPath)
+	db, err := store.New(cfg.BoltDBPath)
 	if err != nil {
-		slog.Error("open store", "path", boltDbPath, "err", err)
-		os.Exit(1)
+		return fmt.Errorf("open store %s: %w", cfg.BoltDBPath, err)
 	}
-
 	defer db.Close()
 
-	n, err := node.New(
-		ctx,
-		db,
-		p2p.Config{
-			Network:        *network,
-			Listen:         *listen,
-			BootstrapAddrs: addrs,
-		},
-	)
-
+	n, err := node.New(ctx, db, p2p.Config{
+		Network:        cfg.Network,
+		Listen:         cfg.ListenAddr,
+		BootstrapAddrs: cfg.BootstrapAddrs,
+	})
 	if err != nil {
-		slog.Error("start", "err", err)
-		os.Exit(1)
+		return err
 	}
 	defer n.Close()
 
-	slog.Info("joined", "topic", p2p.Topic(*network))
+	slog.Info("joined", "topic", p2p.Topic(cfg.Network))
 
 	for _, addr := range n.Addrs() {
 		slog.Info("listening", "addr", addr)
 	}
 
-	lis, err := net.Listen("tcp", *grpcAddr)
+	lis, err := net.Listen("tcp", cfg.GRPCAddr)
 	if err != nil {
-		slog.Error("listen grpc", "addr", *grpcAddr, "err", err)
-		os.Exit(1)
+		return fmt.Errorf("listen grpc %s: %w", cfg.GRPCAddr, err)
 	}
 
 	g := server.New(ctx, n)
@@ -109,20 +80,8 @@ func main() {
 
 	slog.Info("grpc", "addr", lis.Addr().String())
 
-	if *publish != "" {
-		raw, err := os.ReadFile(*publish)
-		if err != nil {
-			slog.Error("read event", "err", err)
-			os.Exit(1)
-		}
-
-		go func() {
-			if err := n.Publish(ctx, raw); err != nil {
-				slog.Error("publish", "err", err)
-			}
-		}()
-	}
-
-	// Run holds main until ctx ends, so the deferred closes wait for it.
+	// Run holds until ctx ends.
 	n.Run(ctx)
+
+	return nil
 }
