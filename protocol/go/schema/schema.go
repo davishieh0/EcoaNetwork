@@ -38,6 +38,13 @@ var embedded embed.FS
 
 // --- CODE ---
 
+// InvalidPayloadError is a payload that fails the schema of its eventType.
+type InvalidPayloadError struct {
+	EventType string
+	Detail    string
+}
+
+
 // Set is every embedded schema, compiled.
 type Set struct {
 	// payloads maps an eventType to its compiled schema
@@ -116,4 +123,31 @@ func compile(compiler *jsonschema.Compiler,
 	}
 
 	return set, nil
+}
+
+
+// ValidatePayload checks payload against the schema of eventType, if any.
+func (s *Set) ValidatePayload(eventType string, payload json.RawMessage) error {
+	compiled, ok := s.payloads[eventType]
+	if !ok {
+		return nil
+	}
+
+	// numbers stay json.Number here
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(payload))
+	if err != nil {
+		return &InvalidPayloadError{EventType: eventType, Detail: err.Error()}
+	}
+
+	if err := compiled.Validate(doc); err != nil {
+		return &InvalidPayloadError{EventType: eventType, Detail: err.Error()}
+	}
+
+	return nil
+}
+
+
+// Error returns the eventType and where the payload fails.
+func (e *InvalidPayloadError) Error() string {
+	return fmt.Sprintf("schema: invalid %s payload: %s", e.EventType, e.Detail)
 }
