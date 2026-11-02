@@ -9,11 +9,16 @@ import (
 	"io"
 	"regexp"
 	"strconv"
+	"time"
 	"unicode/utf8"
 )
 
 
 // --- CONSTANTS ---
+
+// createdAtLayout is RFC 3339 UTC with a literal Z and second precision.
+const createdAtLayout = "2006-01-02T15:04:05Z"
+
 
 // maxDepth is the nesting cap of the protocol.
 const maxDepth = 32
@@ -50,7 +55,9 @@ var (
 	)
 	eventTypePattern = regexp.MustCompile(`^[a-z]+\.[a-z0-9_]+$`)
 	createdAtPattern = regexp.MustCompile(
-		`^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$`,
+		`^([1-9][0-9]{3}|0[1-9][0-9]{2}|00[1-9][0-9]|000[1-9])` +
+			`-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])` +
+			`T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$`,
 	)
 	signaturePattern = regexp.MustCompile(`^[A-Za-z0-9_-]{86}$`)
 )
@@ -179,6 +186,10 @@ func readFields(fields map[string]json.RawMessage, env *Envelope) error {
 		if !readText(raw, text.target, text.pattern) {
 			return &FieldError{Field: text.name, Fault: FieldBreaksItsRule}
 		}
+	}
+
+	if _, err := time.Parse(createdAtLayout, env.CreatedAt); err != nil {
+		return &FieldError{Field: "createdAt", Fault: FieldBreaksItsRule}
 	}
 
 	if err := readVersion(fields["version"], env); err != nil {

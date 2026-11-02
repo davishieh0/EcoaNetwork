@@ -113,6 +113,7 @@ func TestPatternsAreTheOnesOfTheSchemas(t *testing.T) {
 		{"eventType", eventTypePattern},
 		{"eventId", eventIDPattern},
 		{"did", didPattern},
+		{"timestamp", createdAtPattern},
 		{"signature", signaturePattern},
 	}
 
@@ -287,6 +288,11 @@ func TestDecodeRejects(t *testing.T) {
 		{"eventType shape", `review.created`, `Review.Created`, badField},
 		{"createdAt offset", `17:00:00Z`, `17:00:00+00:00`, badField},
 		{"createdAt millis", `17:00:00Z`, `17:00:00.000Z`, badField},
+		{"createdAt not a date", `2026-08-05`, `2026-13-45`, badField},
+		{"createdAt february 30", `2026-08-05`, `2026-02-30`, badField},
+		{"createdAt year zero", `2026-08-05`, `0000-08-05`, badField},
+		{"createdAt leap second", `17:00:00Z`, `16:59:60Z`, badField},
+		{"createdAt hour 24", `17:00:00Z`, `24:00:00Z`, badField},
 		{
 			"eventType with a trailing newline",
 			`review.created`, `review.created\n`,
