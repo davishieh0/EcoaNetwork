@@ -16,6 +16,7 @@
         "properties": {
           "name": { "type": "string" },
           "why": { "type": "string", "$comment": "What breaks if an implementation gets this one wrong." },
+          "since": { "type": "string", "enum": ["v2"], "$comment": "The protocol version that implements this case; an implementation of an earlier version skips it, never deletes it." },
           "identities": {
             "type": "object",
             "$comment": "Local observations supplied as input, never computed by the fixture: weight and age are per-indexer.",

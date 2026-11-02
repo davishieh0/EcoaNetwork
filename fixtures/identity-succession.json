@@ -224,6 +224,7 @@
     },
     {
       "name": "device revocation follows the same rule",
+      "since": "v2",
       "why": "Same class of problem: with a createdAt-based cut, a stolen device would backdate events to before its own revocation.",
       "arrival": [
         {

@@ -122,6 +122,7 @@
     },
     {
       "name": "a device-signed event whose authorization has not arrived",
+      "since": "v2",
       "why": "Verifying a deviceKey signature depends on an event the node may not hold. That is an unresolved reference like any other, not an invalid signature.",
       "arrival": [
         {
@@ -147,6 +148,7 @@
     },
     {
       "name": "the authorization arrives and releases the device event",
+      "since": "v2",
       "why": "The other side of the previous case. Only testing that it holds would allow an implementation that never releases.",
       "arrival": [
         {
