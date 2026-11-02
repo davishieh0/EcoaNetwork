@@ -69,6 +69,26 @@ func load(dir, name string) (File, error) {
 }
 
 
+// Run runs rule once per case, each as a subtest named after the case.
+func Run(t *testing.T, file File, rule func(t *testing.T, c Case)) {
+	t.Helper()
+
+	if rule == nil {
+		t.Skipf("%s: no rule implements %s yet", file.Topic, file.Rule)
+	}
+
+	for _, c := range file.Cases {
+		t.Run(c.Name, func(t *testing.T) {
+			if c.Since != "" {
+				t.Skipf("runs since %s, not in this version", c.Since)
+			}
+
+			rule(t, c)
+		})
+	}
+}
+
+
 // parse validates raw against the fixture schema and decodes it.
 func parse(dir string, raw []byte) (File, error) {
 	if err := checkSchema(dir, raw); err != nil {

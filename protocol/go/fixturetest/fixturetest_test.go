@@ -187,3 +187,61 @@ func TestLoadReadsTheNamedFileAndChecksIt(t *testing.T) {
 		t.Fatalf("load absent = %v, want os.ErrNotExist", absentErr)
 	}
 }
+
+
+func TestRunGivesEachCaseASubtestNamedAfterIt(t *testing.T) {
+	// Arrange
+	file := File{Cases: []Case{{Name: "first"}, {Name: "second"}}}
+	var seen []string
+
+	// Act
+	Run(t, file, func(t *testing.T, c Case) {
+		seen = append(seen, t.Name())
+	})
+
+	// Assert
+	want := []string{
+		"TestRunGivesEachCaseASubtestNamedAfterIt/first",
+		"TestRunGivesEachCaseASubtestNamedAfterIt/second",
+	}
+
+	if strings.Join(seen, ",") != strings.Join(want, ",") {
+		t.Fatalf("subtests = %v, want %v", seen, want)
+	}
+}
+
+
+func TestRunSkipsACaseWithSince(t *testing.T) {
+	// Arrange
+	file := File{Cases: []Case{{Name: "device", Since: "v2"}}}
+	called := false
+
+	// Act
+	Run(t, file, func(t *testing.T, c Case) { called = true })
+
+	// Assert
+	if called {
+		t.Fatal("rule ran for a case marked since v2")
+	}
+}
+
+
+func TestRunSkipsAFileWithoutARule(t *testing.T) {
+	// Arrange
+	file := File{Topic: "t", Rule: "r"}
+	var skipped bool
+
+	// Act
+	t.Run("file", func(t *testing.T) {
+		// Arrange
+		t.Cleanup(func() { skipped = t.Skipped() })
+
+		// Act
+		Run(t, file, nil)
+	})
+
+	// Assert
+	if !skipped {
+		t.Fatal("a file without a rule was not skipped")
+	}
+}
