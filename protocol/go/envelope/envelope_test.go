@@ -630,6 +630,139 @@ func isField(fault FieldFault) func(error) bool {
 }
 
 
+// rules returns the rules of a node that accepts validEnvelope.
+func rules(t *testing.T) Rules {
+	t.Helper()
+
+	now, err := time.Parse(time.RFC3339, "2026-08-05T17:00:00Z")
+	if err != nil {
+		t.Fatalf("parse clock: %v", err)
+	}
+
+	return Rules{
+		Network: "ecoa-dev",
+		MaxSize: MaxSize,
+		Now:     func() time.Time { return now },
+	}
+}
+
+
+// with replaces the first old of validEnvelope with new.
+func with(old, new string) []byte {
+	return []byte(strings.Replace(validEnvelope, old, new, 1))
+}
+
+
+func TestOpenReturnsTheEnvelopeAndItsBytes(t *testing.T) {
+	// Arrange
+	raw := []byte(validEnvelope)
+
+	// Act
+	env, err := Open(raw, rules(t))
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+
+	if env.EventType != "review.created" || string(env.Raw()) != validEnvelope {
+		t.Fatalf("Open = %+v", env)
+	}
+}
+
+
+func TestOpenRejects(t *testing.T) {
+	network := `"protocol": "ecoa-dev"`
+	version := `"version": 1`
+	other := `"protocol": "ecoa-other"`
+
+	cases := []struct {
+		name string
+		raw  []byte
+		want func(error) bool
+	}{
+		{
+			"too large",
+			[]byte(strings.Repeat(" ", MaxSize+1)),
+			tooLarge,
+		},
+		{"not json", []byte("not json"), malformed},
+		{"other network", with(network, other), otherNetwork},
+		{
+			"other version",
+			with(version, `"version": 2`),
+			otherNetwork,
+		},
+		{
+			"other network, whatever the version",
+			[]byte(strings.Replace(string(with(network, other)),
+			                       version, `"version": "x"`, 1)),
+			otherNetwork,
+		},
+		{
+			"version as text",
+			with(version, `"version": "1"`),
+			badField,
+		},
+		{
+			"version as a fraction",
+			with(version, `"version": 1.5`),
+			badNumber,
+		},
+		{
+			"protocol as a number",
+			with(network, `"protocol": 1`),
+			badField,
+		},
+		{
+			"protocol twice in two cases",
+			with(network, network+`, "PROTOCOL": "ecoa-other"`),
+			unknownField,
+		},
+		{
+			"unknown field",
+			with(version, version+`, "extra": 1`),
+			unknownField,
+		},
+		{
+			"future createdAt",
+			with("2026-08-05T17:00:00Z", "2026-08-05T17:05:01Z"),
+			futureCreatedAt,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			cfg := rules(t)
+
+			// Act
+			_, err := Open(c.raw, cfg)
+
+			// Assert
+			if !matches(err, c.want) {
+				t.Fatalf("Open = %v, want another error", err)
+			}
+		})
+	}
+}
+
+
+func TestOpenHoldsTheConfiguredLimit(t *testing.T) {
+	// Arrange
+	cfg := rules(t)
+	cfg.MaxSize = 10
+
+	// Act
+	_, err := Open([]byte(validEnvelope), cfg)
+
+	// Assert
+	if !tooLarge(err) {
+		t.Fatalf("Open = %v, want tooLarge", err)
+	}
+}
+
+
 // nested returns levels of array nesting around nothing.
 func nested(levels int) string {
 	return strings.Repeat("[", levels) + strings.Repeat("]", levels)
