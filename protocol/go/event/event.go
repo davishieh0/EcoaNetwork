@@ -11,6 +11,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/schema"
 	"github.com/gowebpki/jcs"
 	"github.com/hdevalence/ed25519consensus"
 )
@@ -38,6 +39,61 @@ var idEncoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").
 
 
 // --- CODE ---
+
+// Event is an envelope whose payload, eventId and signature were verified.
+type Event struct {
+	env envelope.Envelope
+}
+
+
+// Verify returns the event of env once payload, eventId and signature pass.
+func Verify(env *envelope.Envelope, schemas *schema.Set) (Event, error) {
+	err := schemas.ValidatePayload(env.EventType, env.Payload)
+	if err != nil {
+		return Event{}, err
+	}
+
+	canonical, err := SigningBytes(env.Raw())
+	if err != nil {
+		return Event{}, err
+	}
+
+	input := SigningInput(canonical)
+
+	if err := checkID(env, input); err != nil {
+		return Event{}, err
+	}
+
+	if err := checkSingleKey(env); err != nil {
+		return Event{}, err
+	}
+
+	err = verifySignature(env.Author, env.Signature, input)
+	if err != nil {
+		return Event{}, err
+	}
+
+	return Event{env: *env}, nil
+}
+
+
+// ID returns the eventId, recomputed and matched by Verify.
+func (e Event) ID() string {
+	return e.env.EventID
+}
+
+
+// Raw returns the bytes the event was received as.
+func (e Event) Raw() []byte {
+	return e.env.Raw()
+}
+
+
+// Envelope returns the envelope the event was verified from.
+func (e Event) Envelope() *envelope.Envelope {
+	return &e.env
+}
+
 
 // checkSingleKey rejects an event signed by a device key.
 func checkSingleKey(env *envelope.Envelope) error {
