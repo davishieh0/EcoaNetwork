@@ -255,6 +255,24 @@ func TestDecodeKeepsTheFieldsARuleReads(t *testing.T) {
 }
 
 
+func TestDecodeKeepsTheReceivedBytes(t *testing.T) {
+	// Arrange
+	raw := []byte(strings.Replace(validEnvelope, ":", " : ", 1))
+
+	// Act
+	env, err := Decode(raw)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+
+	if !bytes.Equal(env.Raw(), raw) {
+		t.Fatalf("Raw = %q, want %q", env.Raw(), raw)
+	}
+}
+
+
 func TestDecodeRejects(t *testing.T) {
 	cases := []struct {
 		name string

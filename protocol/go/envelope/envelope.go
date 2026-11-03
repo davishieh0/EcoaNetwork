@@ -88,6 +88,9 @@ type Envelope struct {
 	CreatedAt string
 	Payload   json.RawMessage
 	Signature string
+
+	// raw holds the bytes as received
+	raw []byte
 }
 
 
@@ -139,12 +142,18 @@ func Decode(raw []byte) (*Envelope, error) {
 		return nil, err
 	}
 
-	var env Envelope
+	env := Envelope{raw: raw}
 	if err := readFields(fields, &env); err != nil {
 		return nil, err
 	}
 
 	return &env, nil
+}
+
+
+// Raw returns the bytes the envelope was decoded from.
+func (e *Envelope) Raw() []byte {
+	return e.raw
 }
 
 
