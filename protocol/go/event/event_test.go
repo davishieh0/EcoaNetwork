@@ -2,6 +2,9 @@ package event
 
 
 import (
+	"bytes"
+	"crypto/ed25519"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -10,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
 )
 
 
@@ -17,6 +21,10 @@ import (
 
 // canonicalCount is how many cases vectors/canonicalization.json holds.
 const canonicalCount = 11
+
+
+// zip215Count is how many cases vectors/zip215.json holds.
+const zip215Count = 208
 
 
 // --- GLOBALS ---
@@ -27,7 +35,14 @@ var (
 
 	// badID tells whether an error is an EventIDMismatchError
 	badID = is[*EventIDMismatchError]
+
+	// badSignature tells whether an error is an InvalidSignatureError
+	badSignature = is[*InvalidSignatureError]
 )
+
+
+// message is what the signature tests sign.
+var message = []byte("ecoa-event-v1\x00{}")
 
 
 // --- CODE ---
@@ -41,6 +56,16 @@ type canonicalVector struct {
 	EventID      string          `json:"eventId"`
 	SigningKey   string          `json:"signingKey"`
 	Signature    string          `json:"signature"`
+}
+
+
+// zip215Vector is one case of vectors/zip215.json.
+type zip215Vector struct {
+	Name      string `json:"name"`
+	PublicKey string `json:"publicKey"`
+	Message   string `json:"message"`
+	Signature string `json:"signature"`
+	Expect    string `json:"expect"`
 }
 
 
@@ -58,6 +83,216 @@ func matches(err error, want func(error) bool) bool {
 	}
 
 	return want(err)
+}
+
+
+// newSigner returns a fixed key and its author string.
+func newSigner(seed byte) (ed25519.PrivateKey, string) {
+	key := ed25519.NewKeyFromSeed(append(make([]byte, 31), seed))
+	public, _ := key.Public().(ed25519.PublicKey)
+
+	return key, identity.FromKey(public).String()
+}
+
+
+// mustHex decodes hex or stops the test.
+func mustHex(t *testing.T, text string) []byte {
+	t.Helper()
+
+	decoded, err := hex.DecodeString(text)
+	if err != nil {
+		t.Fatalf("hex %q: %v", text, err)
+	}
+
+	return decoded
+}
+
+
+func TestVerifySignatureMatchesEveryZIP215Vector(t *testing.T) {
+	for _, v := range zip215Vectors(t) {
+		t.Run(v.Name, func(t *testing.T) {
+			// Arrange
+			author := identity.FromKey(mustHex(t, v.PublicKey)).String()
+			signed := mustHex(t, v.Message)
+			signature := base64.RawURLEncoding.EncodeToString(
+				mustHex(t, v.Signature),
+			)
+
+			if v.Expect != "accept" && v.Expect != "reject" {
+				t.Fatalf("expect = %q", v.Expect)
+			}
+
+			// Act
+			err := verifySignature(author, signature, signed)
+
+			// Assert
+			if accepted := err == nil; accepted != (v.Expect == "accept") {
+				t.Fatalf("VerifySignature = %v, want %s", err, v.Expect)
+			}
+		})
+	}
+}
+
+
+func TestVerifySignatureMatchesEveryCanonicalVector(t *testing.T) {
+	for _, v := range canonicalVectors(t) {
+		t.Run(v.Name, func(t *testing.T) {
+			// Arrange
+			env, err := envelope.Decode(v.Envelope)
+			if err != nil {
+				t.Fatalf("Decode: %v", err)
+			}
+
+			// Act
+			err = verifySignature(env.Author,
+			                      env.Signature,
+			                      mustHex(t, v.SigningInput))
+
+			// Assert
+			if err != nil {
+				t.Fatalf("VerifySignature: %v", err)
+			}
+		})
+	}
+}
+
+
+func TestSigningKeyOfEveryVectorProducesItsAuthorAndSignature(t *testing.T) {
+	for _, v := range canonicalVectors(t) {
+		t.Run(v.Name, func(t *testing.T) {
+			// Arrange
+			key := ed25519.NewKeyFromSeed(mustHex(t, v.SigningKey))
+			public, _ := key.Public().(ed25519.PublicKey)
+
+			env, err := envelope.Decode(v.Envelope)
+			if err != nil {
+				t.Fatalf("Decode: %v", err)
+			}
+
+			// Act
+			signature := ed25519.Sign(key, mustHex(t, v.SigningInput))
+
+			// Assert
+			if identity.FromKey(public).String() != env.Author {
+				t.Fatalf("author = %s", env.Author)
+			}
+
+			encoded := base64.RawURLEncoding.EncodeToString(signature)
+			if encoded != v.Signature {
+				t.Fatalf("signature = %s, want %s", encoded, v.Signature)
+			}
+		})
+	}
+}
+
+
+func TestVerifySignatureRefusesAnotherSpellingOfTheSameBytes(t *testing.T) {
+	// Arrange
+	key, author := newSigner(1)
+	signature := ed25519.Sign(key, message)
+	encoded := base64.RawURLEncoding.EncodeToString(signature)
+
+	// sets one of the unused bits of the last digit
+	respelled := encoded[:len(encoded)-1] + string(encoded[len(encoded)-1]+1)
+
+	decoded, err := base64.RawURLEncoding.DecodeString(respelled)
+	if err != nil || !bytes.Equal(decoded, signature) {
+		t.Fatalf("lenient decoding = %x, %v, want the same bytes", decoded, err)
+	}
+
+	// Act
+	err = verifySignature(author, respelled, message)
+
+	// Assert
+	if !badSignature(err) {
+		t.Fatalf("VerifySignature = %v, want badSignature", err)
+	}
+}
+
+
+func TestVerifySignatureRefusesALineBreak(t *testing.T) {
+	// Arrange
+	key, author := newSigner(1)
+	encoded := base64.RawURLEncoding.EncodeToString(ed25519.Sign(key, message))
+
+	spellings := []string{
+		encoded + "\n",
+		encoded[:40] + "\r\n" + encoded[40:],
+	}
+
+	for _, spelling := range spellings {
+		// Act
+		err := verifySignature(author, spelling, message)
+
+		// Assert
+		if !badSignature(err) {
+			t.Fatalf("verifySignature(%q) = %v", spelling, err)
+		}
+	}
+}
+
+
+func TestVerifySignatureRejects(t *testing.T) {
+	key, author := newSigner(1)
+	other, _ := newSigner(2)
+	signature := ed25519.Sign(key, message)
+	encoded := base64.RawURLEncoding.EncodeToString(signature)
+
+	cases := []struct {
+		name      string
+		author    string
+		signature string
+	}{
+		{
+			"signed by another key",
+			author,
+			base64.RawURLEncoding.EncodeToString(ed25519.Sign(other, message)),
+		},
+		{"padded", author, encoded + "=="},
+		{
+			"63 bytes",
+			author,
+			base64.RawURLEncoding.EncodeToString(signature[:63]),
+		},
+		{
+			"65 bytes",
+			author,
+			base64.RawURLEncoding.EncodeToString(append(signature, 0)),
+		},
+		{"bad author", "did:key:nope", encoded},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			input := message
+
+			// Act
+			err := verifySignature(c.author, c.signature, input)
+
+			// Assert
+			if !badSignature(err) {
+				t.Fatalf("VerifySignature = %v, want badSignature", err)
+			}
+		})
+	}
+}
+
+
+func TestVerifySignatureAcceptsItsOwnKey(t *testing.T) {
+	// Arrange
+	key, author := newSigner(1)
+	signature := base64.RawURLEncoding.EncodeToString(
+		ed25519.Sign(key, message),
+	)
+
+	// Act
+	err := verifySignature(author, signature, message)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("VerifySignature: %v", err)
+	}
 }
 
 
@@ -220,4 +455,14 @@ func canonicalVectors(t *testing.T) []canonicalVector {
 	path := "../../../vectors/canonicalization.json"
 
 	return loadCases[canonicalVector](t, path, canonicalCount)
+}
+
+
+// zip215Vectors reads vectors/zip215.json.
+func zip215Vectors(t *testing.T) []zip215Vector {
+	t.Helper()
+
+	path := "../../../vectors/zip215.json"
+
+	return loadCases[zip215Vector](t, path, zip215Count)
 }

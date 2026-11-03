@@ -5,6 +5,7 @@ go 1.26.5
 require (
 	filippo.io/edwards25519 v1.0.0
 	github.com/gowebpki/jcs v1.0.2
+	github.com/hdevalence/ed25519consensus v0.2.0
 	github.com/mr-tron/base58 v1.3.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 )
