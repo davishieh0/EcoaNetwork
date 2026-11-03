@@ -39,6 +39,16 @@ var idEncoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").
 
 // --- CODE ---
 
+// checkSingleKey rejects an event signed by a device key.
+func checkSingleKey(env *envelope.Envelope) error {
+	if env.DeviceKey != nil {
+		return &DeviceKeyNotSupportedError{DeviceKey: *env.DeviceKey}
+	}
+
+	return nil
+}
+
+
 // verifySignature checks signature over signingInput under the ZIP-215 rules.
 func verifySignature(author, signature string, signingInput []byte) error {
 	signer, err := identity.Parse(author)
