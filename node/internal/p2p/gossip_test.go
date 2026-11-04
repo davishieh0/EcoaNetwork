@@ -72,7 +72,8 @@ func TestReceiveEventStopsWithContext(t *testing.T) {
 	cancelled, stop := context.WithCancel(ctx)
 	stop()
 
-	if _, err := p.ReceiveEvent(cancelled); !errors.Is(err, context.Canceled) {
+	_, _, err = p.ReceiveEvent(cancelled)
+	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("ReceiveEvent = %v, want a cancellation error", err)
 	}
 }
@@ -172,12 +173,16 @@ func TestPublishReachesPeer(t *testing.T) {
 		t.Fatalf("publish: %v", err)
 	}
 
-	got, err := receiver.ReceiveEvent(ctx)
+	got, from, err := receiver.ReceiveEvent(ctx)
 	if err != nil {
 		t.Fatalf("event never arrived: %v", err)
 	}
 
 	if !bytes.Equal(got, event) {
 		t.Errorf("received %q, want %q", got, event)
+	}
+
+	if from != sender.host.ID() {
+		t.Errorf("from = %s, want %s", from, sender.host.ID())
 	}
 }

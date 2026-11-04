@@ -17,7 +17,7 @@ import (
 
 type Node struct {
 	store *store.Store
-	peer  *p2p.Peer
+	host  *p2p.Host
 }
 
 
@@ -27,7 +27,7 @@ func New(ctx context.Context, s *store.Store, cfg p2p.Config) (*Node, error) {
 		return nil, err
 	}
 
-	return &Node{store: s, peer: p}, nil
+	return &Node{store: s, host: p}, nil
 }
 
 
@@ -48,7 +48,7 @@ func (n *Node) Handle(raw []byte) error {
 // Run pulls events from the topic until ctx is cancelled.
 func (n *Node) Run(ctx context.Context) {
 	for {
-		raw, err := n.peer.ReceiveEvent(ctx)
+		raw, _, err := n.host.ReceiveEvent(ctx)
 		if err != nil {
 			return
 		}
@@ -68,19 +68,19 @@ func (n *Node) Run(ctx context.Context) {
 
 // Publish waits for the mesh first, since Gossipsub drops unroutable messages.
 func (n *Node) Publish(ctx context.Context, raw []byte) error {
-	if err := n.peer.WaitForPeers(ctx); err != nil {
+	if err := n.host.WaitForPeers(ctx); err != nil {
 		return err
 	}
 
-	return n.peer.Publish(ctx, raw)
+	return n.host.Publish(ctx, raw)
 }
 
 
 func (n *Node) Addrs() []string {
-	return n.peer.Addrs()
+	return n.host.Addrs()
 }
 
 
 func (n *Node) Close() error {
-	return n.peer.Close()
+	return n.host.Close()
 }

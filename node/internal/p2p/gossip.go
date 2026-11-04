@@ -7,6 +7,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 
@@ -52,14 +53,14 @@ func joinTopic(
 }
 
 
-// ReceiveEvent blocks until an event arrives on the topic or ctx is cancelled.
-func (p *Peer) ReceiveEvent(ctx context.Context) ([]byte, error) {
+// ReceiveEvent returns the next event on the topic and the peer it came from.
+func (p *Host) ReceiveEvent(ctx context.Context) ([]byte, peer.ID, error) {
 	msg, err := p.sub.Next(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return msg.Data, nil
+	return msg.Data, msg.ReceivedFrom, nil
 }
 
 
@@ -70,7 +71,7 @@ func (p *Peer) ReceiveEvent(ctx context.Context) ([]byte, error) {
 // starts relaying once the mesh is grafted, which happens on the next
 // heartbeat. Publishing in between is silently lost, so waiting for a peer is
 // necessary and not sufficient: one heartbeat has to pass as well.
-func (p *Peer) WaitForPeers(ctx context.Context) error {
+func (p *Host) WaitForPeers(ctx context.Context) error {
 	for len(p.topic.ListPeers()) == 0 {
 		select {
 		case <-ctx.Done():
@@ -89,6 +90,6 @@ func (p *Peer) WaitForPeers(ctx context.Context) error {
 
 
 // Publish sends an event to the topic.
-func (p *Peer) Publish(ctx context.Context, raw []byte) error {
+func (p *Host) Publish(ctx context.Context, raw []byte) error {
 	return p.topic.Publish(ctx, raw)
 }

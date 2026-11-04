@@ -34,8 +34,8 @@ type Config struct {
 }
 
 
-// Peer is this node's presence on the network.
-type Peer struct {
+// Host is this node's presence on the network.
+type Host struct {
 	host  host.Host
 	topic *pubsub.Topic
 	sub   *pubsub.Subscription
@@ -44,7 +44,7 @@ type Peer struct {
 
 // New builds the peer: host, bootstrap connections, Gossipsub and the
 // subscription. It does not start receiving events; call Run for that.
-func New(ctx context.Context, cfg Config) (*Peer, error) {
+func New(ctx context.Context, cfg Config) (*Host, error) {
 	h, err := libp2p.New(libp2p.ListenAddrStrings(cfg.Listen))
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func New(ctx context.Context, cfg Config) (*Peer, error) {
 		return nil, err
 	}
 
-	return &Peer{host: h, topic: topic, sub: sub}, nil
+	return &Host{host: h, topic: topic, sub: sub}, nil
 }
 
 
@@ -91,7 +91,7 @@ func connectBootstrap(ctx context.Context, h host.Host, addrs []string) {
 
 // Addrs returns this node's full multiaddrs, ready to be used as another
 // node's bootstrap entries.
-func (p *Peer) Addrs() []string {
+func (p *Host) Addrs() []string {
 	var addrs []string
 	for _, a := range p.host.Addrs() {
 		addrs = append(addrs, a.String()+"/p2p/"+p.host.ID().String())
@@ -101,6 +101,6 @@ func (p *Peer) Addrs() []string {
 
 
 // Close shuts down the host.
-func (p *Peer) Close() error {
+func (p *Host) Close() error {
 	return p.host.Close()
 }
