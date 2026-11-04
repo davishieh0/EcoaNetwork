@@ -56,7 +56,7 @@ func run(args []string) error {
 		Network:        cfg.Network,
 		Listen:         cfg.ListenAddr,
 		BootstrapAddrs: cfg.BootstrapAddrs,
-	})
+	}, cfg.MaxEventSize)
 	if err != nil {
 		return err
 	}

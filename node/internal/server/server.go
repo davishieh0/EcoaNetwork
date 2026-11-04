@@ -1,16 +1,16 @@
-// Package server is the gRPC door a gateway uses to submit events.
+// Package server is the gRPC entry a gateway uses to submit events.
 package server
 
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/node"
 	pb "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf"
-	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 
@@ -41,31 +41,35 @@ func New(ctx context.Context, n *node.Node) *grpc.Server {
 }
 
 
-// Publish stores the envelope, then gossips it if it was new.
+// Publish answers with what the node did to the envelope, gossiping it if new.
 func (s *Server) Publish(_ context.Context,
                          event *pb.Event) (*pb.PublishResponse, error) {
 	raw := event.GetEnvelope()
 
-	err := s.node.Handle(raw)
-	if errors.Is(err, store.ErrDuplicate) {
+	outcome, err := s.node.Receive(raw, node.Arrival{Kind: node.Gateway})
+
+	switch outcome {
+	case node.Stored:
+		s.gossip(raw)
+		return &pb.PublishResponse{Outcome: pb.Outcome_ACCEPTED}, nil
+	case node.Duplicate:
 		return &pb.PublishResponse{Outcome: pb.Outcome_ALREADY_EXISTS}, nil
+	case node.Failed:
+		return nil, status.Error(codes.Unavailable, err.Error())
 	}
 
-	if err != nil {
-		slog.Info("publish", "outcome", "rejected", "bytes", len(raw))
-		return &pb.PublishResponse{
-			Outcome: pb.Outcome_REJECTED,
-			Reason:  err.Error(),
-		}, nil
-	}
+	return &pb.PublishResponse{
+		Outcome: pb.Outcome_REJECTED,
+		Reason:  err.Error(),
+	}, nil
+}
 
-	// gossip the event in the background, after answering
+
+// gossip publishes raw in the background, after the answer.
+func (s *Server) gossip(raw []byte) {
 	go func() {
 		if err := s.node.Publish(s.ctx, raw); err != nil {
 			slog.Warn("gossip", "err", err)
 		}
 	}()
-
-	slog.Info("publish", "outcome", "accepted", "bytes", len(raw))
-	return &pb.PublishResponse{Outcome: pb.Outcome_ACCEPTED}, nil
 }
