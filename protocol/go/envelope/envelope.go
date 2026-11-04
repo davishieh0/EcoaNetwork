@@ -56,7 +56,7 @@ var names = []string{
 }
 
 
-// the patterns of schemas/envelope.schema.json and schemas/common.schema.json
+// the patterns of the envelope and common schemas in protocol/schemas/
 var (
 	protocolPattern = regexp.MustCompile(
 		`^ecoa(-[a-z0-9]([a-z0-9-]*[a-z0-9])?)?$`,

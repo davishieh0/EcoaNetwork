@@ -33,7 +33,7 @@ const createdAt = "2026-08-05T17:00:00Z"
 const review = `{"entity":"cnpj:12345678000199","rating":5,"body":"ok"}`
 
 
-// rejectionCount is how many cases vectors/rejections.json holds.
+// rejectionCount is how many cases protocol/vectors/rejections.json holds.
 const rejectionCount = 15
 
 
@@ -90,7 +90,7 @@ var (
 
 // --- CODE ---
 
-// rejectionFile is vectors/rejections.json.
+// rejectionFile is protocol/vectors/rejections.json.
 type rejectionFile struct {
 	Network string `json:"network"`
 	Now     string `json:"now"`
@@ -203,7 +203,7 @@ func edit(t *testing.T, raw []byte, name, value string) []byte {
 
 
 func TestVerifyAcceptsEveryCanonicalizationVector(t *testing.T) {
-	path := "../../../vectors/canonicalization.json"
+	path := "../../vectors/canonicalization.json"
 
 	file, err := os.ReadFile(path)
 	if err != nil {
@@ -243,11 +243,13 @@ func TestVerifyAcceptsEveryCanonicalizationVector(t *testing.T) {
 }
 
 
-// loadRejections reads vectors/rejections.json.
+// loadRejections reads protocol/vectors/rejections.json.
 func loadRejections(t *testing.T) rejectionFile {
 	t.Helper()
 
-	raw, err := os.ReadFile("../../../vectors/rejections.json")
+	path := "../../vectors/rejections.json"
+
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read vectors: %v", err)
 	}

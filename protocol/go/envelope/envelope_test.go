@@ -88,7 +88,7 @@ func schemaPatterns(t *testing.T) map[string]string {
 	patterns := map[string]string{}
 
 	for _, name := range []string{"envelope", "common"} {
-		path := filepath.Join("../../../schemas", name+".schema.json")
+		path := filepath.Join("../../schemas", name+".schema.json")
 
 		raw, err := os.ReadFile(path)
 		if err != nil {

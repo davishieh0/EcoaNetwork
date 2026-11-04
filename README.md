@@ -25,5 +25,5 @@ Every experience leaves an echo.
 
 ## Artifacts
 
-- [`schemas/`](schemas/) — JSON Schema for the envelope and all 18 event types, transcribed from the specification
-- [`fixtures/`](fixtures/) — behavioural cases for the rules that are easy to implement subtly differently
+- [`protocol/schemas/`](protocol/schemas/) — JSON Schema for the envelope and all 18 event types, transcribed from the specification
+- [`protocol/fixtures/`](protocol/fixtures/) — behavioural cases for the rules that are easy to implement subtly differently

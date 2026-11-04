@@ -19,11 +19,11 @@ import (
 
 // --- CONSTANTS ---
 
-// canonicalCount is how many cases vectors/canonicalization.json holds.
+// canonicalCount counts the cases of protocol/vectors/canonicalization.json.
 const canonicalCount = 11
 
 
-// zip215Count is how many cases vectors/zip215.json holds.
+// zip215Count is how many cases protocol/vectors/zip215.json holds.
 const zip215Count = 208
 
 
@@ -50,7 +50,7 @@ var message = []byte("ecoa-event-v1\x00{}")
 
 // --- CODE ---
 
-// canonicalVector is one case of vectors/canonicalization.json.
+// canonicalVector is one case of protocol/vectors/canonicalization.json.
 type canonicalVector struct {
 	Name         string          `json:"name"`
 	Envelope     json.RawMessage `json:"envelope"`
@@ -62,7 +62,7 @@ type canonicalVector struct {
 }
 
 
-// zip215Vector is one case of vectors/zip215.json.
+// zip215Vector is one case of protocol/vectors/zip215.json.
 type zip215Vector struct {
 	Name      string `json:"name"`
 	PublicKey string `json:"publicKey"`
@@ -460,21 +460,21 @@ func loadCases[T any](t *testing.T, path string, want int) []T {
 }
 
 
-// canonicalVectors reads vectors/canonicalization.json.
+// canonicalVectors reads protocol/vectors/canonicalization.json.
 func canonicalVectors(t *testing.T) []canonicalVector {
 	t.Helper()
 
-	path := "../../../vectors/canonicalization.json"
+	path := "../../vectors/canonicalization.json"
 
 	return loadCases[canonicalVector](t, path, canonicalCount)
 }
 
 
-// zip215Vectors reads vectors/zip215.json.
+// zip215Vectors reads protocol/vectors/zip215.json.
 func zip215Vectors(t *testing.T) []zip215Vector {
 	t.Helper()
 
-	path := "../../../vectors/zip215.json"
+	path := "../../vectors/zip215.json"
 
 	return loadCases[zip215Vector](t, path, zip215Count)
 }

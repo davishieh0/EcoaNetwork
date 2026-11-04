@@ -1,7 +1,7 @@
 # Schemas
 
 JSON Schema (draft 2020-12) for the envelope and for the 18 event types registered in
-[`docs/protocol.md`](../docs/protocol.md). These are a transcription of the specification, not a
+[`docs/protocol.md`](../../docs/protocol.md). These are a transcription of the specification, not a
 second source of truth: where a schema and the spec disagree, the spec is right and the schema
 is the bug.
 
@@ -50,7 +50,7 @@ Three more habits keep the verdict the same under other engines. Whitespace is a
 `\uXXXX` escapes, because `\s` means different sets in RE2 and Python. No pattern uses `\p` or
 `\x{...}`, which Python `re` lacks. And `$` means the true end of the string: Python's `re` also
 lets it match before a final newline, so a validator built on it has to anchor at the real end, or
-it accepts what `vectors/rejections.json` refuses.
+it accepts what `protocol/vectors/rejections.json` refuses.
 
 ## Validating
 

@@ -65,12 +65,12 @@ func differs(embeddedTree, source fs.FS) error {
 }
 
 
-// sourceSchemas is schemas/ without the files that are not a schema.
+// sourceSchemas is protocol/schemas/ without the files that are not a schema.
 func sourceSchemas(t *testing.T) fstest.MapFS {
 	t.Helper()
 
 	tree := fstest.MapFS{}
-	root := os.DirFS("../../../schemas")
+	root := os.DirFS("../../schemas")
 
 	err := fs.WalkDir(root, ".", func(name string,
 	                                  entry fs.DirEntry,
@@ -114,7 +114,7 @@ func TestEmbeddedCopyMatchesTheRepository(t *testing.T) {
 	}
 
 	if len(source) != 20 {
-		t.Fatalf("schemas/ holds %d files, want 20", len(source))
+		t.Fatalf("protocol/schemas/ holds %d files, want 20", len(source))
 	}
 }
 

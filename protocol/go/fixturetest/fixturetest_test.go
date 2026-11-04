@@ -30,7 +30,7 @@ func TestParseAcceptsAValidFile(t *testing.T) {
 	raw := []byte(validFile)
 
 	// Act
-	file, err := parse("../../../fixtures", raw)
+	file, err := parse("../../fixtures", raw)
 
 	// Assert
 	if err != nil {
@@ -89,7 +89,7 @@ func TestParseRefusesABrokenFile(t *testing.T) {
 			raw := []byte(strings.Replace(validFile, c.from, c.to, 1))
 
 			// Act
-			_, err := parse("../../../fixtures", raw)
+			_, err := parse("../../fixtures", raw)
 
 			// Assert
 			if err == nil || !strings.Contains(err.Error(), c.want) {
@@ -108,7 +108,7 @@ func TestParseAcceptsSinceV2(t *testing.T) {
 	                       1)
 
 	// Act
-	_, err := parse("../../../fixtures", []byte(raw))
+	_, err := parse("../../fixtures", []byte(raw))
 
 	// Assert
 	if err != nil {
@@ -119,7 +119,7 @@ func TestParseAcceptsSinceV2(t *testing.T) {
 
 func TestLoadChecksEveryFixtureFile(t *testing.T) {
 	// Arrange
-	pattern := filepath.Join("../../../fixtures", "*.json")
+	pattern := filepath.Join("../../fixtures", "*.json")
 
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
@@ -149,9 +149,9 @@ func TestLoadReadsTheNamedFileAndChecksIt(t *testing.T) {
 	// Arrange
 	dir := t.TempDir()
 
-	schema, err := os.ReadFile(
-		filepath.Join("../../../fixtures", "fixture.schema.json"),
-	)
+	path := "../../fixtures/fixture.schema.json"
+
+	schema, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read schema: %v", err)
 	}

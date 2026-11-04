@@ -30,7 +30,7 @@ const payloadsDir = "files/payloads"
 
 // --- GLOBALS ---
 
-// embedded is the copy of schemas/ made by go:generate.
+// embedded is the copy of protocol/schemas/ made by go:generate.
 //
 //go:embed files
 var embedded embed.FS

@@ -1,4 +1,4 @@
-// Package fixturetest runs the behavioural cases of fixtures/ against a rule.
+// Package fixturetest runs the cases of protocol/fixtures/ against a rule.
 package fixturetest
 
 
@@ -45,11 +45,11 @@ type Arrival struct {
 }
 
 
-// Load reads and checks fixtures/<name>.json from the repository root.
+// Load reads and checks protocol/fixtures/<name>.json from the repository root.
 func Load(t *testing.T, name string) File {
 	t.Helper()
 
-	file, err := load("../../../fixtures", name)
+	file, err := load("../../fixtures", name)
 	if err != nil {
 		t.Fatalf("fixture %s: %v", name, err)
 	}
@@ -104,7 +104,7 @@ func parse(dir string, raw []byte) (File, error) {
 }
 
 
-// checkSchema validates raw against fixtures/fixture.schema.json.
+// checkSchema validates raw against protocol/fixtures/fixture.schema.json.
 func checkSchema(dir string, raw []byte) error {
 	compiler := jsonschema.NewCompiler()
 
