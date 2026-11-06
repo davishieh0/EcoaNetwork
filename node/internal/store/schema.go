@@ -15,5 +15,14 @@ var logBucket = []byte("log")
 var metaBucket = []byte("meta")
 
 
+// tombstonesBucket maps a pruned eventId to its pruning time and author.
+var tombstonesBucket = []byte("tombstones")
+
+
 // buckets is every bucket New creates.
-var buckets = [][]byte{eventsBucket, logBucket, metaBucket}
+var buckets = [][]byte{
+	eventsBucket,
+	logBucket,
+	metaBucket,
+	tombstonesBucket,
+}
