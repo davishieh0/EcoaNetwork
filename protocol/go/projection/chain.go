@@ -2,6 +2,7 @@ package projection
 
 
 import (
+	"cmp"
 	"slices"
 )
 
@@ -44,6 +45,32 @@ func ResolveHead(root string, events []Event) Head {
 		Truncated: truncated,
 		Withdrawn: withdrawnAny(members, events),
 	}
+}
+
+
+// Chain returns the events of the chain that starts at root, by eventId.
+func Chain(root string, events []Event) []Event {
+	members := chainIDs(root, successors(events))
+
+	var chain []Event
+
+	for _, e := range events {
+		if members[e.ID] {
+			chain = append(chain, e)
+		}
+	}
+
+	return sortedByID(chain)
+}
+
+
+// sortedByID returns events ordered by eventId, whatever order they came in.
+func sortedByID(events []Event) []Event {
+	slices.SortFunc(events, func(a, b Event) int {
+		return cmp.Compare(a.ID, b.ID)
+	})
+
+	return events
 }
 
 
