@@ -2,6 +2,7 @@ package fixturetest
 
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -243,5 +244,79 @@ func TestRunSkipsAFileWithoutARule(t *testing.T) {
 	// Assert
 	if !skipped {
 		t.Fatal("a file without a rule was not skipped")
+	}
+}
+
+
+func TestEventsSignsTheArrivalsNamingRealIdsAndKeys(t *testing.T) {
+	// Arrange
+	file := Load(t, "authorship")
+	c := file.Cases[0]
+
+	// Act
+	events := c.Events(t)
+
+	// Assert
+	if len(events) != len(c.Arrival) {
+		t.Fatalf("Events = %d, want %d", len(events), len(c.Arrival))
+	}
+
+	if events[0].Env.Author != Author("alice") {
+		t.Fatalf("author = %s, want alice", events[0].Env.Author)
+	}
+
+	var payload struct{ Replaces string }
+	if err := json.Unmarshal(events[1].Env.Payload, &payload); err != nil {
+		t.Fatalf("payload: %v", err)
+	}
+
+	if payload.Replaces != events[0].Env.EventID {
+		t.Fatalf("replaces = %s, want %s",
+		         payload.Replaces,
+		         events[0].Env.EventID)
+	}
+}
+
+
+func TestEventsNamesATargetThatArrivesLater(t *testing.T) {
+	// Arrange
+	file := Load(t, "orphan-buffer")
+	c := file.Cases[1]
+
+	// Act
+	events := c.Events(t)
+
+	// Assert
+	var payload struct{ Target string }
+	if err := json.Unmarshal(events[0].Env.Payload, &payload); err != nil {
+		t.Fatalf("payload: %v", err)
+	}
+
+	if payload.Target != events[1].Env.EventID {
+		t.Fatalf("target = %s, want %s",
+		         payload.Target,
+		         events[1].Env.EventID)
+	}
+}
+
+
+func TestEventsGivesAnAbsentTargetAValidId(t *testing.T) {
+	// Arrange
+	file := Load(t, "orphan-buffer")
+	c := file.Cases[3]
+
+	// Act
+	events := c.Events(t)
+
+	// Assert
+	var payload struct{ Target string }
+	if err := json.Unmarshal(events[0].Env.Payload, &payload); err != nil {
+		t.Fatalf("payload: %v", err)
+	}
+
+	if payload.Target != EventID("never_existed") {
+		t.Fatalf("target = %s, want %s",
+		         payload.Target,
+		         EventID("never_existed"))
 	}
 }

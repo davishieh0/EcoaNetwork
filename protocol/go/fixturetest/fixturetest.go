@@ -4,13 +4,49 @@ package fixturetest
 
 import (
 	"bytes"
+	"crypto/ed25519"
+	"crypto/sha256"
+	"encoding/base32"
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/testevent"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
+
+
+// --- CONSTANTS ---
+
+// network is the network of every event built from a case.
+const network = "ecoa-dev"
+
+
+// cnpjDigits is the length of the digits of a cnpj entity identifier.
+const cnpjDigits = 14
+
+
+// defaultAt is the createdAt of an arrival that declares none.
+const defaultAt = "2026-01-01T00:00:00Z"
+
+
+// --- GLOBALS ---
+
+// eventFields are the payload fields that name another event.
+var eventFields = []string{"target", "replaces"}
+
+
+// authorFields are the payload fields that name an author.
+var authorFields = []string{"successor", "subject"}
+
+
+// idEncoding is base32 lowercase without padding, as in an eventId.
+var idEncoding = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").
+	WithPadding(base32.NoPadding)
 
 
 // --- CODE ---
@@ -45,11 +81,179 @@ type Arrival struct {
 }
 
 
-// Load reads and checks protocol/fixtures/<name>.json from the repository root.
+// Built is one arrival of a case as a signed event.
+type Built struct {
+	// ID is the symbolic id the fixture gave the arrival.
+	ID string
+
+	// Raw is the signed envelope.
+	Raw []byte
+
+	// Env is Raw decoded.
+	Env *envelope.Envelope
+}
+
+
+// builder signs the arrivals of one case, each after the events it names.
+type builder struct {
+	t        *testing.T
+	arrivals map[string]Arrival
+	built    map[string]Built
+}
+
+
+// Author returns the did:key of the symbolic author name.
+func Author(name string) string {
+	return identity.FromKey(key(name).Public().(ed25519.PublicKey)).String()
+}
+
+
+// entityID returns the entity identifier a fixture's short cnpj stands for.
+func entityID(name string) string {
+	digits, ok := strings.CutPrefix(name, "cnpj:")
+	if !ok {
+		return name
+	}
+
+	return "cnpj:" + strings.Repeat("0", cnpjDigits-len(digits)) + digits
+}
+
+
+// EventID returns the eventId a fixture gives to a name no arrival carries.
+func EventID(name string) string {
+	digest := sha256.Sum256([]byte(name))
+	return "evt_" + idEncoding.EncodeToString(digest[:])
+}
+
+
+// Events signs the arrivals of c, in arrival order, naming real ids and keys.
+func (c Case) Events(t *testing.T) []Built {
+	t.Helper()
+
+	b := &builder{
+		t:        t,
+		arrivals: map[string]Arrival{},
+		built:    map[string]Built{},
+	}
+
+	for _, a := range c.Arrival {
+		b.arrivals[a.ID] = a
+	}
+
+	events := make([]Built, 0, len(c.Arrival))
+	for _, a := range c.Arrival {
+		events = append(events, b.build(a.ID))
+	}
+
+	return events
+}
+
+
+// key returns the signing key every event of the symbolic name uses.
+func key(name string) ed25519.PrivateKey {
+	seed := sha256.Sum256([]byte(name))
+	return ed25519.NewKeyFromSeed(seed[:])
+}
+
+
+// build signs the arrival id once, after the arrivals its payload names.
+func (b *builder) build(id string) Built {
+	if done, ok := b.built[id]; ok {
+		return done
+	}
+
+	a := b.arrivals[id]
+
+	at := a.At
+	if at == "" {
+		at = defaultAt
+	}
+
+	raw, err := testevent.Sign(key(a.Author), testevent.Fields{
+		Protocol:  network,
+		Version:   1,
+		EventType: a.Type,
+		CreatedAt: at,
+		Payload:   string(b.payload(a)),
+	})
+	if err != nil {
+		b.t.Fatalf("sign %s: %v", id, err)
+	}
+
+	env, err := envelope.Decode(raw)
+	if err != nil {
+		b.t.Fatalf("decode %s: %v", id, err)
+	}
+
+	b.built[id] = Built{ID: id, Raw: raw, Env: env}
+	return b.built[id]
+}
+
+
+// payload returns the payload of a with its symbolic names made real.
+func (b *builder) payload(a Arrival) []byte {
+	fields := map[string]json.RawMessage{}
+	if len(a.Payload) > 0 {
+		if err := json.Unmarshal(a.Payload, &fields); err != nil {
+			b.t.Fatalf("payload of %s: %v", a.ID, err)
+		}
+	}
+
+	for _, name := range eventFields {
+		b.rename(fields, name, b.eventID)
+	}
+
+	for _, name := range authorFields {
+		b.rename(fields, name, Author)
+	}
+
+	b.rename(fields, "entity", entityID)
+
+	raw, err := json.Marshal(fields)
+	if err != nil {
+		b.t.Fatalf("payload of %s: %v", a.ID, err)
+	}
+
+	return raw
+}
+
+
+// rename replaces the symbolic name held by fields[field] with resolve(name).
+func (b *builder) rename(fields map[string]json.RawMessage,
+                         field string,
+                         resolve func(name string) string) {
+	var name string
+	if json.Unmarshal(fields[field], &name) != nil {
+		return
+	}
+
+	fields[field], _ = json.Marshal(resolve(name))
+}
+
+
+// eventID returns the eventId of the arrival name, or a made-up one.
+func (b *builder) eventID(name string) string {
+	if _, ok := b.arrivals[name]; !ok {
+		return EventID(name)
+	}
+
+	return b.build(name).Env.EventID
+}
+
+
+// Load reads and checks protocol/fixtures/<name>.json from a library package.
 func Load(t *testing.T, name string) File {
 	t.Helper()
 
-	file, err := load("../../fixtures", name)
+	return LoadFrom(t, "../../fixtures", name)
+}
+
+
+// LoadFrom reads and checks <dir>/<name>.json.
+func LoadFrom(t *testing.T, dir string, name string) File {
+	t.Helper()
+
+	file, err := load(dir, name)
 	if err != nil {
 		t.Fatalf("fixture %s: %v", name, err)
 	}
