@@ -24,6 +24,12 @@ const pollInterval = 50 * time.Millisecond
 
 // --- CODE ---
 
+// Validator decides whether a message from a peer may be relayed.
+type Validator func(ctx context.Context,
+                    from peer.ID,
+                    raw []byte) pubsub.ValidationResult
+
+
 // Topic returns the Gossipsub topic for a network: one topic per network,
 // carrying every event type.
 func Topic(network string) string {
@@ -36,6 +42,7 @@ func joinTopic(
 	ctx context.Context,
 	h host.Host,
 	network string,
+	validate Validator,
 ) (*pubsub.Topic, *pubsub.Subscription, error) {
 	ps, err := pubsub.NewGossipSub(ctx,
 	                               h,
@@ -45,6 +52,12 @@ func joinTopic(
 	}
 
 	name := Topic(network)
+
+	// Gossipsub relays a message only once its validator has accepted it.
+	err = ps.RegisterTopicValidator(name, relayValidator(h.ID(), validate))
+	if err != nil {
+		return nil, nil, err
+	}
 
 	topic, err := ps.Join(name)
 	if err != nil {
@@ -57,6 +70,20 @@ func joinTopic(
 	}
 
 	return topic, sub, nil
+}
+
+
+// relayValidator accepts this node's own messages and validates the rest.
+func relayValidator(self peer.ID, validate Validator) pubsub.ValidatorEx {
+	return func(ctx context.Context,
+	            from peer.ID,
+	            msg *pubsub.Message) pubsub.ValidationResult {
+		if from == self {
+			return pubsub.ValidationAccept
+		}
+
+		return validate(ctx, from, msg.Data)
+	}
 }
 
 

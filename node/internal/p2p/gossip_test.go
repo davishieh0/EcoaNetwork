@@ -9,6 +9,8 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 
@@ -48,7 +50,7 @@ func TestJoinTopic(t *testing.T) {
 	}
 	defer h.Close()
 
-	topic, sub, err := joinTopic(ctx, h, "ecoa-test")
+	topic, sub, err := joinTopic(ctx, h, "ecoa-test", acceptAll)
 	if err != nil {
 		t.Fatalf("joinTopic: %v", err)
 	}
@@ -64,7 +66,7 @@ func TestReceiveEventStopsWithContext(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	p, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	p, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -87,7 +89,7 @@ func TestWaitForPeersGivesUpWithNoPeers(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	p, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	p, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -109,17 +111,13 @@ func TestWaitForPeersGivesUpDuringHeartbeat(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	a, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	a, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("a: %v", err)
 	}
 	defer a.Close()
 
-	b, err := New(ctx, Config{
-		Network:        "ecoa-test",
-		Listen:         loopback,
-		BootstrapAddrs: a.Addrs(),
-	})
+	b, err := New(ctx, config(a.Addrs()...))
 	if err != nil {
 		t.Fatalf("b: %v", err)
 	}
@@ -149,17 +147,13 @@ func TestPublishReachesPeer(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	sender, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	sender, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("sender: %v", err)
 	}
 	defer sender.Close()
 
-	receiver, err := New(ctx, Config{
-		Network:        "ecoa-test",
-		Listen:         loopback,
-		BootstrapAddrs: sender.Addrs(),
-	})
+	receiver, err := New(ctx, config(sender.Addrs()...))
 	if err != nil {
 		t.Fatalf("receiver: %v", err)
 	}
@@ -195,17 +189,13 @@ func TestPublishCarriesAnEventOfTheSizeCeiling(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	sender, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	sender, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("sender: %v", err)
 	}
 	defer sender.Close()
 
-	receiver, err := New(ctx, Config{
-		Network:        "ecoa-test",
-		Listen:         loopback,
-		BootstrapAddrs: sender.Addrs(),
-	})
+	receiver, err := New(ctx, config(sender.Addrs()...))
 	if err != nil {
 		t.Fatalf("receiver: %v", err)
 	}
@@ -227,5 +217,135 @@ func TestPublishCarriesAnEventOfTheSizeCeiling(t *testing.T) {
 	// Assert
 	if err != nil || !bytes.Equal(got, event) {
 		t.Fatalf("received %d bytes, %v, want %d", len(got), err, len(event))
+	}
+}
+
+
+func TestNewRequiresAValidator(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cfg := config()
+	cfg.Validator = nil
+
+	// Act
+	_, err := New(ctx, cfg)
+
+	// Assert
+	if err == nil {
+		t.Fatal("New started a peer that would relay before validating")
+	}
+}
+
+
+// line starts three peers in a row, the middle one judging with validate.
+func line(t *testing.T,
+          ctx context.Context,
+          validate Validator) (first, last *Host) {
+	t.Helper()
+
+	first, err := New(ctx, config())
+	if err != nil {
+		t.Fatalf("first: %v", err)
+	}
+
+	t.Cleanup(func() { first.Close() })
+
+	middleConfig := config(first.Addrs()...)
+	middleConfig.Validator = validate
+
+	middle, err := New(ctx, middleConfig)
+	if err != nil {
+		t.Fatalf("middle: %v", err)
+	}
+
+	t.Cleanup(func() { middle.Close() })
+
+	last, err = New(ctx, config(middle.Addrs()...))
+	if err != nil {
+		t.Fatalf("last: %v", err)
+	}
+
+	t.Cleanup(func() { last.Close() })
+
+	// the middle peer relays only once both ends are in its mesh
+	for len(middle.topic.ListPeers()) < 2 {
+		select {
+		case <-ctx.Done():
+			t.Fatal("the ends never subscribed to the middle peer")
+		case <-time.After(pollInterval):
+		}
+	}
+
+	if err := middle.WaitForPeers(ctx); err != nil {
+		t.Fatalf("middle mesh: %v", err)
+	}
+
+	return first, last
+}
+
+
+func TestARelayedEventIsValidatedBeforeItReachesTheNextPeer(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	refuseBad := func(_ context.Context,
+	                  _ peer.ID,
+	                  raw []byte) pubsub.ValidationResult {
+		if string(raw) == "bad" {
+			return pubsub.ValidationIgnore
+		}
+
+		return pubsub.ValidationAccept
+	}
+
+	first, last := line(t, ctx, refuseBad)
+
+	// Act
+	badErr := first.Publish(ctx, []byte("bad"))
+	goodErr := first.Publish(ctx, []byte("good"))
+	got, _, receiveErr := last.ReceiveEvent(ctx)
+
+	// Assert
+	if badErr != nil || goodErr != nil {
+		t.Fatalf("publish: %v, %v", badErr, goodErr)
+	}
+
+	// the first message to arrive is "good": "bad" was never relayed
+	if receiveErr != nil || string(got) != "good" {
+		t.Fatalf("last peer received %q, %v, want only good", got, receiveErr)
+	}
+}
+
+
+func TestAPeerSkipsItsOwnValidatorForWhatItPublishes(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	called := false
+	cfg := config()
+	cfg.Validator = func(context.Context,
+	                     peer.ID,
+	                     []byte) pubsub.ValidationResult {
+		called = true
+		return pubsub.ValidationIgnore
+	}
+
+	p, err := New(ctx, cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+
+	// Act
+	err = p.Publish(ctx, []byte("mine"))
+
+	// Assert
+	if err != nil || called {
+		t.Fatalf("Publish = %v, validator called = %t, want nil, false",
+		         err, called)
 	}
 }

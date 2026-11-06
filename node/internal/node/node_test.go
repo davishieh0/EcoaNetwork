@@ -3,15 +3,18 @@ package node
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"encoding/json"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/testevent"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -315,5 +318,132 @@ func TestReceiveFailsWhenTheStoreIsClosed(t *testing.T) {
 	// Assert
 	if outcome != Failed || err == nil {
 		t.Fatalf("Receive = %s, %v, want failed", outcome, err)
+	}
+}
+
+
+func TestValidateAcceptsOnlyWhatReceiveStored(t *testing.T) {
+	other := review()
+	other.Protocol = "ecoa-other"
+
+	cases := []struct {
+		name string
+		raw  []byte
+		want pubsub.ValidationResult
+	}{
+		{"valid", sign(t, 1, review()), pubsub.ValidationAccept},
+		{"invalid", []byte(`not json`), pubsub.ValidationIgnore},
+		{"other network", sign(t, 1, other), pubsub.ValidationIgnore},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			n, _ := newNode(t)
+
+			// Act
+			got := n.validate(context.Background(), "peer", c.raw)
+
+			// Assert
+			if got != c.want {
+				t.Fatalf("validate = %d, want %d", got, c.want)
+			}
+		})
+	}
+}
+
+
+func TestValidateStoresADeliveredTwiceEventOnce(t *testing.T) {
+	// Arrange
+	n, _ := newNode(t)
+	raw := sign(t, 1, review())
+
+	// Act
+	first := n.validate(context.Background(), "peer-a", raw)
+	second := n.validate(context.Background(), "peer-b", raw)
+
+	// Assert
+	if first != pubsub.ValidationAccept || second != pubsub.ValidationIgnore {
+		t.Fatalf("validate = %d, %d, want accept, ignore", first, second)
+	}
+
+	found, err := n.store.EventsSince(0, 10)
+	if err != nil || len(found) != 1 {
+		t.Fatalf("EventsSince = %v, %v, want one event", found, err)
+	}
+}
+
+
+// startNode returns a node on a loopback port that bootstraps from addrs.
+func startNode(t *testing.T,
+               ctx context.Context,
+               addrs ...string) *Node {
+	t.Helper()
+
+	s, err := store.New(filepath.Join(t.TempDir(), "bolt.db"))
+	if err != nil {
+		t.Fatalf("store.New: %v", err)
+	}
+
+	t.Cleanup(func() { s.Close() })
+
+	n, err := New(ctx, s, p2p.Config{
+		Network:        network,
+		Listen:         "/ip4/127.0.0.1/tcp/0",
+		BootstrapAddrs: addrs,
+	}, envelope.MaxSize)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	t.Cleanup(func() { n.Close() })
+
+	return n
+}
+
+
+func TestPublishAfterReceiveStoresOnceAndReachesThePeer(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	a := startNode(t, ctx)
+	b := startNode(t, ctx, a.Addrs()...)
+
+	raw := sign(t, 1, review())
+	id := field(t, raw, "eventId")
+
+	if outcome, err := a.Receive(raw, gateway); outcome != Stored {
+		t.Fatalf("Receive = %s, %v, want stored", outcome, err)
+	}
+
+	// Act
+	err := a.Publish(ctx, raw)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+
+	for {
+		reached, err := b.store.GetEvent(id)
+		if err != nil {
+			t.Fatalf("GetEvent: %v", err)
+		}
+
+		if reached != nil {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			t.Fatal("the peer never stored the event")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+
+	found, err := a.store.EventsSince(0, 10)
+	if err != nil || len(found) != 1 {
+		t.Fatalf("EventsSince = %v, %v, want one event", found, err)
 	}
 }

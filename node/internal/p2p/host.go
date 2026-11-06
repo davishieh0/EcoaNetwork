@@ -3,6 +3,7 @@ package p2p
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/libp2p/go-libp2p"
@@ -31,6 +32,9 @@ type Config struct {
 
 	// BootstrapAddrs is the list of peer multiaddrs to connect to on startup.
 	BootstrapAddrs []string
+
+	// Validator judges each message before Gossipsub relays it.
+	Validator Validator
 }
 
 
@@ -45,6 +49,10 @@ type Host struct {
 // New builds the peer: host, bootstrap connections, Gossipsub and the
 // subscription. It does not start receiving events; call Run for that.
 func New(ctx context.Context, cfg Config) (*Host, error) {
+	if cfg.Validator == nil {
+		return nil, errors.New("p2p: Config.Validator is required")
+	}
+
 	h, err := libp2p.New(libp2p.ListenAddrStrings(cfg.Listen))
 	if err != nil {
 		return nil, err
@@ -52,7 +60,7 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 
 	connectBootstrap(ctx, h, bootstrapList(cfg))
 
-	topic, sub, err := joinTopic(ctx, h, cfg.Network)
+	topic, sub, err := joinTopic(ctx, h, cfg.Network, cfg.Validator)
 	if err != nil {
 		h.Close()
 		return nil, err

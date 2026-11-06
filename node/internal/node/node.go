@@ -13,6 +13,8 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/event"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/schema"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 
@@ -83,6 +85,8 @@ func New(ctx context.Context,
 		return nil, err
 	}
 
+	cfg.Validator = n.validate
+
 	n.host, err = p2p.New(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -109,16 +113,26 @@ func build(s *store.Store, rules envelope.Rules) (*Node, error) {
 }
 
 
-// Run pulls events from the topic until ctx is cancelled.
+// Run keeps the subscription, and so the mesh, alive until ctx is cancelled.
 func (n *Node) Run(ctx context.Context) {
 	for {
-		raw, from, err := n.host.ReceiveEvent(ctx)
-		if err != nil {
+		if _, _, err := n.host.ReceiveEvent(ctx); err != nil {
 			return
 		}
-
-		n.Receive(raw, Arrival{Kind: Gossip, Peer: from})
 	}
+}
+
+
+// validate translates the outcome of Receive for Gossipsub.
+func (n *Node) validate(_ context.Context,
+                        from peer.ID,
+                        raw []byte) pubsub.ValidationResult {
+	outcome, _ := n.Receive(raw, Arrival{Kind: Gossip, Peer: from})
+	if outcome == Stored {
+		return pubsub.ValidationAccept
+	}
+
+	return pubsub.ValidationIgnore
 }
 
 

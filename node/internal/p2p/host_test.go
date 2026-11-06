@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/libp2p/go-libp2p/core/peer"
 )
 
 
@@ -51,11 +53,28 @@ func (b *safeBuffer) String() string {
 }
 
 
+// acceptAll relays every message.
+func acceptAll(context.Context, peer.ID, []byte) pubsub.ValidationResult {
+	return pubsub.ValidationAccept
+}
+
+
+// config returns the settings of a test peer that bootstraps from addrs.
+func config(addrs ...string) Config {
+	return Config{
+		Network:        "ecoa-test",
+		Listen:         loopback,
+		BootstrapAddrs: addrs,
+		Validator:      acceptAll,
+	}
+}
+
+
 func TestNew(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	p, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	p, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -73,7 +92,10 @@ func TestNewRejectsBadListenAddr(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	_, err := New(ctx, Config{Network: "ecoa-test", Listen: "nonsense"})
+	bad := config()
+	bad.Listen = "nonsense"
+
+	_, err := New(ctx, bad)
 	if err == nil {
 		t.Fatal("an unbindable listen address should fail")
 	}
@@ -86,11 +108,7 @@ func TestNewSurvivesDeadBootstrap(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	p, err := New(ctx, Config{
-		Network:        "ecoa-test",
-		Listen:         loopback,
-		BootstrapAddrs: []string{deadEnd},
-	})
+	p, err := New(ctx, config(deadEnd))
 	if err != nil {
 		t.Fatalf("New with a dead bootstrap peer: %v", err)
 	}
@@ -171,7 +189,7 @@ func TestAddrs(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	p, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	p, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
@@ -196,7 +214,7 @@ func TestClose(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	p, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	p, err := New(ctx, config())
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
