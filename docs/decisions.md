@@ -129,6 +129,8 @@ A cold root signing only authorization/rotation/revocation, hot device keys sign
 
 **Behavior optional in v1, shape fixed in v1** (see §1.4). The plain statement that replaces the previous hand-waving: **without a recovery path, compromise is terminal.** Whoever holds the key is the identity, and there is no authority to appeal to — the same property that stops anyone seizing an identity they don't control.
 
+Whether v1 ships the behavior or only the shape is settled in §3.5.
+
 ### 3.4 Authorship over derived events — **gap** (rule supplied by the project)
 
 An event that **replaces, withdraws, or revokes** another must carry the same `author` as its target. An event that merely **references** another — response, vote, report, label — is a new independent statement and carries no restriction.
@@ -136,6 +138,16 @@ An event that **replaces, withdraws, or revokes** another must carry the same `a
 Without this, any identity could edit or delete any other identity's review and every node would accept it: valid signature, valid schema, target exists.
 
 Two consequences: "same author" resolves through the rotation chain (so rotating a key doesn't orphan your own history), and pruning tombstones now retain the target's `author` so the check survives on a node that pruned the target.
+
+### 3.5 v1 ships the single-key model and rejects any `deviceKey` — **call**
+
+The question left open in §3.3 was how much of the root/device model a v1 node enforces. The answer is none of it: a node accepts only `deviceKey: null`, verifies the signature directly against `author`, and rejects an event with `deviceKey` set, with that as the stated reason. The envelope field stays, nullable, exactly as §1.4 fixed it, so the model can arrive later without a version bump.
+
+**Rejected: sending a device-signed event to the orphan buffer.** It is the obvious reading of the old text, where a device event whose authorization has not arrived waits like any unresolved reference. In v1 the authorization will never arrive, because no node processes `identity.device_authorized`. The event would sit in the buffer until it is evicted and resolve into nothing, and anyone could fill that buffer with events built to wait for it.
+
+**Rejected: implementing both models now.** Device-signed events add a second verification path (against `deviceKey`, then the authorization from the root), device revocation taking effect on observation, and the orphan case above. That is the part of validation where two independent nodes most easily disagree about validity (§11.3), added ahead of any need.
+
+**The cost is the one §3.3 already named:** without a recovery path, compromise is terminal. A stolen key can edit and withdraw that identity's history and revoke the identity, and nothing in v1 undoes it. The second cost is that rejecting `deviceKey` is a validity rule. The day device-signed events become valid, a node that has not upgraded will keep rejecting them, so the change has to be adopted by the network together, as any change to validity is.
 
 ---
 
@@ -568,7 +580,6 @@ Converging on it independently is still worth something — as evidence the desi
 - Max review character length beyond the 16 KB byte ceiling.
 - `expiresAt` for `email` and `human` claims (settled for `domain`).
 - Whether an indexer publishes an auditable completeness commitment.
-- Whether v1 ships the single-key or root/device identity model — the envelope supports both either way.
 - Vote decay over time, and per-category reputation scoping.
 
 ## Things deliberately not built

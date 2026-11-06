@@ -73,9 +73,11 @@ The last two look wrong at a glance, and they are the entire point. ZIP-215 is n
 
 ### Signing key vs. identity
 
-`author` says *who* an event is from. `deviceKey` says *which key* signed it. When `deviceKey` is `null` — the simple case, and the only one v1 has to implement — they are the same key and `signature` verifies against `author` directly.
+`author` says *who* an event is from. `deviceKey` says *which key* signed it. When `deviceKey` is `null` — the simple case, and the only one v1 accepts — they are the same key and `signature` verifies against `author` directly.
 
-When `deviceKey` is set, `signature` verifies against the **device key**, and the event is valid only if that device key was authorized by `author` and not since revoked ([docs/identity.md](./identity.md#root-key-and-device-keys)). Because that means a signature check can depend on an `identity.device_authorized` event the node may not have yet, a device-signed event whose authorization hasn't arrived goes to the [orphan buffer](#unresolved-references) like any other unresolved reference, rather than being rejected.
+**In v1 an event with `deviceKey` set is rejected**, with that as the reason, rather than sent to the [orphan buffer](#unresolved-references): no v1 node processes `identity.device_authorized`, so the authorization would never arrive and the event would never resolve ([decisions.md](./decisions.md#35-v1-ships-the-single-key-model-and-rejects-any-devicekey--call)).
+
+Once the root/device model is adopted, `signature` verifies against the **device key**, and the event is valid only if that device key was authorized by `author` and not since revoked ([docs/identity.md](./identity.md#root-key-and-device-keys)). Because that means a signature check can depend on an `identity.device_authorized` event the node may not have yet, a device-signed event whose authorization hasn't arrived will go to the orphan buffer like any other unresolved reference.
 
 **The field exists in v1 even though v1 may never set it**, and that is the entire reason it's here. The envelope is a closed set (above), so adding a field later is a breaking `version` bump that every node must adopt in lockstep. A nullable field costs one `null` per event now and buys the option to adopt the root/device model — the only real answer to a compromised key — without a protocol migration. This is the one place where paying a small cost up front is clearly better than the alternative, because the alternative is not "add it later" but "fork the envelope later".
 
@@ -100,7 +102,7 @@ Note the consequence for `author` comparisons: they are always against the *iden
 6. **Canonicalize the signing bytes** — the whole envelope minus `eventId` and `signature`, JCS-serialized.
 7. **Recompute the digest** over those bytes and compare it to `eventId`.
 8. **Verify the signature** against `deviceKey` when it is set, against `author` when it is `null`. Then reject if this node has already observed an `identity.key_revoked` for the signing key (see [When rotation and revocation take effect](#when-rotation-and-revocation-take-effect)).
-9. **Resolve references and check authorship** — that `replaces` and similar targets exist, that the author is entitled to act on them ([Who may sign what](#who-may-sign-what)), and, when `deviceKey` is set, that an `identity.device_authorized` from `author` covers it and no `identity.device_revoked` has retired it. Anything unresolvable goes to the orphan buffer rather than being rejected ([Unresolved references](#unresolved-references)). *Type-specific, except the `deviceKey` part.*
+9. **Resolve references and check authorship** — that `replaces` and similar targets exist, that the author is entitled to act on them ([Who may sign what](#who-may-sign-what)), and, once the root/device model is adopted, that an `identity.device_authorized` from `author` covers `deviceKey` and no `identity.device_revoked` has retired it (v1 rejects a set `deviceKey`, see [Signing key vs. identity](#signing-key-vs-identity)). Anything unresolvable goes to the orphan buffer rather than being rejected ([Unresolved references](#unresolved-references)). *Type-specific, except the `deviceKey` part.*
 10. **Node admission policy** — per-author rate, per-identity thresholds, whatever this operator has configured ([docs/identity.md](./identity.md#where-these-controls-actually-sit)). Local, never protocol-level.
 11. **Store**, assigning a local receive timestamp and the next monotonic local sequence number.
 12. **Notify the indexer.**

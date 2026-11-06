@@ -148,7 +148,7 @@ This subsumes the per-device-identity and encrypted-backup options above into on
 
 A useful side effect of `author` remaining the identity: swapping device keys never fragments a history, and never breaks the authorship rule that lets an identity edit or withdraw what it published from a device it no longer has.
 
-**In v1 the behavior is optional but the shape is fixed.** An identity may be a single key (simple, and terminal on compromise) or a root with device keys (safer, two keys to manage). Settling the shape now rather than later is not premature: retrofitting it would change how *every* event is verified, which the versioning rules classify as a breaking envelope bump — the one category of change this project has committed to making rare and deliberate. What v1 must not do is ship a single-key model that assumes it will always be the only model.
+**In v1 the shape is fixed and the behavior is the single key.** An identity is one key (simple, and terminal on compromise); a node rejects any event with `deviceKey` set, and the root with device keys (safer, two keys to manage) is for later ([decisions.md](./decisions.md#35-v1-ships-the-single-key-model-and-rejects-any-devicekey--call)). Settling the shape now rather than later is not premature: retrofitting it would change how *every* event is verified, which the versioning rules classify as a breaking envelope bump — the one category of change this project has committed to making rare and deliberate. What v1 must not do is ship a single-key model that assumes it will always be the only model.
 
 ## Trust boundary: who validates what
 
