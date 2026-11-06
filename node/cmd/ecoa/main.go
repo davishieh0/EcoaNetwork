@@ -57,7 +57,7 @@ func run(args []string) error {
 		return err
 	}
 
-	n, err := node.New(ctx, db, peers, cfg.MaxEventSize)
+	n, err := node.New(ctx, db, peers, cfg.MaxEventSize, cfg.AdmissionRate)
 	if err != nil {
 		return err
 	}

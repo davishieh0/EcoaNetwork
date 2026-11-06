@@ -54,6 +54,8 @@ func (s *Server) Publish(_ context.Context,
 		return &pb.PublishResponse{Outcome: pb.Outcome_ACCEPTED}, nil
 	case node.Duplicate:
 		return &pb.PublishResponse{Outcome: pb.Outcome_ALREADY_EXISTS}, nil
+	case node.Orphaned:
+		return &pb.PublishResponse{Outcome: pb.Outcome_ORPHAN}, nil
 	case node.Failed:
 		return nil, status.Error(codes.Unavailable, err.Error())
 	}

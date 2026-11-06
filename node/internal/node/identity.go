@@ -18,15 +18,7 @@ const replayPage = 256
 
 // --- CODE ---
 
-// movesIdentity reports whether eventType rotates or revokes a key.
-func movesIdentity(eventType string) bool {
-	return eventType == "identity.key_rotated" ||
-	       eventType == "identity.key_revoked"
-}
-
-
-// rebuildIdentity replays the rotations and revocations of the log into t, in
-// the order this node received them.
+// rebuildIdentity replays the rotations and revocations of the log into t.
 func rebuildIdentity(s *store.Store, t *identity.Tracker) error {
 	var cursor uint64
 
@@ -59,7 +51,7 @@ func replay(t *identity.Tracker, logged store.StoredEvent) error {
 		return err
 	}
 
-	if !movesIdentity(env.EventType) {
+	if !identity.Moves(env.EventType) {
 		return nil
 	}
 

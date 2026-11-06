@@ -104,7 +104,7 @@ func TestNewRestoresTheIdentitiesOfTheStore(t *testing.T) {
 		Network: network,
 		Listen:  loopback,
 		Sync:    roomy,
-	}, envelope.MaxSize)
+	}, envelope.MaxSize, 0)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

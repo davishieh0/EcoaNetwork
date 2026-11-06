@@ -22,6 +22,9 @@ type Entry struct {
 
 	// Origin is the peer that delivered it, or the gateway.
 	Origin string
+
+	// Kind is the path it came in by, which the buffer hands back unread.
+	Kind int
 }
 
 

@@ -1,7 +1,10 @@
 package node
 
 
-import "github.com/libp2p/go-libp2p/core/peer"
+import (
+	"github.com/eduardokairalla1/EcoaNetwork/internal/orphan"
+	"github.com/libp2p/go-libp2p/core/peer"
+)
 
 
 // --- CONSTANTS ---
@@ -60,11 +63,11 @@ func originOf(arrival Arrival) string {
 }
 
 
-// arrivalOf returns the arrival that an orphan of origin is handed back as.
-func arrivalOf(origin string) Arrival {
-	if origin == gatewayOrigin {
+// arrivalOf returns the arrival that an orphan was held as.
+func arrivalOf(entry orphan.Entry) Arrival {
+	if entry.Origin == gatewayOrigin {
 		return Arrival{Kind: Gateway}
 	}
 
-	return Arrival{Kind: Gossip, Peer: peer.ID(origin)}
+	return Arrival{Kind: ArrivalKind(entry.Kind), Peer: peer.ID(entry.Origin)}
 }

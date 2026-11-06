@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/internal/admission"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/orphan"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
@@ -81,6 +82,7 @@ func newNode(t *testing.T) (*Node, string) {
 	n, err := build(context.Background(),
 	                s,
 	                rules,
+	                admission.New(0, time.Hour, clock),
 	                orphan.New(10, testShare, time.Hour, clock))
 	if err != nil {
 		t.Fatalf("build: %v", err)
@@ -417,7 +419,7 @@ func startNode(t *testing.T,
 		Listen:         "/ip4/127.0.0.1/tcp/0",
 		BootstrapAddrs: addrs,
 		Sync:           roomy,
-	}, envelope.MaxSize)
+	}, envelope.MaxSize, 0)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

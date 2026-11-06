@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/internal/admission"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/orphan"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
 	pb "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf"
@@ -44,6 +45,9 @@ const (
 
 	// Orphaned is an event held until the events it names arrive.
 	Orphaned
+
+	// OverLimit is an event whose author is over the admission limit.
+	OverLimit
 )
 
 
@@ -57,6 +61,10 @@ const orphanShare = maxOrphans / 10
 
 // orphanAge is how long an orphan waits for its target.
 const orphanAge = time.Hour
+
+
+// admissionWindow is the period an author's events are counted over.
+const admissionWindow = time.Hour
 
 
 // gatewayOrigin is the origin the orphan buffer charges the gateway to.
@@ -73,6 +81,7 @@ var outcomeNames = map[Outcome]string{
 	Rejected:  "rejected",
 	Failed:    "failed",
 	Orphaned:  "orphaned",
+	OverLimit: "over limit",
 }
 
 
@@ -91,6 +100,9 @@ type Node struct {
 
 	// identities are the rotations and revocations this node observed
 	identities *identity.Tracker
+
+	// admission limits the events one author may have accepted
+	admission *admission.Limiter
 
 	// orphans hold the events whose references have not resolved
 	orphans *orphan.Buffer
@@ -113,20 +125,22 @@ type Node struct {
 type Outcome int
 
 
-// New returns a node that judges events by the rules of cfg.Network.
+// New returns a node on the network of cfg, admitting admissionRate per hour.
 func New(ctx context.Context,
          s *store.Store,
          cfg p2p.Config,
-         maxEventSize int) (*Node, error) {
+         maxEventSize int,
+         admissionRate int) (*Node, error) {
 	rules := envelope.Rules{
 		Network: cfg.Network,
 		MaxSize: maxEventSize,
 		Now:     time.Now,
 	}
 
+	limiter := admission.New(admissionRate, admissionWindow, time.Now)
 	orphans := orphan.New(maxOrphans, orphanShare, orphanAge, time.Now)
 
-	n, err := build(ctx, s, rules, orphans)
+	n, err := build(ctx, s, rules, limiter, orphans)
 	if err != nil {
 		return nil, err
 	}
@@ -149,6 +163,7 @@ func New(ctx context.Context,
 func build(ctx context.Context,
            s *store.Store,
            rules envelope.Rules,
+           limiter *admission.Limiter,
            orphans *orphan.Buffer) (*Node, error) {
 	schemas, err := schema.Load()
 	if err != nil {
@@ -166,6 +181,7 @@ func build(ctx context.Context,
 		rules:      rules,
 		schemas:    schemas,
 		identities: identities,
+		admission:  limiter,
 		orphans:    orphans,
 		ctx:        ctx,
 		fetching:   map[string]bool{},
@@ -198,7 +214,8 @@ func (n *Node) validate(_ context.Context,
 }
 
 
-// Receive validates one event and stores it, however it arrived.
+// Receive runs one event through the whole checklist, however it arrived,
+// and hands back the orphans it frees.
 func (n *Node) Receive(raw []byte, arrival Arrival) (Outcome, error) {
 	env, err := envelope.Open(raw, n.rules)
 	if _, ok := errors.AsType[*envelope.OtherNetworkError](err); ok {
@@ -232,15 +249,15 @@ func (n *Node) Receive(raw []byte, arrival Arrival) (Outcome, error) {
 }
 
 
-// settle stores a verified event, or holds it when a reference is missing.
+// settle runs the checklist on a verified event from the revoked key on.
 func (n *Node) settle(verified event.Event, arrival Arrival) (Outcome, error) {
 	env := verified.Envelope()
 
 	n.mu.Lock()
 	defer n.mu.Unlock()
 
-	if err := n.observe(env); err != nil {
-		return report(arrival, Rejected, err)
+	if n.identities.IsRevoked(env.Author) {
+		return report(arrival, Rejected, &RevokedKeyError{Key: env.Author})
 	}
 
 	result, err := references.Check(env, lookup{n.store, n.identities})
@@ -256,7 +273,32 @@ func (n *Node) settle(verified event.Event, arrival Arrival) (Outcome, error) {
 		return n.hold(verified, result.Missing, arrival), nil
 	}
 
-	err = n.store.AddEvent(verified.ID(), verified.Raw(), n.rules.Now())
+	if !n.admitted(env.Author, arrival) {
+		return report(arrival, OverLimit, &OverLimitError{Author: env.Author})
+	}
+
+	return n.commit(verified, arrival)
+}
+
+
+// admitted applies the admission limit, which sync is exempt from.
+func (n *Node) admitted(author string, arrival Arrival) bool {
+	return arrival.Kind == Sync || n.admission.Allow(author)
+}
+
+
+// commit records a rotation or a revocation, stores the event and tells the
+// indexer.
+func (n *Node) commit(verified event.Event, arrival Arrival) (Outcome, error) {
+	env := verified.Envelope()
+
+	if identity.Moves(env.EventType) {
+		if err := n.identities.Observe(env); err != nil {
+			return report(arrival, Rejected, err)
+		}
+	}
+
+	err := n.store.AddEvent(verified.ID(), verified.Raw(), n.rules.Now())
 	if errors.Is(err, store.ErrDuplicate) {
 		return Duplicate, nil
 	}
@@ -266,8 +308,16 @@ func (n *Node) settle(verified event.Event, arrival Arrival) (Outcome, error) {
 	}
 
 	slog.Info("stored", "arrival", arrival.Kind, "bytes", len(verified.Raw()))
+
+	n.notifyIndexer(verified.Raw())
+
 	return Stored, nil
 }
+
+
+// notifyIndexer is where a stored event will be handed to the indexer. There
+// is no indexer in this phase.
+func (n *Node) notifyIndexer(_ []byte) {}
 
 
 // offline reports whether n was built without a network.
@@ -286,6 +336,7 @@ func (n *Node) hold(verified event.Event,
 		Raw:     verified.Raw(),
 		Missing: missing,
 		Origin:  originOf(arrival),
+		Kind:    int(arrival.Kind),
 	})
 
 	slog.Info("orphaned",
@@ -301,25 +352,12 @@ func (n *Node) hold(verified event.Event,
 }
 
 
-// release hands every orphan waiting for id back to Receive.
+// release hands every orphan waiting for id back to Receive, as the arrival it
+// first came in by.
 func (n *Node) release(id string) {
 	for _, entry := range n.orphans.Release(id) {
-		n.Receive(entry.Raw, arrivalOf(entry.Origin))
+		n.Receive(entry.Raw, arrivalOf(entry))
 	}
-}
-
-
-// observe refuses a revoked key and records a rotation or a revocation.
-func (n *Node) observe(env *envelope.Envelope) error {
-	if n.identities.IsRevoked(env.Author) {
-		return &RevokedKeyError{Key: env.Author}
-	}
-
-	if movesIdentity(env.EventType) {
-		return n.identities.Observe(env)
-	}
-
-	return nil
 }
 
 
