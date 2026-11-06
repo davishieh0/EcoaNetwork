@@ -5,11 +5,13 @@ package identity
 import (
 	"bytes"
 	"crypto/ed25519"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	"filippo.io/edwards25519"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/mr-tron/base58"
 )
 
@@ -18,6 +20,13 @@ import (
 
 // prefix is the did:key method plus the multibase z of base58btc.
 const prefix = "did:key:z"
+
+
+// eventType of the two events that move an identity between keys.
+const (
+	rotatedType = "identity.key_rotated"
+	revokedType = "identity.key_revoked"
+)
 
 
 // --- GLOBALS ---
@@ -87,4 +96,171 @@ func (i Identity) String() string {
 // PublicKey returns the Ed25519 public key of the identity.
 func (i Identity) PublicKey() ed25519.PublicKey {
 	return bytes.Clone(i.key)
+}
+
+
+// Tracker is the rotations and revocations this node observed, in order.
+type Tracker struct {
+	// successor maps a rotated key to the key it named
+	successor map[string]string
+
+	// contested holds the keys with two conflicting rotations in one batch
+	contested map[string]bool
+
+	// revoked holds the keys whose revocation this node accepted
+	revoked map[string]bool
+}
+
+
+// NewTracker returns a tracker that has observed nothing.
+func NewTracker() *Tracker {
+	return &Tracker{
+		successor: map[string]string{},
+		contested: map[string]bool{},
+		revoked:   map[string]bool{},
+	}
+}
+
+
+// Moves reports whether eventType rotates or revokes a key.
+func Moves(eventType string) bool {
+	return eventType == rotatedType || eventType == revokedType
+}
+
+
+// Observe records a rotation or revocation, refusing a conflicting rotation.
+func (t *Tracker) Observe(env *envelope.Envelope) error {
+	switch env.EventType {
+	case rotatedType:
+		return t.rotate(env)
+	case revokedType:
+		t.revoked[env.Author] = true
+		return nil
+	}
+
+	return &UnsupportedEventError{EventType: env.EventType}
+}
+
+
+// ObserveBackfill records a batch, contesting a key with conflicting rotations.
+func (t *Tracker) ObserveBackfill(rotations []*envelope.Envelope) error {
+	named := map[string]map[string]bool{}
+
+	for _, env := range rotations {
+		successor, err := successorOf(env)
+		if err != nil {
+			return err
+		}
+
+		if named[env.Author] == nil {
+			named[env.Author] = map[string]bool{}
+		}
+
+		named[env.Author][successor] = true
+	}
+
+	for author, successors := range named {
+		_, rotated := t.successor[author]
+		if len(successors) > 1 && !rotated {
+			t.contested[author] = true
+		}
+	}
+
+	return t.observeUncontested(rotations)
+}
+
+
+// Resolve returns the current key of key and whether its identity is contested.
+func (t *Tracker) Resolve(key string) (string, bool) {
+	for {
+		next, rotated := t.successor[key]
+		if !rotated {
+			return key, t.contested[key]
+		}
+
+		key = next
+	}
+}
+
+
+// IsRevoked reports whether this node accepted a revocation of key.
+func (t *Tracker) IsRevoked(key string) bool {
+	return t.revoked[key]
+}
+
+
+// rotate records the rotation of env, the first one observed per key.
+func (t *Tracker) rotate(env *envelope.Envelope) error {
+	successor, err := successorOf(env)
+	if err != nil {
+		return err
+	}
+
+	current, rotated := t.successor[env.Author]
+	if rotated && current == successor {
+		return nil
+	}
+
+	if rotated || t.contested[env.Author] {
+		return &SuccessorObservedError{
+			Author:    env.Author,
+			Successor: successor,
+		}
+	}
+
+	if t.reaches(successor, env.Author) {
+		return &RotationCycleError{
+			Author:    env.Author,
+			Successor: successor,
+		}
+	}
+
+	t.successor[env.Author] = successor
+	return nil
+}
+
+
+// observeUncontested observes each rotation whose key is not contested.
+func (t *Tracker) observeUncontested(rotations []*envelope.Envelope) error {
+	var refused []error
+
+	for _, env := range rotations {
+		if t.contested[env.Author] {
+			continue
+		}
+
+		if err := t.rotate(env); err != nil {
+			refused = append(refused, err)
+		}
+	}
+
+	return errors.Join(refused...)
+}
+
+
+// reaches reports whether the successors of from lead to target.
+func (t *Tracker) reaches(from string, target string) bool {
+	for key := from; ; key = t.successor[key] {
+		if key == target {
+			return true
+		}
+
+		if _, rotated := t.successor[key]; !rotated {
+			return false
+		}
+	}
+}
+
+
+// successorOf returns the successor a rotation names.
+func successorOf(env *envelope.Envelope) (string, error) {
+	var payload struct {
+		Successor string `json:"successor"`
+	}
+
+	if err := json.Unmarshal(env.Payload, &payload); err != nil {
+		return "", fmt.Errorf("identity: rotation payload: %w", err)
+	}
+
+	return payload.Successor, nil
 }
