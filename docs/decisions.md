@@ -572,11 +572,90 @@ Converging on it independently is still worth something — as evidence the desi
 
 **The lesson worth keeping:** the wide claim would have survived until someone in a defence asked about Ozone. Doing this before writing code, rather than after, is what the roadmap ordering was for.
 
+## 15. The v1 node
+
+Decisions taken while mapping the node's implementation, each of them closing a number or a layout the specification left open. Sync serving limits are in §10.5 and the single-key model in §3.5.
+
+### 15.1 The sync contract: bytes, a sequence cursor, a ceiling on pages — **call**
+
+`protocol.md` said "direct libp2p streams (Protobuf)" and stopped, which is not enough for a Go node and a Python node to interoperate: field names, the type of the cursor, the page size, the protocol ID and the framing all had to be fixed.
+
+- **An event travels as `bytes`: the original envelope JSON, never rebuilt from Protobuf fields.** The `eventId` is a hash of the canonicalized JSON; rebuilding it from fields would change bytes and drop the unknown fields a node has to preserve. Protobuf is only the wrapper.
+- **The cursor is a `uint64`**, the peer's local receive sequence (§2.4). `GetEventsSince` answers with the next cursor and `has_more`.
+- **Pages are sized by the server.** The caller suggests a size; the server applies a ceiling of 256 events per page and 256 ids per `GetEvents`.
+- **Protocol ID `/ecoa/sync/1.0.0`**, one request and one response per stream, each message prefixed by its length as a varint, the libp2p convention.
+- **`GetEventsResponse` carries a status per id**, `FOUND`, `PRUNED` or `UNKNOWN`, with the bytes when found. A v1 node never answers `PRUNED`, since it does not prune (§4.3), but the value exists from day one.
+
+### 15.2 bbolt is the node database, in six buckets — **call**
+
+The node needs an append-only log with a monotonic local sequence, a cheap lookup by `eventId` (checklist step 4), a cursor per peer that survives a restart, and room for tombstones.
+
+bbolt is pure Go in one file, so there is nothing to operate and the image stays static. Its one-writer ACID transaction puts an event and its sequence number in the same commit, so neither exists without the other. Its keys are ordered, so `GetEventsSince(cursor)` is a range scan. The load is modest writes and reads by id and by range, which is what it is built for. **Rejected: Badger.** An LSM tree optimizes heavy writes at the price of compaction and value-log garbage collection, and this node does not write heavily.
+
+The buckets:
+
+- `events`: `eventId` → the raw envelope, which is the step 4 lookup.
+- `log`: local sequence (`uint64`, big-endian, so byte order is numeric order) → `eventId`. The sequence comes from `NextSequence`, in the same transaction as `events`.
+- `meta`: `eventId` → sequence and local receive time (step 11).
+- `cursors`: peer ID → the last cursor received from that peer.
+- `tombstones`: `eventId` → the author and the time of pruning. It is created empty, because nodes do not prune, but the format exists.
+- `peers`: the multiaddr of every peer the node reached, dialed first on the next start (§15.6).
+
+The identity state of the node (rotations and revocations) has no bucket. It is rebuilt on every start by replaying `log` in sequence order, which is also the order the node observed them in (§2.3), so the state cannot disagree with the log.
+
+### 15.3 The orphan buffer holds 10,000 events or an hour, and one peer at most a tenth — **call**
+
+`protocol.md` suggested "1 hour or 10,000 events" and said only "a small share" for the per-peer bound.
+
+- **Global bound:** 1 hour or 10,000 events, whichever comes first, oldest evicted first.
+- **Per-peer share: 10% of the buffer, 1,000 entries.** A peer over its share loses its own oldest orphan, never another peer's.
+- **Whose orphan it is.** Gossipsub: the peer that delivered the message. Sync: the peer the stream was opened with. Reprocessing: the peer and the kind of arrival it was held under. The gateway has a share of its own.
+- **Targets are fetched, within the share.** An orphan's missing target is asked for with `GetEvents` from the peer that delivered the orphan, and only while that peer is under its share, so a peer cannot make the node chase an endless chain.
+- **Rejected: punishing the peer through Gossipsub's `AppSpecificScore`.** Nothing in Gossipsub penalizes an orphan that never resolves, so `protocol.md` was wrong to say it did (corrected there and in `fixtures/orphan-buffer.json`). Turning scoring on means setting the whole score, which ships off and without defaults, and the share already contains the damage. Peer scoring stays off in v1.
+
+### 15.4 Admission is 100 events per author per hour, and sync is exempt — **call**
+
+Step 10 is local policy and binds nobody, but it needs a value, and "accept everything that passed step 9" was one of the options.
+
+- **Only a rate per author in v1.** Thresholds per identity, and a stricter limit for authors with no recognized claim, are out: they would make the node evaluate claims, and recognizing a claim is the indexer's job (DNS, the list of verifiers).
+- **100 events per author per hour, configurable with `ADMISSION_RATE`, and 0 turns it off.** Loose on purpose: it must not stop the generator of synthetic reviews for the demo.
+- **Over the limit, an event is not stored and not relayed, and the peer is not punished**, because the event is still valid. The gateway answers `REJECTED` with the reason; the Gossipsub validator ignores, never rejects.
+- **Sync is outside the limit; it applies to Gossipsub and the gateway.** A node back from days offline receives an active author's history at once, and limiting by the moment of arrival would refuse legitimate history. Limiting by `createdAt` is no alternative, since it is self-declared.
+- **The count follows the arrival at this node** and is taken after the references resolve, so an orphan is counted once, when it is released.
+
+### 15.5 Connections are held between 32 and 96, and the peer ID survives a restart — **call**
+
+The host had a new key on every run and no explicit limits.
+
+- **The peer key is kept in a file (`PEER_KEY_PATH`, mode `0600`)** and reused, so the peer ID survives a restart and other nodes' lists of known peers stay valid. A corrupt key file stops the node and names the file, rather than silently starting under a new identity.
+- **Connection manager: low 32, high 96** (`CONN_LOW`, `CONN_HIGH`). The library default is 160/192. A v1 network is a handful of nodes and Gossipsub keeps 6 to 12 peers in its mesh, so 160/192 is room the node would not use.
+- **The resource manager has explicit limits**, scaled from 256 MiB of memory and 512 file descriptors, not the implicit ones of the library.
+- **Gossipsub peer scoring stays off** (§15.3).
+
+### 15.6 The node remembers the peers it reached, and the operator can replace or extend the bootstrap list — **call**
+
+`protocol.md` asks a node that has run before to try its last peers before the bootstrap list.
+
+- **Peers are remembered in the `peers` bucket** as multiaddrs, when the node reaches them, and are dialed first on the next start.
+- **`BOOTSTRAP_ADDRS` replaces the embedded list; `BOOTSTRAP_EXTRA_ADDRS` adds to it.** The embedded list is empty until a public node exists.
+- **Each dial has its own timeout.** A dead peer in any list delays the start by that timeout and no more.
+- **Rejected: a DNS seed and a DHT.** Both are out of v1 (`protocol.md` → Bootstrap & peer discovery).
+
+### 15.7 Every arrival takes one path, and the door decides only what follows the verdict — **call**
+
+Gossipsub, the gateway, a sync response and the reprocessing of the orphan buffer all end in the same function, which runs the whole checklist, admission included. A second path would be a second place for two doors to disagree about validity.
+
+What differs between doors is what the node does after the verdict:
+
+- **Gossipsub** relays what the validator accepted, which is only what was stored.
+- **The gateway** gets the outcome (`ACCEPTED`, `ALREADY_EXISTS`, `ORPHAN` or `REJECTED`; over the limit is a `REJECTED` with its reason, since the `Outcome` enum is a contract with the backend), and the node publishes what it stored.
+- **Sync** stores, and never hands an event back to the peer it was pulled from.
+- **A released orphan** is rebroadcast unless it came by sync, because Gossipsub never relayed it while it was held.
+
 ## Still open, and owned by the project
 
 - **Payload schemas per event type.** The largest remaining gap before Phase 0 closes. The rating scale is settled (§1.5) because its meaning has to be uniform across the network; the rest of each payload is ordinary schema work and nothing above depends on how it lands.
 - **LGPD, Marco Civil, and the illegal-content/PII process.** A dedicated pass, not a paragraph.
-- Per-period publish limits and per-node admission defaults.
 - Max review character length beyond the 16 KB byte ceiling.
 - `expiresAt` for `email` and `human` claims (settled for `domain`).
 - Whether an indexer publishes an auditable completeness commitment.

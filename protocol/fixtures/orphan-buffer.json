@@ -283,7 +283,7 @@
       "expect": {
         "perPeerCapEnforced": true,
         "legitimateOrphansEvicted": false,
-        "note": "behaviour Gossipsub peer scoring also penalizes"
+        "note": "Gossipsub peer scoring does not see a valid orphan that never resolves; the per-peer share is the only thing that contains it"
       }
     }
   ]

@@ -141,7 +141,7 @@ This is a different problem from API-level rate limiting (see [docs/identity.md]
 
 No bespoke Ecoa mechanism for this — libp2p already covers the P2P layer well:
 
-- **Gossipsub peer scoring** — penalizes peers that send invalid or low-value messages, deprioritizes them, eventually stops relaying through them.
+- **Gossipsub peer scoring** — penalizes peers that send invalid or low-value messages, deprioritizes them, eventually stops relaying through them. It ships off, with no defaults, and turning it on means configuring the whole score. **v1 leaves it off**: the per-peer orphan share and the sync limits contain the abuse a score would have to catch ([decisions.md](./decisions.md#153-the-orphan-buffer-holds-10000-events-or-an-hour-and-one-peer-at-most-a-tenth--call)).
 - **Connection manager limits** — caps how many peers a node holds connections with at once, so no single peer (or coordinated set) can exhaust connection slots.
 
 The one Ecoa-specific mitigation is the reordered validation checklist above — cheap duplicate detection before any expensive crypto work is itself an anti-flood measure, since it stops replay spam from costing meaningful CPU.
@@ -283,7 +283,7 @@ So a failed reference check is **not** the same as an invalid event:
 - When a newly accepted event completes a pending reference, the buffered event is re-run from step 9 and, if it passes, stored and rebroadcast normally.
 - The buffer is bounded in both entries and age — a suggested v1 default of **1 hour or 10,000 events, whichever comes first** — and evicts oldest-first. Eviction is silent and safe: a genuinely valid orphan comes back through ordinary sync once its target is in place, because the peer that has the target has the child too.
 - An event that is still an orphan after eviction is simply gone from this node's view until then. That is a delay, not a loss, and it's the reason the buffer can stay small.
-- **The buffer is itself an attack surface**, since filling it with valid-signature events pointing at targets that will never exist is cheap and would evict legitimate orphans. So the bound is applied *per peer*, not just globally: no single peer may occupy more than a small share of the buffer, and a peer producing orphans that never resolve is exactly the behavior Gossipsub peer scoring already penalizes ([Peer abuse & flood protection](#peer-abuse--flood-protection)).
+- **The buffer is itself an attack surface**, since filling it with valid-signature events pointing at targets that will never exist is cheap and would evict legitimate orphans. So the bound is applied *per peer*, not just globally: no single peer may occupy more than a small share of the buffer. Gossipsub peer scoring does not help here: a valid orphan is not invalid traffic, and the scoring is off in v1 ([Peer abuse & flood protection](#peer-abuse--flood-protection)), so the per-peer share is what contains a peer that produces orphans that never resolve. v1 sets it at 10% of the buffer, and evicts that peer's own oldest orphan first ([decisions.md](./decisions.md#153-the-orphan-buffer-holds-10000-events-or-an-hour-and-one-peer-at-most-a-tenth--call)).
 
 Without this, ordinary out-of-order delivery would be indistinguishable from an attack, and the network would lose valid events at a rate proportional to how fast it is.
 

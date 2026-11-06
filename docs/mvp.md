@@ -135,11 +135,10 @@ Still genuinely open:
 
 - ~~Payload schemas per event type~~ — **settled** ([protocol.md](./protocol.md#payloads)). With this the protocol's design is closed; what remains for Phase 0 is producing artifacts from it, not deciding anything.
 - **LGPD, Marco Civil, and the illegal-content/PII process** — deferred to a dedicated pass, not because it's minor but because it's the opposite. See [Legal exposure](#legal-exposure).
-- Per-period publish limits, and the specific per-node admission policy defaults ([docs/identity.md](./identity.md#where-these-controls-actually-sit)).
 - Old-version display policy — how much of a replace chain a client shows by default.
 - Re-check intervals for the delegated claim types — the maximum lifetimes are settled, but `email` and `human` have no cheap re-check, so in practice they just expire ([docs/verification.md](./verification.md#open-questions)).
 - Whether an indexer should publish an auditable completeness commitment ([docs/architecture.md](./architecture.md#integrity-is-verifiable-completeness-is-not)).
 - Identity export/backup format. Which key model v1 ships is settled: the single key ([decisions.md](./decisions.md#35-v1-ships-the-single-key-model-and-rejects-any-devicekey--call)).
-- Which language, framework, and database the **gateway, indexer and client** use. The node is settled as Go ([decisions.md](./decisions.md#132-the-node-is-written-in-go--call)); the rest speak HTTP and SQL rather than libp2p, and nothing is blocked on them.
+- Which language, framework, and database the **gateway, indexer and client** use. The node is settled as Go ([decisions.md](./decisions.md#132-the-node-is-written-in-go--call)) with bbolt as its database ([decisions.md](./decisions.md#152-bbolt-is-the-node-database-in-six-buckets--call)); the rest speak HTTP and SQL rather than libp2p, and nothing is blocked on them.
 
 Settled during the architecture review and no longer open: node retention for v1 (nodes don't prune), minimum replica target (3), alias conflicts (an alias is an ordinary weighted metadata proposal), and the key-recovery strategy (single-key is terminal on compromise; the root/device model is the designed way out). Every decision taken, with its cost and the alternatives rejected, is in [docs/decisions.md](./decisions.md).
