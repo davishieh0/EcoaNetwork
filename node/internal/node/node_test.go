@@ -78,7 +78,8 @@ func newNode(t *testing.T) (*Node, string) {
 		Now:     clock,
 	}
 
-	n, err := build(s,
+	n, err := build(context.Background(),
+	                s,
 	                rules,
 	                orphan.New(10, testShare, time.Hour, clock))
 	if err != nil {

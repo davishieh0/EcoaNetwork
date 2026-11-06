@@ -7,8 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/internal/orphan"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/fixturetest"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
@@ -36,6 +38,12 @@ type logServer struct {
 	log   []p2p.LoggedEvent
 	asked []uint64
 
+	// events are the events GetEvent serves by id
+	events map[string][]byte
+
+	// wanted are the ids GetEvent was asked for
+	wanted []string
+
 	// onAsk runs when a page is requested, before it is served
 	onAsk func(cursor uint64)
 }
@@ -62,7 +70,9 @@ func (l *logServer) EventsSince(cursor uint64,
 
 
 func (l *logServer) GetEvent(id string) ([]byte, error) {
-	return nil, nil
+	l.wanted = append(l.wanted, id)
+
+	return l.events[id], nil
 }
 
 
@@ -319,4 +329,120 @@ func TestNewServesItsLogToAPeerThatConnectsLater(t *testing.T) {
 
 	// Assert
 	waitStored(t, ctx, late, ids)
+}
+
+
+// target returns a review served by src under its id, and that id.
+func target(t *testing.T, src *logServer) (string, string) {
+	t.Helper()
+
+	raw := sign(t, 1, review())
+	id := field(t, raw, "eventId")
+	src.events = map[string][]byte{id: raw}
+
+	return id, string(raw)
+}
+
+
+func TestFetchMissingStoresTheTargetAndReleasesTheOrphan(t *testing.T) {
+	// Arrange
+	src := &logServer{}
+	id, _ := target(t, src)
+	n, server, path := syncedNode(t, src)
+
+	child := sign(t, 2, endorsement(id))
+
+	if outcome, _ := n.Receive(child, gateway); outcome != Orphaned {
+		t.Fatalf("Receive = %s, want orphaned", outcome)
+	}
+
+	// Act
+	err := n.fetchMissing(context.Background(), server, []string{id})
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := len(stored(t, n, path)); got != 2 {
+		t.Errorf("stored %d events, want the target and the orphan", got)
+	}
+}
+
+
+func TestFetchMissingKeepsTheOrphanOfAnUnknownTarget(t *testing.T) {
+	// Arrange
+	src := &logServer{}
+	n, server, _ := syncedNode(t, src)
+
+	missing := fixturetest.EventID("never")
+	child := sign(t, 2, endorsement(missing))
+	n.Receive(child, gateway)
+
+	// Act
+	err := n.fetchMissing(context.Background(), server, []string{missing})
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if held := n.orphans.Release(missing); len(held) != 1 {
+		t.Errorf("%d orphans held, want the one still waiting", len(held))
+	}
+}
+
+
+func TestReceiveAsksThePeerThatDeliveredTheOrphanForItsTarget(t *testing.T) {
+	// Arrange
+	src := &logServer{}
+	id, _ := target(t, src)
+	n, server, path := syncedNode(t, src)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	child := sign(t, 2, endorsement(id))
+
+	// Act
+	n.Receive(child, Arrival{Kind: Gossip, Peer: server})
+
+	// Assert
+	waitStored(t, ctx, n, []string{id, field(t, child, "eventId")})
+
+	if len(src.wanted) == 0 {
+		t.Fatal("the target was stored without asking the peer for it")
+	}
+
+	if got := len(stored(t, n, path)); got != 2 {
+		t.Errorf("stored %d events, want the target and the orphan", got)
+	}
+}
+
+
+func TestWantsTargetsStopsAtTheShare(t *testing.T) {
+	// Arrange
+	n, _, _ := syncedNode(t, &logServer{})
+
+	bob := Arrival{Kind: Sync, Peer: "bob"}
+	before := n.wantsTargets(bob)
+
+	for i := range testShare {
+		target := fixturetest.EventID("never" + string(rune('a'+i)))
+		n.orphans.Add(orphan.Entry{
+			Missing: []string{target},
+			Origin:  originOf(bob),
+		})
+	}
+
+	// Act
+	atShare := n.wantsTargets(bob)
+	other := n.wantsTargets(Arrival{Kind: Sync, Peer: "carol"})
+	fromGateway := n.wantsTargets(gateway)
+
+	// Assert
+	if !before || atShare || !other || fromGateway {
+		t.Fatalf("wantsTargets = %t, %t, %t, %t, want true, false, true, false",
+		         before, atShare, other, fromGateway)
+	}
 }

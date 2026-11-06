@@ -12,6 +12,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/orphan"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
+	pb "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/event"
@@ -94,6 +95,15 @@ type Node struct {
 	// orphans hold the events whose references have not resolved
 	orphans *orphan.Buffer
 
+	// ctx is the lifetime of the node, which the target fetches run under
+	ctx context.Context
+
+	// fetching holds the targets already being asked for
+	fetching map[string]bool
+
+	// fetchMu guards fetching
+	fetchMu sync.Mutex
+
 	// mu serializes events from the revocation check to the store
 	mu sync.Mutex
 }
@@ -116,7 +126,7 @@ func New(ctx context.Context,
 
 	orphans := orphan.New(maxOrphans, orphanShare, orphanAge, time.Now)
 
-	n, err := build(s, rules, orphans)
+	n, err := build(ctx, s, rules, orphans)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +146,8 @@ func New(ctx context.Context,
 
 
 // build returns a node over s with no network, judging events by rules.
-func build(s *store.Store,
+func build(ctx context.Context,
+           s *store.Store,
            rules envelope.Rules,
            orphans *orphan.Buffer) (*Node, error) {
 	schemas, err := schema.Load()
@@ -156,6 +167,8 @@ func build(s *store.Store,
 		schemas:    schemas,
 		identities: identities,
 		orphans:    orphans,
+		ctx:        ctx,
+		fetching:   map[string]bool{},
 	}
 
 	return n, nil
@@ -257,10 +270,18 @@ func (n *Node) settle(verified event.Event, arrival Arrival) (Outcome, error) {
 }
 
 
+// offline reports whether n was built without a network.
+func (n *Node) offline() bool {
+	return n.host == nil
+}
+
+
 // hold parks an event until the events it names are stored.
 func (n *Node) hold(verified event.Event,
                     missing []string,
                     arrival Arrival) Outcome {
+	fetch := n.wantsTargets(arrival)
+
 	n.orphans.Add(orphan.Entry{
 		Raw:     verified.Raw(),
 		Missing: missing,
@@ -271,6 +292,10 @@ func (n *Node) hold(verified event.Event,
 	          "arrival", arrival.Kind,
 	          "peer", arrival.Peer,
 	          "missing", missing[0])
+
+	if fetch {
+		go n.fetchTargets(arrival.Peer, missing)
+	}
 
 	return Orphaned
 }
@@ -356,45 +381,120 @@ func (n *Node) catchUp(ctx context.Context, p peer.ID) error {
 	}
 
 	for {
-		page, err := n.host.GetEventsSince(ctx, p, cursor)
+		page, err := n.pullPage(ctx, p, cursor)
 		if err != nil {
-			return err
-		}
-
-		if page.HasMore && page.NextCursor <= cursor {
-			return fmt.Errorf("cursor stuck at %d with more to send", cursor)
-		}
-
-		if err := n.receivePage(page.Events, p); err != nil {
-			return err
-		}
-
-		cursor = page.NextCursor
-
-		if err := n.store.SetCursor(p.String(), cursor); err != nil {
 			return err
 		}
 
 		if !page.HasMore {
 			return nil
 		}
+
+		cursor = page.NextCursor
 	}
 }
 
 
-// receivePage hands each event of a page to Receive, as an arrival from p.
-func (n *Node) receivePage(events [][]byte, p peer.ID) error {
+// pullPage receives the page of p after cursor and keeps its next cursor.
+func (n *Node) pullPage(ctx context.Context,
+                        p peer.ID,
+                        cursor uint64) (*pb.GetEventsSinceResponse, error) {
+	page, err := n.host.GetEventsSince(ctx, p, cursor)
+	if err != nil {
+		return nil, err
+	}
+
+	if page.HasMore && page.NextCursor <= cursor {
+		return nil, fmt.Errorf("cursor stuck at %d with more to send", cursor)
+	}
+
+	if err := n.receiveFrom(p, page.Events); err != nil {
+		return nil, err
+	}
+
+	if err := n.store.SetCursor(p.String(), page.NextCursor); err != nil {
+		return nil, err
+	}
+
+	return page, nil
+}
+
+
+// receiveFrom hands each event to Receive, as an arrival from p.
+func (n *Node) receiveFrom(p peer.ID, events [][]byte) error {
 	arrival := Arrival{Kind: Sync, Peer: p}
 
 	for _, raw := range events {
 		outcome, err := n.Receive(raw, arrival)
 
 		// A rejected event is the peer's fault; a failed one is ours, and
-		// moving the cursor past it would lose it.
+		// going on past it would lose it.
 		if outcome == Failed {
 			return fmt.Errorf("receive: %w", err)
 		}
 	}
 
 	return nil
+}
+
+
+// wantsTargets reports whether the targets of an orphan are asked for.
+func (n *Node) wantsTargets(arrival Arrival) bool {
+	if n.offline() || arrival.Peer == "" {
+		return false
+	}
+
+	return n.orphans.HasRoom(originOf(arrival))
+}
+
+
+// fetchTargets asks p for the ids not already being asked for.
+func (n *Node) fetchTargets(p peer.ID, ids []string) {
+	var wanted []string
+
+	n.fetchMu.Lock()
+	for _, id := range ids {
+		if !n.fetching[id] {
+			n.fetching[id] = true
+			wanted = append(wanted, id)
+		}
+	}
+	n.fetchMu.Unlock()
+
+	defer func() {
+		n.fetchMu.Lock()
+		for _, id := range wanted {
+			delete(n.fetching, id)
+		}
+		n.fetchMu.Unlock()
+	}()
+
+	if len(wanted) == 0 {
+		return
+	}
+
+	if err := n.fetchMissing(n.ctx, p, wanted); err != nil {
+		slog.Warn("fetch targets stopped", "peer", p, "reason", err)
+	}
+}
+
+
+// fetchMissing asks p for the events under ids and receives those found.
+func (n *Node) fetchMissing(ctx context.Context,
+                            p peer.ID,
+                            ids []string) error {
+	resp, err := n.host.GetEvents(ctx, p, ids)
+	if err != nil {
+		return err
+	}
+
+	var found [][]byte
+
+	for _, result := range resp.Results {
+		if result.Status == pb.EventStatus_FOUND {
+			found = append(found, result.Event)
+		}
+	}
+
+	return n.receiveFrom(p, found)
 }
