@@ -149,6 +149,35 @@ func (c Case) Events(t *testing.T) []Built {
 }
 
 
+// List returns the strings of the expect field name, none when it is absent.
+func (c Case) List(name string) []string {
+	var ids []string
+
+	items, _ := c.Expect[name].([]any)
+	for _, item := range items {
+		id, _ := item.(string)
+		ids = append(ids, id)
+	}
+
+	return ids
+}
+
+
+// Rejected returns the ids named by the rejected entries of expect.
+func (c Case) Rejected() []string {
+	var ids []string
+
+	items, _ := c.Expect["rejected"].([]any)
+	for _, item := range items {
+		entry, _ := item.(map[string]any)
+		id, _ := entry["id"].(string)
+		ids = append(ids, id)
+	}
+
+	return ids
+}
+
+
 // key returns the signing key every event of the symbolic name uses.
 func key(name string) ed25519.PrivateKey {
 	seed := sha256.Sum256([]byte(name))

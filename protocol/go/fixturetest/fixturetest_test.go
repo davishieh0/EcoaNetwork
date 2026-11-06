@@ -320,3 +320,30 @@ func TestEventsGivesAnAbsentTargetAValidId(t *testing.T) {
 		         EventID("never_existed"))
 	}
 }
+
+
+func TestListAndRejectedReadTheExpectOfACase(t *testing.T) {
+	// Arrange
+	c := Case{Expect: map[string]any{
+		"accepted": []any{"e1", "e2"},
+		"rejected": []any{map[string]any{"id": "e3", "reason": "r"}},
+	}}
+
+	// Act
+	accepted := c.List("accepted")
+	absent := c.List("buffered")
+	rejected := c.Rejected()
+
+	// Assert
+	if strings.Join(accepted, ",") != "e1,e2" {
+		t.Fatalf("List accepted = %v", accepted)
+	}
+
+	if absent != nil {
+		t.Fatalf("List absent = %v, want nil", absent)
+	}
+
+	if strings.Join(rejected, ",") != "e3" {
+		t.Fatalf("Rejected = %v", rejected)
+	}
+}
