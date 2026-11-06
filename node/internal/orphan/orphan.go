@@ -131,14 +131,16 @@ func (b *Buffer) Release(targetID string) []Entry {
 }
 
 
-// Len returns how many entries are held.
-func (b *Buffer) Len() int {
+// HasRoom reports whether origin can add an entry and keep all of its own.
+func (b *Buffer) HasRoom(origin string) bool {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
 	b.expire()
 
-	return b.all.Len()
+	mine := b.byOrigin[origin]
+
+	return mine == nil || mine.Len() < b.orphanShare
 }
 
 

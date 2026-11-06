@@ -138,3 +138,25 @@ func TestAddChargesAReheldEntryToItsOriginalPeer(t *testing.T) {
 		t.Fatal("the reheld entry was not charged to its peer")
 	}
 }
+
+
+func TestHasRoomIsFalseOnlyForAnOriginAtItsShare(t *testing.T) {
+	// Arrange
+	b := New(10, 2, time.Hour, func() time.Time { return clock })
+	b.Add(entry("a", "t1"))
+	b.Add(entry("a", "t2"))
+	b.Add(entry("b", "t3"))
+
+	// Act
+	full := b.HasRoom("a")
+	roomy := b.HasRoom("b")
+	empty := b.HasRoom("c")
+	b.Release("t1")
+	freed := b.HasRoom("a")
+
+	// Assert
+	if full || !roomy || !empty || !freed {
+		t.Fatalf("HasRoom = %t, %t, %t, %t, want false, true, true, true",
+		         full, roomy, empty, freed)
+	}
+}
