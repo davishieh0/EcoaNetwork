@@ -6,12 +6,14 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/event"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/schema"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -62,6 +64,12 @@ type Node struct {
 
 	// schemas validate payloads by eventType
 	schemas *schema.Set
+
+	// identities are the rotations and revocations this node observed
+	identities *identity.Tracker
+
+	// mu serializes events from the revocation check to the store
+	mu sync.Mutex
 }
 
 
@@ -104,9 +112,10 @@ func build(s *store.Store, rules envelope.Rules) (*Node, error) {
 	}
 
 	n := &Node{
-		store:   s,
-		rules:   rules,
-		schemas: schemas,
+		store:      s,
+		rules:      rules,
+		schemas:    schemas,
+		identities: identity.NewTracker(),
 	}
 
 	return n, nil
@@ -161,6 +170,13 @@ func (n *Node) Receive(raw []byte, arrival Arrival) (Outcome, error) {
 		return report(arrival, Rejected, err)
 	}
 
+	n.mu.Lock()
+	defer n.mu.Unlock()
+
+	if err := n.observe(env); err != nil {
+		return report(arrival, Rejected, err)
+	}
+
 	err = n.store.AddEvent(verified.ID(), verified.Raw(), n.rules.Now())
 	if errors.Is(err, store.ErrDuplicate) {
 		return Duplicate, nil
@@ -172,6 +188,21 @@ func (n *Node) Receive(raw []byte, arrival Arrival) (Outcome, error) {
 
 	slog.Info("stored", "arrival", arrival.Kind, "bytes", len(raw))
 	return Stored, nil
+}
+
+
+// observe refuses a revoked key and records a rotation or a revocation.
+func (n *Node) observe(env *envelope.Envelope) error {
+	if n.identities.IsRevoked(env.Author) {
+		return &RevokedKeyError{Key: env.Author}
+	}
+
+	switch env.EventType {
+	case "identity.key_rotated", "identity.key_revoked":
+		return n.identities.Observe(env)
+	}
+
+	return nil
 }
 
 

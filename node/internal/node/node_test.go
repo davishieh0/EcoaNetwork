@@ -6,13 +6,17 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/json"
+	"errors"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/testevent"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	bolt "go.etcd.io/bbolt"
@@ -445,5 +449,104 @@ func TestPublishAfterReceiveStoresOnceAndReachesThePeer(t *testing.T) {
 	found, err := a.store.EventsSince(0, 10)
 	if err != nil || len(found) != 1 {
 		t.Fatalf("EventsSince = %v, %v, want one event", found, err)
+	}
+}
+
+
+// did returns the author of the events sign signs with seed.
+func did(seed byte) string {
+	key := ed25519.NewKeyFromSeed(bytes.Repeat([]byte{seed}, 32))
+	public, _ := key.Public().(ed25519.PublicKey)
+
+	return identity.FromKey(public).String()
+}
+
+
+// rotation returns the fields of a rotation to the key of seed.
+func rotation(seed byte, createdAt string) testevent.Fields {
+	return testevent.Fields{
+		Protocol:  network,
+		Version:   1,
+		EventType: "identity.key_rotated",
+		CreatedAt: createdAt,
+		Payload:   `{"successor":"` + did(seed) + `"}`,
+	}
+}
+
+
+func TestReceiveRejectsWhatARevokedKeySignsAfterwards(t *testing.T) {
+	// Arrange
+	n, _ := newNode(t)
+
+	revocation := review()
+	revocation.EventType = "identity.key_revoked"
+	revocation.Payload = `{"reason":"compromised"}`
+
+	// signed before the revocation, but received after it
+	backdated := review()
+	backdated.CreatedAt = "2026-03-01T10:00:00Z"
+
+	before := sign(t, 1, review())
+	n.Receive(before, gateway)
+	n.Receive(sign(t, 1, revocation), gateway)
+
+	// Act
+	outcome, err := n.Receive(sign(t, 1, backdated), gateway)
+
+	// Assert
+	var revoked *RevokedKeyError
+	if outcome != Rejected || !errors.As(err, &revoked) {
+		t.Fatalf("Receive = %s, %v, want rejected by a revoked key",
+		         outcome, err)
+	}
+}
+
+
+func TestReceiveRejectsARotationAfterTheFirstOne(t *testing.T) {
+	// Arrange
+	n, _ := newNode(t)
+	n.Receive(sign(t, 1, rotation(2, "2026-01-01T10:00:00Z")), gateway)
+
+	// Act
+	outcome, err := n.Receive(
+		sign(t, 1, rotation(3, "2026-07-01T10:00:00Z")), gateway,
+	)
+
+	// Assert
+	var observed *identity.SuccessorObservedError
+	if outcome != Rejected || !errors.As(err, &observed) {
+		t.Fatalf("Receive = %s, %v, want a successor already observed",
+		         outcome, err)
+	}
+}
+
+
+func TestReceiveAcceptsOnlyOneOfManyParallelRotations(t *testing.T) {
+	// Arrange
+	n, _ := newNode(t)
+	const rivals = 20
+
+	var wg sync.WaitGroup
+	var storedCount atomic.Int32
+
+	// Act
+	for seed := byte(2); seed < 2+rivals; seed++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			raw := sign(t, 1, rotation(seed, "2026-01-01T10:00:00Z"))
+			if outcome, _ := n.Receive(raw, gateway); outcome == Stored {
+				storedCount.Add(1)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Assert
+	if got := storedCount.Load(); got != 1 {
+		t.Fatalf("stored %d rotations of one key, want 1", got)
 	}
 }
