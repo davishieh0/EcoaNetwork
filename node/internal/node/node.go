@@ -144,11 +144,17 @@ func build(s *store.Store,
 		return nil, err
 	}
 
+	identities := identity.NewTracker()
+
+	if err := rebuildIdentity(s, identities); err != nil {
+		return nil, fmt.Errorf("rebuild identities: %w", err)
+	}
+
 	n := &Node{
 		store:      s,
 		rules:      rules,
 		schemas:    schemas,
-		identities: identity.NewTracker(),
+		identities: identities,
 		orphans:    orphans,
 	}
 
@@ -284,8 +290,7 @@ func (n *Node) observe(env *envelope.Envelope) error {
 		return &RevokedKeyError{Key: env.Author}
 	}
 
-	switch env.EventType {
-	case "identity.key_rotated", "identity.key_revoked":
+	if movesIdentity(env.EventType) {
 		return n.identities.Observe(env)
 	}
 
