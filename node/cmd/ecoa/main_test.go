@@ -5,8 +5,12 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/eduardokairalla1/EcoaNetwork/internal/config"
+	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 )
 
 
@@ -47,3 +51,36 @@ func TestRunRefusesANetworkOutsideTheProtocolPattern(t *testing.T) {
 
 
 
+
+
+func TestPeerConfigDialsTheLastSessionAndRemembersThisOne(t *testing.T) {
+	// Arrange
+	db, err := store.New(filepath.Join(t.TempDir(), "bolt.db"))
+	if err != nil {
+		t.Fatalf("store: %v", err)
+	}
+	defer db.Close()
+
+	if err := db.AddPeer("/ip4/1.1.1.1/tcp/1"); err != nil {
+		t.Fatalf("AddPeer: %v", err)
+	}
+
+	// Act
+	peers, err := peerConfig(config.Config{Network: "ecoa-test"}, db)
+	if err != nil {
+		t.Fatalf("peerConfig: %v", err)
+	}
+
+	peers.OnDialed("/ip4/2.2.2.2/tcp/2")
+
+	// Assert
+	known, err := db.KnownPeers()
+	want := []string{"/ip4/1.1.1.1/tcp/1", "/ip4/2.2.2.2/tcp/2"}
+	if err != nil || !reflect.DeepEqual(known, want) {
+		t.Fatalf("KnownPeers = %v, %v, want %v", known, err, want)
+	}
+
+	if !reflect.DeepEqual(peers.KnownAddrs, want[:1]) {
+		t.Fatalf("KnownAddrs = %v, want %v", peers.KnownAddrs, want[:1])
+	}
+}

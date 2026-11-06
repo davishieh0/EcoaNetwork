@@ -52,19 +52,12 @@ func run(args []string) error {
 	}
 	defer db.Close()
 
-	n, err := node.New(ctx, db, p2p.Config{
-		Network:        cfg.Network,
-		Listen:         cfg.ListenAddr,
-		BootstrapAddrs: cfg.BootstrapAddrs,
-		Sync: p2p.SyncLimits{
-			MaxStreams:        cfg.SyncMaxStreams,
-			MaxStreamsPerPeer: cfg.SyncMaxStreamsPerPeer,
-			EventsPerPeer:     cfg.SyncEventsPerPeer,
-		},
-		KeyPath:        cfg.PeerKeyPath,
-		ConnLow:        cfg.ConnLow,
-		ConnHigh:       cfg.ConnHigh,
-	}, cfg.MaxEventSize)
+	peers, err := peerConfig(cfg, db)
+	if err != nil {
+		return err
+	}
+
+	n, err := node.New(ctx, db, peers, cfg.MaxEventSize)
 	if err != nil {
 		return err
 	}
@@ -98,4 +91,33 @@ func run(args []string) error {
 	n.Run(ctx)
 
 	return nil
+}
+
+
+// peerConfig builds the network settings, with the peers of the last session.
+func peerConfig(cfg config.Config, db *store.Store) (p2p.Config, error) {
+	known, err := db.KnownPeers()
+	if err != nil {
+		return p2p.Config{}, fmt.Errorf("read known peers: %w", err)
+	}
+
+	return p2p.Config{
+		Network:        cfg.Network,
+		Listen:         cfg.ListenAddr,
+		BootstrapAddrs: cfg.BootstrapAddrs,
+		KnownAddrs:     known,
+		Sync: p2p.SyncLimits{
+			MaxStreams:        cfg.SyncMaxStreams,
+			MaxStreamsPerPeer: cfg.SyncMaxStreamsPerPeer,
+			EventsPerPeer:     cfg.SyncEventsPerPeer,
+		},
+		KeyPath:        cfg.PeerKeyPath,
+		ConnLow:        cfg.ConnLow,
+		ConnHigh:       cfg.ConnHigh,
+		OnDialed: func(addr string) {
+			if err := db.AddPeer(addr); err != nil {
+				slog.Warn("remember peer", "addr", addr, "err", err)
+			}
+		},
+	}, nil
 }
