@@ -120,40 +120,6 @@ func TestNewSurvivesDeadBootstrap(t *testing.T) {
 }
 
 
-func TestBootstrapListFallsBackToTheEmbeddedList(t *testing.T) {
-	// Arrange
-	previous := DefaultBootstrapAddrs
-	DefaultBootstrapAddrs = []string{"embedded"}
-	t.Cleanup(func() { DefaultBootstrapAddrs = previous })
-
-	// Act
-	got := bootstrapList(Config{})
-
-	// Assert
-	if !reflect.DeepEqual(got, []string{"embedded"}) {
-		t.Fatalf("bootstrapList = %v, want the embedded list", got)
-	}
-}
-
-
-func TestBootstrapListPrefersTheConfiguredList(t *testing.T) {
-	// Arrange
-	previous := DefaultBootstrapAddrs
-	DefaultBootstrapAddrs = []string{"embedded"}
-	t.Cleanup(func() { DefaultBootstrapAddrs = previous })
-
-	cfg := Config{BootstrapAddrs: []string{"configured"}}
-
-	// Act
-	got := bootstrapList(cfg)
-
-	// Assert
-	if !reflect.DeepEqual(got, []string{"configured"}) {
-		t.Fatalf("bootstrapList = %v, want the configured list", got)
-	}
-}
-
-
 // TestConnectBootstrapSkipsUnusable covers both ways an entry can fail: one
 // that does not parse and one that parses but refuses the dial. Neither may
 // stop the caller, so the function returns nothing to check and the log is
@@ -317,17 +283,16 @@ func TestNewNamesTheCorruptKeyFile(t *testing.T) {
 
 func TestDialOrderPutsTheKnownPeersFirst(t *testing.T) {
 	// Arrange
-	previous := DefaultBootstrapAddrs
-	DefaultBootstrapAddrs = []string{"embedded"}
-	t.Cleanup(func() { DefaultBootstrapAddrs = previous })
-
-	cfg := Config{KnownAddrs: []string{"known"}}
+	cfg := Config{
+		KnownAddrs:     []string{"known"},
+		BootstrapAddrs: []string{"bootstrap"},
+	}
 
 	// Act
 	got := dialOrder(cfg)
 
 	// Assert
-	want := []string{"known", "embedded"}
+	want := []string{"known", "bootstrap"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("dialOrder = %v, want %v", got, want)
 	}

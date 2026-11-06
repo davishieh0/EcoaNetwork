@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -36,6 +37,12 @@ const (
 )
 
 
+// --- GLOBALS ---
+
+// defaultBootstrapAddrs is the bootstrap list shipped with the node.
+var defaultBootstrapAddrs []string
+
+
 // --- CODE ---
 
 // Config is every setting the node reads at startup.
@@ -49,7 +56,7 @@ type Config struct {
 	// GRPCAddr is the host:port the gateway submits events to.
 	GRPCAddr string
 
-	// BootstrapAddrs replaces the embedded peer list when not empty.
+	// BootstrapAddrs is the peers to dial at start.
 	BootstrapAddrs []string
 
 	// BoltDBPath is the path of the bbolt file holding the event log.
@@ -113,7 +120,7 @@ func Load() (Config, error) {
 		Network:        network,
 		ListenAddr:     envOr("LISTEN_ADDR", "/ip4/127.0.0.1/tcp/4001"),
 		GRPCAddr:       envOr("GRPC_ADDR", "127.0.0.1:50051"),
-		BootstrapAddrs: splitAddrs(os.Getenv("BOOTSTRAP_ADDRS")),
+		BootstrapAddrs: bootstrapAddrs(),
 		BoltDBPath:     envOr("BOLT_DB_PATH", "data/bbolt/bolt.db"),
 		PeerKeyPath:    envOr("PEER_KEY_PATH", "data/peer.key"),
 		ConnLow:        low,
@@ -137,6 +144,17 @@ func envOr(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+
+// bootstrapAddrs returns the bootstrap list the environment asks for.
+func bootstrapAddrs() []string {
+	list := splitAddrs(os.Getenv("BOOTSTRAP_ADDRS"))
+	if list == nil {
+		list = slices.Clone(defaultBootstrapAddrs)
+	}
+
+	return append(list, splitAddrs(os.Getenv("BOOTSTRAP_EXTRA_ADDRS"))...)
 }
 
 

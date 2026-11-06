@@ -16,6 +16,7 @@ var names = []string{
 	"LISTEN_ADDR",
 	"GRPC_ADDR",
 	"BOOTSTRAP_ADDRS",
+	"BOOTSTRAP_EXTRA_ADDRS",
 	"BOLT_DB_PATH",
 	"PEER_KEY_PATH",
 	"CONN_LOW",
@@ -312,6 +313,49 @@ func TestLoadRefusesInvalidConnLimits(t *testing.T) {
 				t.Fatalf("Load accepted CONN_LOW=%s CONN_HIGH=%s",
 				         pair[0],
 				         pair[1])
+			}
+		})
+	}
+}
+
+
+func TestLoadBuildsTheBootstrapListFromBothVariables(t *testing.T) {
+	cases := map[string]struct {
+		addrs string
+		extra string
+		want  []string
+	}{
+		"neither":           {"", "", []string{"embedded"}},
+		"replaces":          {"a", "", []string{"a"}},
+		"adds":              {"", "b", []string{"embedded", "b"}},
+		"replaces and adds": {"a", "b", []string{"a", "b"}},
+	}
+
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			// Arrange
+			clearEnv(t)
+			previous := defaultBootstrapAddrs
+			defaultBootstrapAddrs = []string{"embedded"}
+			t.Cleanup(func() { defaultBootstrapAddrs = previous })
+
+			if c.addrs != "" {
+				t.Setenv("BOOTSTRAP_ADDRS", c.addrs)
+			}
+
+			if c.extra != "" {
+				t.Setenv("BOOTSTRAP_EXTRA_ADDRS", c.extra)
+			}
+
+			// Act
+			got, err := Load()
+
+			// Assert
+			if err != nil || !reflect.DeepEqual(got.BootstrapAddrs, c.want) {
+				t.Fatalf("BootstrapAddrs = %v, %v, want %v",
+				         got.BootstrapAddrs,
+				         err,
+				         c.want)
 			}
 		})
 	}

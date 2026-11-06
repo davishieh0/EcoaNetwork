@@ -43,11 +43,6 @@ const (
 var dialTimeout = 5 * time.Second
 
 
-// DefaultBootstrapAddrs is the bootstrap list shipped with the node. Empty
-// until a public node exists; the operator overrides it from configuration.
-var DefaultBootstrapAddrs []string
-
-
 // --- CODE ---
 
 // Config is what the node needs to join the network.
@@ -216,19 +211,9 @@ func createKey(path string) (crypto.PrivKey, error) {
 }
 
 
-// bootstrapList returns the configured peers, or else the embedded list.
-func bootstrapList(cfg Config) []string {
-	if len(cfg.BootstrapAddrs) > 0 {
-		return cfg.BootstrapAddrs
-	}
-
-	return DefaultBootstrapAddrs
-}
-
-
 // dialOrder returns the peers of the last session, then the bootstrap list.
 func dialOrder(cfg Config) []string {
-	return append(slices.Clone(cfg.KnownAddrs), bootstrapList(cfg)...)
+	return append(slices.Clone(cfg.KnownAddrs), cfg.BootstrapAddrs...)
 }
 
 
