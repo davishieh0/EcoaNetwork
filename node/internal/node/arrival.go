@@ -44,3 +44,23 @@ type Arrival struct {
 func (k ArrivalKind) String() string {
 	return kindNames[k]
 }
+
+
+// originOf returns the origin an orphan of arrival is charged to.
+func originOf(arrival Arrival) string {
+	if arrival.Kind == Gateway {
+		return gatewayOrigin
+	}
+
+	return string(arrival.Peer)
+}
+
+
+// arrivalOf returns the arrival that an orphan of origin is handed back as.
+func arrivalOf(origin string) Arrival {
+	if origin == gatewayOrigin {
+		return Arrival{Kind: Gateway}
+	}
+
+	return Arrival{Kind: Gossip, Peer: peer.ID(origin)}
+}

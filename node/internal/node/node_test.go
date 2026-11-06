@@ -8,15 +8,19 @@ import (
 	"encoding/json"
 	"errors"
 	"path/filepath"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/p2p"
+	"github.com/eduardokairalla1/EcoaNetwork/internal/orphan"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/fixturetest"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/testevent"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	bolt "go.etcd.io/bbolt"
@@ -27,6 +31,14 @@ import (
 
 // network is the network every test node belongs to.
 const network = "ecoa-dev"
+
+
+// fixtures is the directory of the behavioural cases.
+const fixtures = "../../../protocol/fixtures"
+
+
+// testShare is the orphans one origin may hold in a test node.
+const testShare = 3
 
 
 // --- GLOBALS ---
@@ -40,6 +52,12 @@ var gateway = Arrival{Kind: Gateway}
 
 
 // --- CODE ---
+
+// clock reads now, so a test moves every clock of the node by setting it.
+func clock() time.Time {
+	return now
+}
+
 
 // newNode returns a node over a fresh store, and the store's file path.
 func newNode(t *testing.T) (*Node, string) {
@@ -57,10 +75,12 @@ func newNode(t *testing.T) (*Node, string) {
 	rules := envelope.Rules{
 		Network: network,
 		MaxSize: envelope.MaxSize,
-		Now:     func() time.Time { return now },
+		Now:     clock,
 	}
 
-	n, err := build(s, rules)
+	n, err := build(s,
+	                rules,
+	                orphan.New(10, testShare, time.Hour, clock))
 	if err != nil {
 		t.Fatalf("build: %v", err)
 	}
@@ -548,5 +568,244 @@ func TestReceiveAcceptsOnlyOneOfManyParallelRotations(t *testing.T) {
 	// Assert
 	if got := storedCount.Load(); got != 1 {
 		t.Fatalf("stored %d rotations of one key, want 1", got)
+	}
+}
+
+
+// endorsement returns the fields of a vote on the event target.
+func endorsement(target string) testevent.Fields {
+	return testevent.Fields{
+		Protocol:  network,
+		Version:   1,
+		EventType: "review.endorsed",
+		CreatedAt: "2026-08-05T17:00:00Z",
+		Payload:   `{"target":"` + target + `"}`,
+	}
+}
+
+
+// waiting returns how many events came out orphaned and are still not stored.
+func waiting(t *testing.T,
+             n *Node,
+             events []fixturetest.Built,
+             outcomes []Outcome) int {
+	t.Helper()
+
+	count := 0
+
+	for i, e := range events {
+		found, err := n.store.GetEvent(e.Env.EventID)
+		if err != nil {
+			t.Fatalf("GetEvent: %v", err)
+		}
+
+		if outcomes[i] == Orphaned && found == nil {
+			count++
+		}
+	}
+
+	return count
+}
+
+
+// released returns how many orphans releasing the targets of events frees.
+func released(t *testing.T, n *Node, events []fixturetest.Built) int {
+	t.Helper()
+
+	count := 0
+
+	for _, e := range events {
+		var payload struct {
+			Target string `json:"target"`
+		}
+
+		if err := json.Unmarshal(e.Env.Payload, &payload); err != nil {
+			t.Fatalf("unmarshal: %v", err)
+		}
+
+		count += len(n.orphans.Release(payload.Target))
+	}
+
+	return count
+}
+
+
+// expectBuffered stops the test when the orphans held differ from c.
+func expectBuffered(t *testing.T,
+                    n *Node,
+                    c fixturetest.Case,
+                    events []fixturetest.Built,
+                    outcomes []Outcome) {
+	t.Helper()
+
+	if _, ok := c.Expect["buffered"]; ok {
+		got := waiting(t, n, events, outcomes)
+		if want := len(c.List("buffered")); got != want {
+			t.Fatalf("buffered %d events, want %d", got, want)
+		}
+	}
+
+	if c.Expect["perPeerCapEnforced"] == true {
+		if got := released(t, n, events); got > testShare {
+			t.Fatalf("buffered %d events of one peer, share is %d",
+			         got, testShare)
+		}
+	}
+
+	if after, ok := c.Expect["afterBound"].(map[string]any); ok {
+		now = now.Add(2 * time.Hour)
+		want, _ := after["buffered"].([]any)
+
+		if got := released(t, n, events); got != len(want) {
+			t.Fatalf("after the bound buffered %d, want %d", got, len(want))
+		}
+	}
+}
+
+
+// expectStored stops the test when the log differs from the stored of c.
+func expectStored(t *testing.T,
+                  n *Node,
+                  path string,
+                  c fixturetest.Case,
+                  ids map[string]string) {
+	t.Helper()
+
+	if _, ok := c.Expect["stored"]; !ok {
+		return
+	}
+
+	var want []string
+	for _, id := range c.List("stored") {
+		want = append(want, ids[id])
+	}
+
+	var got []string
+	for id := range stored(t, n, path) {
+		got = append(got, id)
+	}
+
+	slices.Sort(want)
+	slices.Sort(got)
+
+	if !slices.Equal(got, want) {
+		t.Fatalf("stored %v, want %v", got, want)
+	}
+}
+
+
+func TestOrphanFixtures(t *testing.T) {
+	file := fixturetest.LoadFrom(t, fixtures, "orphan-buffer")
+
+	fixturetest.Run(t, file, func(t *testing.T, c fixturetest.Case) {
+		// Arrange
+		n, path := newNode(t)
+		ids := map[string]string{}
+		saved := now
+		t.Cleanup(func() { now = saved })
+
+		events := c.Events(t)
+		outcomes := make([]Outcome, len(events))
+
+		// Act
+		for i, e := range events {
+			from := peer.ID(c.Arrival[i].Author)
+			outcomes[i], _ = n.Receive(e.Raw, Arrival{Kind: Gossip, Peer: from})
+
+			ids[e.ID] = e.Env.EventID
+		}
+
+		// Assert
+		expectBuffered(t, n, c, events, outcomes)
+		expectStored(t, n, path, c, ids)
+	})
+}
+
+
+func TestReceiveHoldsAnOrphanWithoutStoringIt(t *testing.T) {
+	// Arrange
+	n, path := newNode(t)
+	raw := sign(t, 1, endorsement(fixturetest.EventID("e1")))
+
+	// Act
+	outcome, err := n.Receive(raw, gateway)
+
+	// Assert
+	if outcome != Orphaned || err != nil {
+		t.Fatalf("Receive = %s, %v, want orphaned", outcome, err)
+	}
+
+	held := n.orphans.Release(fixturetest.EventID("e1"))
+	if len(held) != 1 || len(stored(t, n, path)) != 0 {
+		t.Fatal("the orphan was stored, or not held")
+	}
+}
+
+
+func TestReceiveKeepsAnotherPeersOrphanWhenOnePeerFloods(t *testing.T) {
+	// Arrange
+	n, _ := newNode(t)
+	bob := Arrival{Kind: Gossip, Peer: "bob"}
+	mallory := Arrival{Kind: Gossip, Peer: "mallory"}
+
+	n.Receive(sign(t, 1, endorsement(fixturetest.EventID("wanted"))), bob)
+
+	var targets []string
+	for i := range 2 * testShare {
+		targets = append(targets,
+		                 fixturetest.EventID("never"+string(rune('a'+i))))
+	}
+
+	// Act
+	for _, target := range targets {
+		n.Receive(sign(t, 2, endorsement(target)), mallory)
+	}
+
+	// Assert
+	held := 0
+	for _, target := range targets {
+		held += len(n.orphans.Release(target))
+	}
+
+	if held != testShare {
+		t.Fatalf("buffered %d of mallory's, want %d", held, testShare)
+	}
+
+	if n.orphans.Release(fixturetest.EventID("wanted")) == nil {
+		t.Fatal("the orphan of another peer was evicted")
+	}
+}
+
+
+func TestReceiveReleasesAChainOfOrphans(t *testing.T) {
+	// Arrange
+	n, _ := newNode(t)
+	mallory := Arrival{Kind: Gossip, Peer: "mallory"}
+
+	first := fixturetest.Case{Arrival: []fixturetest.Arrival{
+		{ID: "e1", Author: "alice", Type: "review.created",
+		 Payload: []byte(`{"entity":"cnpj:1","rating":2,"body":"x"}`)},
+		{ID: "v1", Author: "bob", Type: "review.endorsed",
+		 Payload: []byte(`{"target":"e1"}`)},
+		{ID: "v2", Author: "carol", Type: "review.endorsed",
+		 Payload: []byte(`{"target":"v1"}`)},
+	}}
+	events := first.Events(t)
+
+	n.Receive(events[2].Raw, mallory)
+	n.Receive(events[1].Raw, mallory)
+
+	// Act
+	outcome, _ := n.Receive(events[0].Raw, mallory)
+
+	// Assert
+	if outcome != Stored {
+		t.Fatalf("Receive = %s, want stored", outcome)
+	}
+
+	for _, e := range events[1:] {
+		if found, err := n.store.GetEvent(e.Env.EventID); found == nil {
+			t.Fatalf("GetEvent %s = %v, want the chain released", e.ID, err)
+		}
 	}
 }
