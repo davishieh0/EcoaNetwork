@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+// Node-to-node sync on /ecoa/sync/1.0.0; the gateway contract is separate.
+package sync;
+
+option go_package = "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf";
+
+
+// The one message a node opens a sync stream with.
+message SyncRequest {
+    oneof call {
+        GetEventsSinceRequest since = 1;
+        GetEventsRequest events = 2;
+    }
+}
+
+
+// Asks for every event accepted after cursor.
+message GetEventsSinceRequest {
+    uint64 cursor = 1;
+    uint32 page_size = 2;
+}
+
+
+// One page of events, each the original envelope JSON.
+message GetEventsSinceResponse {
+    repeated bytes events = 1;
+    uint64 next_cursor = 2;
+    bool has_more = 3;
+}
+
+
+// Asks for specific events by eventId.
+message GetEventsRequest {
+    repeated string ids = 1;
+}
+
+
+// What a node knows about one requested eventId.
+enum EventStatus {
+    EVENT_STATUS_UNSPECIFIED = 0;
+    FOUND = 1;
+    PRUNED = 2;
+    UNKNOWN = 3;
+}
+
+
+// The answer for one requested eventId.
+message EventResult {
+    string id = 1;
+    EventStatus status = 2;
+    bytes event = 3;
+}
+
+
+// One result per requested eventId.
+message GetEventsResponse {
+    repeated EventResult results = 1;
+}
