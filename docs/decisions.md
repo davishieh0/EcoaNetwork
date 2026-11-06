@@ -492,6 +492,12 @@ Seventeen values, no hierarchy. A free string means everyone invents their own a
 - **`lang` is optional and exists for search quality.** Portuguese and English stem differently and automatic detection is wrong often enough to matter on short text. An indexer that ignores it loses only relevance.
 - **`device.label` is optional and warned about.** Device names leak more than people expect, and the event is permanent.
 
+### 10.5 Sync serving limits have defaults — **call**
+
+`protocol.md` requires a node to cap concurrent sync streams and events served per peer, and names no numbers. The node reads three variables: `SYNC_MAX_STREAMS` (32), `SYNC_MAX_STREAMS_PER_PEER` (2) and `SYNC_EVENTS_PER_PEER` (4096 per minute, a fixed window).
+
+4096 events is sixteen full pages: enough for a peer to catch up a log of v1 size in one visit, little enough that `GetEventsSince(0)` on repeat cannot drain a node. A stream over any limit is reset and the connection stays open, so the peer is still reachable by Gossipsub.
+
 ## 13. Stack for the node
 
 The first stack decision, taken when the node phase was picked up rather than in advance. It brought one correction with it.
