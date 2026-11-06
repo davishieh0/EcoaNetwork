@@ -67,14 +67,21 @@ type SyncSource interface {
 // ServeSync answers the sync calls peers open on SyncProtocol from src.
 func (p *Host) ServeSync(src SyncSource) {
 	p.host.SetStreamHandler(SyncProtocol, func(s network.Stream) {
-		serveStream(s, src)
+		p.serveStream(s, src)
 	})
 }
 
 
 // serveStream reads one SyncRequest, writes its response and closes.
-func serveStream(s network.Stream, src SyncSource) {
+func (p *Host) serveStream(s network.Stream, src SyncSource) {
 	peerID := s.Conn().RemotePeer()
+
+	if !p.limiter.acquire(peerID) {
+		slog.Warn("sync over limit", "peer", peerID)
+		s.Reset()
+		return
+	}
+	defer p.limiter.release(peerID)
 
 	resp, err := respond(s, src)
 	if err != nil {
@@ -90,7 +97,21 @@ func serveStream(s network.Stream, src SyncSource) {
 		return
 	}
 
+	p.limiter.record(peerID, servedEvents(resp))
 	s.Close()
+}
+
+
+// servedEvents counts the events a response carries.
+func servedEvents(resp proto.Message) int {
+	switch r := resp.(type) {
+	case *pb.GetEventsSinceResponse:
+		return len(r.Events)
+	case *pb.GetEventsResponse:
+		return len(r.Results)
+	}
+
+	return 0
 }
 
 

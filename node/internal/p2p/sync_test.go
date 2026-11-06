@@ -10,6 +10,7 @@ import (
 	"time"
 
 	pb "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"google.golang.org/protobuf/encoding/protodelim"
 	"google.golang.org/protobuf/proto"
@@ -68,8 +69,26 @@ func sourceWith(count int) *fakeSource {
 }
 
 
+// roomy are limits no test of the sync calls comes near.
+var roomy = SyncLimits{
+	MaxStreams:        100,
+	MaxStreamsPerPeer: 100,
+	EventsPerPeer:     100000,
+}
+
+
 // syncPair returns a client peer connected to a peer serving src.
 func syncPair(t *testing.T, src SyncSource) (*Host, peer.ID) {
+	t.Helper()
+
+	return limitedPair(t, src, roomy)
+}
+
+
+// limitedPair is syncPair with the server holding peers to limits.
+func limitedPair(t *testing.T,
+                 src SyncSource,
+                 limits SyncLimits) (*Host, peer.ID) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -79,6 +98,7 @@ func syncPair(t *testing.T, src SyncSource) (*Host, peer.ID) {
 		Network:   "ecoa-test",
 		Listen:    loopback,
 		Validator: acceptAll,
+		Sync:      limits,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -317,5 +337,35 @@ func TestServeSyncResetsRequestWithoutCall(t *testing.T) {
 	// Assert
 	if err == nil {
 		t.Error("a request naming no call should be refused")
+	}
+}
+
+
+func TestServeSyncRefusesAPeerOverTheEventLimit(t *testing.T) {
+	// Arrange
+	limits := SyncLimits{
+		MaxStreams:        10,
+		MaxStreamsPerPeer: 10,
+		EventsPerPeer:     MaxPage,
+	}
+	client, server := limitedPair(t, sourceWith(300), limits)
+
+	var first pb.GetEventsSinceResponse
+	err := ask(t, client, server, sinceRequest(0, 0), &first)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Act
+	var second pb.GetEventsSinceResponse
+	err = ask(t, client, server, sinceRequest(256, 0), &second)
+
+	// Assert
+	if err == nil {
+		t.Error("a peer past its event limit should be refused")
+	}
+
+	if client.host.Network().Connectedness(server) != network.Connected {
+		t.Error("refusing the sync closed the connection")
 	}
 }

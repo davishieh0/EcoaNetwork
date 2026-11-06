@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -35,6 +36,9 @@ type Config struct {
 
 	// Validator judges each message before Gossipsub relays it.
 	Validator Validator
+
+	// Sync holds the peers that open sync streams to these ceilings.
+	Sync SyncLimits
 }
 
 
@@ -43,6 +47,9 @@ type Host struct {
 	host  host.Host
 	topic *pubsub.Topic
 	sub   *pubsub.Subscription
+
+	// limiter decides which sync streams get served
+	limiter *syncLimiter
 }
 
 
@@ -66,7 +73,9 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 		return nil, err
 	}
 
-	return &Host{host: h, topic: topic, sub: sub}, nil
+	limiter := newSyncLimiter(cfg.Sync, time.Now)
+
+	return &Host{host: h, topic: topic, sub: sub, limiter: limiter}, nil
 }
 
 
