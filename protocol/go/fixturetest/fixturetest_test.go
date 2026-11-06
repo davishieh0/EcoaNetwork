@@ -101,6 +101,74 @@ func TestParseRefusesABrokenFile(t *testing.T) {
 }
 
 
+func TestParseChecksWhatTheSchemaCannot(t *testing.T) {
+	arrival := `"arrival": [{"id": "e1", "author": "alice", ` +
+		`"type": "review.created"}]`
+
+	cases := []struct {
+		name string
+		from string
+		to   string
+		want string
+	}{
+		{
+			"repeated id",
+			arrival,
+			`"arrival": [{"id": "e1", "author": "a", "type": "t"},
+			             {"id": "e1", "author": "b", "type": "t"}]`,
+			"repeats",
+		},
+		{
+			"expect names an id outside arrival",
+			`"expect": {"accepted": ["e1"]}`,
+			`"expect": {"head": "e9"}`,
+			"e9",
+		},
+		{
+			"expect names an id outside a list",
+			`"expect": {"accepted": ["e1"]}`,
+			`"expect": {"chain": ["e1", "e9"]}`,
+			"e9",
+		},
+		{
+			"expect names a label outside arrival",
+			`"expect": {"accepted": ["e1"]}`,
+			`"expect": {"labelsOnHead": [{"id": "l9"}]}`,
+			"l9",
+		},
+		{
+			"expect names a version outside arrival",
+			`"expect": {"accepted": ["e1"]}`,
+			`"expect": {"historical": {"e9": {}}}`,
+			"e9",
+		},
+		{
+			"proposal from an author with no weight",
+			arrival,
+			`"identities": {"bob": {"weight": 0.5}},
+			 "arrival": [{"id": "e1", "author": "alice",
+			              "type": "entity.updated"}]`,
+			"alice",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Arrange
+			raw := []byte(strings.Replace(validFile, c.from, c.to, 1))
+
+			// Act
+			_, err := parse("../../fixtures", raw)
+
+			// Assert
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("parse = %v, want an error citing %q", err, c.want)
+			}
+		})
+	}
+}
+
+
 func TestParseAcceptsSinceV2(t *testing.T) {
 	// Arrange
 	raw := strings.Replace(validFile,
