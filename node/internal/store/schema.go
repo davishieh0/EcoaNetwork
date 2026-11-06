@@ -23,6 +23,10 @@ var tombstonesBucket = []byte("tombstones")
 var cursorsBucket = []byte("cursors")
 
 
+// peersBucket holds the multiaddr of every peer this node has connected to.
+var peersBucket = []byte("peers")
+
+
 // buckets is every bucket New creates.
 var buckets = [][]byte{
 	eventsBucket,
@@ -30,4 +34,5 @@ var buckets = [][]byte{
 	metaBucket,
 	tombstonesBucket,
 	cursorsBucket,
+	peersBucket,
 }
