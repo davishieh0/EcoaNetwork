@@ -17,11 +17,15 @@ type lookup struct {
 }
 
 
-// Author returns who signed the stored event eventID.
+// Author returns who signed the event eventID, stored or pruned.
 func (l lookup) Author(eventID string) (string, bool, error) {
 	raw, err := l.store.GetEvent(eventID)
-	if err != nil || raw == nil {
+	if err != nil {
 		return "", false, err
+	}
+
+	if raw == nil {
+		return l.store.Tombstone(eventID)
 	}
 
 	env, err := envelope.Decode(raw)
