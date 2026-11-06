@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -225,5 +227,87 @@ func TestClose(t *testing.T) {
 
 	if len(p.host.Addrs()) != 0 {
 		t.Error("a closed node is still listening")
+	}
+}
+
+
+func TestNewKeepsThePeerIDAcrossRestarts(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Arrange
+	cfg := Config{
+		Network:   "ecoa-test",
+		Listen:    loopback,
+		Validator: acceptAll,
+		KeyPath:   filepath.Join(t.TempDir(), "peer.key"),
+	}
+
+	first, err := New(ctx, cfg)
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+
+	id := first.host.ID()
+	first.Close()
+
+	// Act
+	second, err := New(ctx, cfg)
+	if err != nil {
+		t.Fatalf("New after restart: %v", err)
+	}
+	defer second.Close()
+
+	// Assert
+	if second.host.ID() != id {
+		t.Fatalf("peer ID = %s after restart, want %s", second.host.ID(), id)
+	}
+}
+
+
+func TestLoadOrCreateKeyCreatesTheFileForOwnerOnly(t *testing.T) {
+	// Arrange
+	path := filepath.Join(t.TempDir(), "peer.key")
+
+	// Act
+	_, err := loadOrCreateKey(path)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("loadOrCreateKey: %v", err)
+	}
+
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("key file: %v", err)
+	}
+
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("key file mode = %o, want 600", info.Mode().Perm())
+	}
+}
+
+
+func TestNewNamesTheCorruptKeyFile(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Arrange
+	path := filepath.Join(t.TempDir(), "peer.key")
+	if err := os.WriteFile(path, []byte("not a key"), 0o600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	// Act
+	_, err := New(ctx, Config{
+		Network:   "ecoa-test",
+		Listen:    loopback,
+		Validator: acceptAll,
+		KeyPath:   path,
+	})
+
+	// Assert
+	if err == nil || !strings.Contains(err.Error(), path) {
+		t.Fatalf("New = %v, want an error naming %s", err, path)
 	}
 }

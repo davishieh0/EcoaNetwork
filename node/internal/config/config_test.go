@@ -17,6 +17,7 @@ var names = []string{
 	"GRPC_ADDR",
 	"BOOTSTRAP_ADDRS",
 	"BOLT_DB_PATH",
+	"PEER_KEY_PATH",
 	"MAX_EVENT_SIZE",
 	"ADMISSION_RATE",
 	"SYNC_MAX_STREAMS",
@@ -50,6 +51,7 @@ func TestLoadAppliesTheDefaultsToAnEmptyEnvironment(t *testing.T) {
 		ListenAddr:    "/ip4/127.0.0.1/tcp/4001",
 		GRPCAddr:      "127.0.0.1:50051",
 		BoltDBPath:    "data/bbolt/bolt.db",
+		PeerKeyPath:   "data/peer.key",
 		MaxEventSize:  16384,
 		AdmissionRate: 100,
 
@@ -114,6 +116,10 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		{
 			"BOLT_DB_PATH", "x.db",
 			func(c Config) any { return c.BoltDBPath }, "x.db",
+		},
+		{
+			"PEER_KEY_PATH", "x.key",
+			func(c Config) any { return c.PeerKeyPath }, "x.key",
 		},
 		{
 			"MAX_EVENT_SIZE", "4096",

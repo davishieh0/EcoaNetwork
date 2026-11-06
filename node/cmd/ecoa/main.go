@@ -61,6 +61,7 @@ func run(args []string) error {
 			MaxStreamsPerPeer: cfg.SyncMaxStreamsPerPeer,
 			EventsPerPeer:     cfg.SyncEventsPerPeer,
 		},
+		KeyPath:        cfg.PeerKeyPath,
 	}, cfg.MaxEventSize)
 	if err != nil {
 		return err

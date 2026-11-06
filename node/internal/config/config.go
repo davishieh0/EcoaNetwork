@@ -49,6 +49,9 @@ type Config struct {
 	// BoltDBPath is the path of the bbolt file holding the event log.
 	BoltDBPath string
 
+	// PeerKeyPath is the file holding the node's libp2p private key.
+	PeerKeyPath string
+
 	// MaxEventSize is this node's limit per event, in bytes.
 	MaxEventSize int
 
@@ -95,6 +98,7 @@ func Load() (Config, error) {
 		GRPCAddr:       envOr("GRPC_ADDR", "127.0.0.1:50051"),
 		BootstrapAddrs: splitAddrs(os.Getenv("BOOTSTRAP_ADDRS")),
 		BoltDBPath:     envOr("BOLT_DB_PATH", "data/bbolt/bolt.db"),
+		PeerKeyPath:    envOr("PEER_KEY_PATH", "data/peer.key"),
 		MaxEventSize:   size,
 		AdmissionRate:  rate,
 
