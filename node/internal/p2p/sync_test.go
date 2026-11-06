@@ -369,3 +369,91 @@ func TestServeSyncRefusesAPeerOverTheEventLimit(t *testing.T) {
 		t.Error("refusing the sync closed the connection")
 	}
 }
+
+
+func TestGetEventsSinceReturnsThePage(t *testing.T) {
+	// Arrange
+	client, server := syncPair(t, sourceWith(300))
+
+	// Act
+	page, err := client.GetEventsSince(context.Background(), server, 256)
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(page.Events) != 44 || page.HasMore || page.NextCursor != 300 {
+		t.Errorf("got %d events, has_more %v, next %d",
+		         len(page.Events), page.HasMore, page.NextCursor)
+	}
+}
+
+
+func TestGetEventsReturnsAStatusPerID(t *testing.T) {
+	// Arrange
+	client, server := syncPair(t, sourceWith(1))
+
+	// Act
+	got, err := client.GetEvents(context.Background(), server,
+	                             []string{"evt_1", "evt_never"})
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(got.Results) != 2 ||
+	   got.Results[0].Status != pb.EventStatus_FOUND ||
+	   got.Results[1].Status != pb.EventStatus_UNKNOWN {
+		t.Errorf("got %v", got.Results)
+	}
+}
+
+
+func TestOnConnectNamesTheConnectingPeer(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	server, err := New(ctx, Config{
+		Network:   "ecoa-test",
+		Listen:    loopback,
+		Validator: acceptAll,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	seen := make(chan peer.ID, 1)
+	server.OnConnect(func(id peer.ID) { seen <- id })
+
+	client, err := New(ctx, Config{
+		Network:   "ecoa-test",
+		Listen:    loopback,
+		Validator: acceptAll,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	// Act
+	info := peer.AddrInfo{ID: server.host.ID(), Addrs: server.host.Addrs()}
+	err = client.host.Connect(ctx, info)
+
+	// Assert
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	select {
+	case id := <-seen:
+		if id != client.host.ID() {
+			t.Errorf("saw %v, want %v", id, client.host.ID())
+		}
+	case <-ctx.Done():
+		t.Fatal("OnConnect never fired")
+	}
+}
