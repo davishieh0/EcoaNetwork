@@ -268,3 +268,55 @@ func (s *stuck) EventsSince(cursor uint64,
 
 	return page, err
 }
+
+
+// waitStored waits until n holds every id, or stops the test.
+func waitStored(t *testing.T, ctx context.Context, n *Node, ids []string) {
+	t.Helper()
+
+	for _, id := range ids {
+		for {
+			raw, err := n.store.GetEvent(id)
+			if err != nil {
+				t.Fatalf("GetEvent: %v", err)
+			}
+
+			if raw != nil {
+				break
+			}
+
+			select {
+			case <-ctx.Done():
+				t.Fatalf("event %s never reached the node", id)
+			case <-time.After(10 * time.Millisecond):
+			}
+		}
+	}
+}
+
+
+func TestNewServesItsLogToAPeerThatConnectsLater(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	served := startNode(t, ctx)
+	src := logOf(t, 3)
+
+	var ids []string
+
+	for _, entry := range src.log {
+		outcome, err := served.Receive(entry.Raw, gateway)
+		if outcome != Stored {
+			t.Fatalf("Receive = %s, %v, want stored", outcome, err)
+		}
+
+		ids = append(ids, field(t, entry.Raw, "eventId"))
+	}
+
+	// Act
+	late := startNode(t, ctx, served.Addrs()...)
+
+	// Assert
+	waitStored(t, ctx, late, ids)
+}

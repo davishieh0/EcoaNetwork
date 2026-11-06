@@ -128,6 +128,7 @@ func New(ctx context.Context,
 		return nil, err
 	}
 
+	n.host.ServeSync(source{s})
 	n.host.OnConnect(func(id peer.ID) { n.syncWith(ctx, id) })
 
 	return n, nil

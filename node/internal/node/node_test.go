@@ -415,6 +415,7 @@ func startNode(t *testing.T,
 		Network:        network,
 		Listen:         "/ip4/127.0.0.1/tcp/0",
 		BootstrapAddrs: addrs,
+		Sync:           roomy,
 	}, envelope.MaxSize)
 	if err != nil {
 		t.Fatalf("New: %v", err)
