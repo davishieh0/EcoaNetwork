@@ -147,7 +147,7 @@ func (n *Node) Receive(raw []byte, arrival Arrival) (Outcome, error) {
 		return report(arrival, Rejected, err)
 	}
 
-	err = n.store.AddEvent(verified.ID(), verified.Raw())
+	err = n.store.AddEvent(verified.ID(), verified.Raw(), n.rules.Now())
 	if errors.Is(err, store.ErrDuplicate) {
 		return Duplicate, nil
 	}

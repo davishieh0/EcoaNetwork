@@ -31,8 +31,13 @@ func New(path string) (*Store, error) {
 	}
 
 	err = db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists(eventsBucket)
-		return err
+		for _, name := range buckets {
+			if _, err := tx.CreateBucketIfNotExists(name); err != nil {
+				return err
+			}
+		}
+
+		return nil
 	})
 
 	// Closing releases the file lock taken by the open above.
