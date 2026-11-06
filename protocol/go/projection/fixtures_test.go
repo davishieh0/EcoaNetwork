@@ -2,6 +2,7 @@ package projection
 
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/fixturetest"
@@ -13,7 +14,6 @@ import (
 func TestFixtures(t *testing.T) {
 	names := []string{
 		"vote-and-label-binding",
-		"entity-metadata",
 	}
 
 	for _, name := range names {
@@ -45,6 +45,25 @@ func TestChainHeadFixtures(t *testing.T) {
 
 		// Assert
 		checkHead(t, c, head)
+	})
+}
+
+
+func TestEntityMetadataFixtures(t *testing.T) {
+	// Arrange
+	file := fixturetest.Load(t, "entity-metadata")
+
+	// Act
+	fixturetest.Run(t, file, func(t *testing.T, c fixturetest.Case) {
+		// Arrange
+		proposals := unlabelled(eventsOf(c))
+		identities := identitiesOf(t, c)
+
+		// Act
+		fields := ResolveFields(proposals, identities)
+
+		// Assert
+		checkFields(t, c, fields)
 	})
 }
 
@@ -97,5 +116,70 @@ func checkHead(t *testing.T, c fixturetest.Case, head Head) {
 
 	if head.Withdrawn != withdrawn {
 		t.Errorf("withdrawn = %v, want %v", head.Withdrawn, withdrawn)
+	}
+}
+
+
+// identitiesOf decodes the identities that c supplies as input.
+func identitiesOf(t *testing.T, c fixturetest.Case) map[string]Identity {
+	t.Helper()
+
+	identities := map[string]Identity{}
+
+	for name, raw := range c.Identities {
+		var identity Identity
+		if err := json.Unmarshal(raw, &identity); err != nil {
+			t.Fatalf("identity %s: %v", name, err)
+		}
+
+		identities[name] = identity
+	}
+
+	return identities
+}
+
+
+// unlabelled keeps the entity.updated events no label points at.
+func unlabelled(events []Event) []Event {
+	labelled := map[string]bool{}
+
+	for _, e := range events {
+		if e.Type == "moderation.label_created" {
+			labelled[e.Field("target")] = true
+		}
+	}
+
+	var kept []Event
+
+	for _, e := range events {
+		if e.Type == "entity.updated" && !labelled[e.ID] {
+			kept = append(kept, e)
+		}
+	}
+
+	return kept
+}
+
+
+// checkFields compares fields with the canonical values and tier of c.
+func checkFields(t *testing.T, c fixturetest.Case, fields map[string]Field) {
+	t.Helper()
+
+	canonical, _ := c.Expect["canonical"].(map[string]any)
+	tier, hasTier := c.Expect["tier"].(float64)
+
+	if len(fields) != len(canonical) {
+		t.Errorf("fields = %+v, want %d of them", fields, len(canonical))
+	}
+
+	for name, want := range canonical {
+		got := fields[name]
+		if got.Value != want {
+			t.Errorf("%s = %q, want %q", name, got.Value, want)
+		}
+
+		if hasTier && float64(got.Tier) != tier {
+			t.Errorf("%s tier = %d, want %v", name, got.Tier, tier)
+		}
 	}
 }
