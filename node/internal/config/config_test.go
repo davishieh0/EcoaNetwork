@@ -19,6 +19,9 @@ var names = []string{
 	"BOLT_DB_PATH",
 	"MAX_EVENT_SIZE",
 	"ADMISSION_RATE",
+	"SYNC_MAX_STREAMS",
+	"SYNC_MAX_STREAMS_PER_PEER",
+	"SYNC_EVENTS_PER_PEER",
 }
 
 
@@ -49,6 +52,10 @@ func TestLoadAppliesTheDefaultsToAnEmptyEnvironment(t *testing.T) {
 		BoltDBPath:    "data/bbolt/bolt.db",
 		MaxEventSize:  16384,
 		AdmissionRate: 100,
+
+		SyncMaxStreams:        32,
+		SyncMaxStreamsPerPeer: 2,
+		SyncEventsPerPeer:     4096,
 	}
 
 	// Act
@@ -119,6 +126,18 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		{
 			"ADMISSION_RATE", "0",
 			func(c Config) any { return c.AdmissionRate }, 0,
+		},
+		{
+			"SYNC_MAX_STREAMS", "5",
+			func(c Config) any { return c.SyncMaxStreams }, 5,
+		},
+		{
+			"SYNC_MAX_STREAMS_PER_PEER", "3",
+			func(c Config) any { return c.SyncMaxStreamsPerPeer }, 3,
+		},
+		{
+			"SYNC_EVENTS_PER_PEER", "100",
+			func(c Config) any { return c.SyncEventsPerPeer }, 100,
 		},
 		{
 			"BOOTSTRAP_ADDRS", "/ip4/1.1.1.1/tcp/1,/ip4/2.2.2.2/tcp/2",
@@ -221,5 +240,32 @@ func TestLoadRefusesAnInvalidAdmissionRate(t *testing.T) {
 				t.Fatalf("Load accepted ADMISSION_RATE=%s", value)
 			}
 		})
+	}
+}
+
+
+func TestLoadRefusesAnInvalidSyncLimit(t *testing.T) {
+	names := []string{
+		"SYNC_MAX_STREAMS",
+		"SYNC_MAX_STREAMS_PER_PEER",
+		"SYNC_EVENTS_PER_PEER",
+	}
+
+	for _, name := range names {
+		for _, value := range []string{"0", "-1", "many"} {
+			t.Run(name+"="+value, func(t *testing.T) {
+				// Arrange
+				clearEnv(t)
+				t.Setenv(name, value)
+
+				// Act
+				_, err := Load()
+
+				// Assert
+				if err == nil {
+					t.Fatalf("%s=%s should fail", name, value)
+				}
+			})
+		}
 	}
 }

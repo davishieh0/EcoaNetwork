@@ -18,6 +18,18 @@ import (
 const defaultAdmissionRate = 100
 
 
+const (
+	// defaultSyncMaxStreams is SYNC_MAX_STREAMS when unset.
+	defaultSyncMaxStreams = 32
+
+	// defaultSyncMaxStreamsPerPeer is SYNC_MAX_STREAMS_PER_PEER when unset.
+	defaultSyncMaxStreamsPerPeer = 2
+
+	// defaultSyncEventsPerPeer is SYNC_EVENTS_PER_PEER when unset.
+	defaultSyncEventsPerPeer = 4096
+)
+
+
 // --- CODE ---
 
 // Config is every setting the node reads at startup.
@@ -42,6 +54,15 @@ type Config struct {
 
 	// AdmissionRate is the events accepted per author per hour, 0 for no limit.
 	AdmissionRate int
+
+	// SyncMaxStreams is the most sync streams served at once.
+	SyncMaxStreams int
+
+	// SyncMaxStreamsPerPeer is the most sync streams open at once per peer.
+	SyncMaxStreamsPerPeer int
+
+	// SyncEventsPerPeer is the most events served to one peer per minute.
+	SyncEventsPerPeer int
 }
 
 
@@ -53,6 +74,11 @@ func Load() (Config, error) {
 	}
 
 	rate, err := loadAdmissionRate()
+	if err != nil {
+		return Config{}, err
+	}
+
+	limits, err := loadSyncLimits()
 	if err != nil {
 		return Config{}, err
 	}
@@ -71,6 +97,10 @@ func Load() (Config, error) {
 		BoltDBPath:     envOr("BOLT_DB_PATH", "data/bbolt/bolt.db"),
 		MaxEventSize:   size,
 		AdmissionRate:  rate,
+
+		SyncMaxStreams:        limits[0],
+		SyncMaxStreamsPerPeer: limits[1],
+		SyncEventsPerPeer:     limits[2],
 	}
 
 	return cfg, nil
@@ -136,4 +166,52 @@ func loadAdmissionRate() (int, error) {
 	}
 
 	return rate, nil
+}
+
+
+// loadSyncLimits reads the three sync limits, in the order of Config's fields.
+func loadSyncLimits() ([3]int, error) {
+	names := [3]string{
+		"SYNC_MAX_STREAMS",
+		"SYNC_MAX_STREAMS_PER_PEER",
+		"SYNC_EVENTS_PER_PEER",
+	}
+	defaults := [3]int{
+		defaultSyncMaxStreams,
+		defaultSyncMaxStreamsPerPeer,
+		defaultSyncEventsPerPeer,
+	}
+
+	var limits [3]int
+
+	for i, name := range names {
+		value, err := positiveInt(name, defaults[i])
+		if err != nil {
+			return limits, err
+		}
+
+		limits[i] = value
+	}
+
+	return limits, nil
+}
+
+
+// positiveInt reads the variable named key as an integer above zero.
+func positiveInt(key string, fallback int) (int, error) {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback, nil
+	}
+
+	n, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("%s: %w", key, err)
+	}
+
+	if n <= 0 {
+		return 0, fmt.Errorf("%s: %d is not above 0", key, n)
+	}
+
+	return n, nil
 }

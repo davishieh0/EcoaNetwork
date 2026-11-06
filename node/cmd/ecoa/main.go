@@ -56,6 +56,11 @@ func run(args []string) error {
 		Network:        cfg.Network,
 		Listen:         cfg.ListenAddr,
 		BootstrapAddrs: cfg.BootstrapAddrs,
+		Sync: p2p.SyncLimits{
+			MaxStreams:        cfg.SyncMaxStreams,
+			MaxStreamsPerPeer: cfg.SyncMaxStreamsPerPeer,
+			EventsPerPeer:     cfg.SyncEventsPerPeer,
+		},
 	}, cfg.MaxEventSize)
 	if err != nil {
 		return err
