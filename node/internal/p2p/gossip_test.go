@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/libp2p/go-libp2p"
 )
 
@@ -184,5 +185,47 @@ func TestPublishReachesPeer(t *testing.T) {
 
 	if from != sender.host.ID() {
 		t.Errorf("from = %s, want %s", from, sender.host.ID())
+	}
+}
+
+
+// TestPublishCarriesAnEventOfTheSizeCeiling guards MaxMessage.
+func TestPublishCarriesAnEventOfTheSizeCeiling(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	sender, err := New(ctx, Config{Network: "ecoa-test", Listen: loopback})
+	if err != nil {
+		t.Fatalf("sender: %v", err)
+	}
+	defer sender.Close()
+
+	receiver, err := New(ctx, Config{
+		Network:        "ecoa-test",
+		Listen:         loopback,
+		BootstrapAddrs: sender.Addrs(),
+	})
+	if err != nil {
+		t.Fatalf("receiver: %v", err)
+	}
+	defer receiver.Close()
+
+	if err := sender.WaitForPeers(ctx); err != nil {
+		t.Fatalf("no peer subscribed to the topic: %v", err)
+	}
+
+	event := bytes.Repeat([]byte("x"), envelope.MaxSize)
+
+	// Act
+	if err := sender.Publish(ctx, event); err != nil {
+		t.Fatalf("publish: %v", err)
+	}
+
+	got, _, err := receiver.ReceiveEvent(ctx)
+
+	// Assert
+	if err != nil || !bytes.Equal(got, event) {
+		t.Fatalf("received %d bytes, %v, want %d", len(got), err, len(event))
 	}
 }

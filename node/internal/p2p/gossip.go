@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -12,6 +13,10 @@ import (
 
 
 // --- CONSTANTS ---
+
+// MaxMessage is the largest Gossipsub message: an envelope and its wrapping.
+const MaxMessage = envelope.MaxSize + 1<<10
+
 
 // pollInterval is how often WaitForPeers rechecks the topic.
 const pollInterval = 50 * time.Millisecond
@@ -32,7 +37,9 @@ func joinTopic(
 	h host.Host,
 	network string,
 ) (*pubsub.Topic, *pubsub.Subscription, error) {
-	ps, err := pubsub.NewGossipSub(ctx, h)
+	ps, err := pubsub.NewGossipSub(ctx,
+	                               h,
+	                               pubsub.WithMaxMessageSize(MaxMessage))
 	if err != nil {
 		return nil, nil, err
 	}
