@@ -9,12 +9,14 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
@@ -36,6 +38,10 @@ const (
 
 
 // --- GLOBALS ---
+
+// dialTimeout bounds each connection attempt at startup.
+var dialTimeout = 5 * time.Second
+
 
 // DefaultBootstrapAddrs is the bootstrap list shipped with the node. Empty
 // until a public node exists; the operator overrides it from configuration.
@@ -61,8 +67,13 @@ type Config struct {
 	// Sync holds the peers that open sync streams to these ceilings.
 	Sync SyncLimits
 
-	// KeyPath is the file holding the peer's private key. Empty makes the
-	// peer ID last only as long as the process.
+	// KnownAddrs are the peers of the last session.
+	KnownAddrs []string
+
+	// OnDialed is called with the multiaddr of each peer this node reaches.
+	OnDialed func(addr string)
+
+	// KeyPath is the file holding the peer's private key, empty for none.
 	KeyPath string
 
 	// ConnLow is the connection count the manager trims down to.
@@ -101,7 +112,11 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 		return nil, err
 	}
 
-	connectBootstrap(ctx, h, bootstrapList(cfg))
+	if cfg.OnDialed != nil {
+		h.Network().Notify(remember(cfg.OnDialed))
+	}
+
+	connectBootstrap(ctx, h, dialOrder(cfg))
 
 	topic, sub, err := joinTopic(ctx, h, cfg.Network, cfg.Validator)
 	if err != nil {
@@ -151,8 +166,7 @@ func hostOptions(cfg Config) ([]libp2p.Option, error) {
 }
 
 
-// loadOrCreateKey reads the private key at path, or creates the file with a
-// new one when it does not exist.
+// loadOrCreateKey reads the private key at path, creating it when absent.
 func loadOrCreateKey(path string) (crypto.PrivKey, error) {
 	raw, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -212,8 +226,28 @@ func bootstrapList(cfg Config) []string {
 }
 
 
-// connectBootstrap dials every bootstrap address. A peer being down must not
-// stop this node from starting, so a failure is logged and skipped.
+// dialOrder returns the peers of the last session, then the bootstrap list.
+func dialOrder(cfg Config) []string {
+	return append(slices.Clone(cfg.KnownAddrs), bootstrapList(cfg)...)
+}
+
+
+// remember reports each peer this node dialed.
+func remember(onConnected func(addr string)) *network.NotifyBundle {
+	return &network.NotifyBundle{
+		ConnectedF: func(_ network.Network, c network.Conn) {
+			if c.Stat().Direction != network.DirOutbound {
+				return
+			}
+
+			onConnected(c.RemoteMultiaddr().String() +
+			            "/p2p/" + c.RemotePeer().String())
+		},
+	}
+}
+
+
+// connectBootstrap dials every address, each under its own timeout.
 func connectBootstrap(ctx context.Context, h host.Host, addrs []string) {
 	for _, addr := range addrs {
 		info, err := peer.AddrInfoFromString(addr)
@@ -222,7 +256,11 @@ func connectBootstrap(ctx context.Context, h host.Host, addrs []string) {
 			continue
 		}
 
-		if err := h.Connect(ctx, *info); err != nil {
+		dialCtx, cancel := context.WithTimeout(ctx, dialTimeout)
+		err = h.Connect(dialCtx, *info)
+		cancel()
+
+		if err != nil {
 			slog.Warn("bootstrap unreachable", "addr", addr, "err", err)
 		}
 	}

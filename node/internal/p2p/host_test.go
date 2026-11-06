@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -309,5 +311,115 @@ func TestNewNamesTheCorruptKeyFile(t *testing.T) {
 	// Assert
 	if err == nil || !strings.Contains(err.Error(), path) {
 		t.Fatalf("New = %v, want an error naming %s", err, path)
+	}
+}
+
+
+func TestDialOrderPutsTheKnownPeersFirst(t *testing.T) {
+	// Arrange
+	previous := DefaultBootstrapAddrs
+	DefaultBootstrapAddrs = []string{"embedded"}
+	t.Cleanup(func() { DefaultBootstrapAddrs = previous })
+
+	cfg := Config{KnownAddrs: []string{"known"}}
+
+	// Act
+	got := dialOrder(cfg)
+
+	// Assert
+	want := []string{"known", "embedded"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("dialOrder = %v, want %v", got, want)
+	}
+}
+
+
+func TestNewReportsThePeerItDialed(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Arrange
+	target, err := libp2p.New(libp2p.ListenAddrStrings(loopback))
+	if err != nil {
+		t.Fatalf("host: %v", err)
+	}
+	defer target.Close()
+
+	want := target.Addrs()[0].String() + "/p2p/" + target.ID().String()
+	reported := make(chan string, 1)
+
+	// Act
+	p, err := New(ctx, Config{
+		Network:        "ecoa-test",
+		Listen:         loopback,
+		BootstrapAddrs: []string{want},
+		Validator:      acceptAll,
+		OnDialed:       func(addr string) { reported <- addr },
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+
+	// Assert
+	select {
+	case got := <-reported:
+		if got != want {
+			t.Fatalf("OnDialed addr = %q, want %q", got, want)
+		}
+	case <-ctx.Done():
+		t.Fatal("OnDialed was never called")
+	}
+}
+
+
+func TestNewStartsWithinTheTimeoutWhenEveryPeerIsDown(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Arrange
+	silent, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer silent.Close()
+
+	go func() {
+		for {
+			conn, err := silent.Accept()
+			if err != nil {
+				return
+			}
+
+			defer conn.Close()
+		}
+	}()
+
+	port := strconv.Itoa(silent.Addr().(*net.TCPAddr).Port)
+	hangs := "/ip4/127.0.0.1/tcp/" + port +
+	         "/p2p/12D3KooWL8WucnuP3YZ7yh2E8bNggmBsqhGs4PxXrxTZaEF7DH1j"
+
+	previous := dialTimeout
+	dialTimeout = 200 * time.Millisecond
+	t.Cleanup(func() { dialTimeout = previous })
+
+	start := time.Now()
+
+	// Act
+	p, err := New(ctx, Config{
+		Network:        "ecoa-test",
+		Listen:         loopback,
+		KnownAddrs:     []string{hangs},
+		BootstrapAddrs: []string{hangs, deadEnd},
+		Validator:      acceptAll,
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+
+	// Assert
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Fatalf("New took %s, want it bounded by the dial timeout", elapsed)
 	}
 }
