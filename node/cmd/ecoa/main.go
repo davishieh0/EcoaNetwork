@@ -62,6 +62,8 @@ func run(args []string) error {
 			EventsPerPeer:     cfg.SyncEventsPerPeer,
 		},
 		KeyPath:        cfg.PeerKeyPath,
+		ConnLow:        cfg.ConnLow,
+		ConnHigh:       cfg.ConnHigh,
 	}, cfg.MaxEventSize)
 	if err != nil {
 		return err

@@ -16,6 +16,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
+	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
+	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 )
 
 
@@ -24,6 +26,12 @@ import (
 const (
 	// keyMode is the permission of the peer key file: owner only.
 	keyMode = 0o600
+
+	// resourceMemory is the memory, in bytes, the resource limits scale from.
+	resourceMemory = 256 << 20
+
+	// resourceFDs is the file descriptor count the resource limits scale from.
+	resourceFDs = 512
 )
 
 
@@ -56,6 +64,12 @@ type Config struct {
 	// KeyPath is the file holding the peer's private key. Empty makes the
 	// peer ID last only as long as the process.
 	KeyPath string
+
+	// ConnLow is the connection count the manager trims down to.
+	ConnLow int
+
+	// ConnHigh is the connection count that makes the manager start trimming.
+	ConnHigh int
 }
 
 
@@ -101,10 +115,27 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 }
 
 
-// hostOptions returns the libp2p options: address and identity.
+// hostOptions returns the libp2p options: address, identity and limits.
 func hostOptions(cfg Config) ([]libp2p.Option, error) {
+	cm, err := connmgr.NewConnManager(cfg.ConnLow, cfg.ConnHigh)
+	if err != nil {
+		return nil, fmt.Errorf("connection manager: %w", err)
+	}
+
+	limits := rcmgr.DefaultLimits
+	libp2p.SetDefaultServiceLimits(&limits)
+
+	scaled := limits.Scale(resourceMemory, resourceFDs)
+
+	rm, err := rcmgr.NewResourceManager(rcmgr.NewFixedLimiter(scaled))
+	if err != nil {
+		return nil, fmt.Errorf("resource manager: %w", err)
+	}
+
 	opts := []libp2p.Option{
 		libp2p.ListenAddrStrings(cfg.Listen),
+		libp2p.ConnectionManager(cm),
+		libp2p.ResourceManager(rm),
 	}
 
 	if cfg.KeyPath == "" {

@@ -27,6 +27,12 @@ const (
 
 	// defaultSyncEventsPerPeer is SYNC_EVENTS_PER_PEER when unset.
 	defaultSyncEventsPerPeer = 4096
+
+	// defaultConnLow is the connection count the manager trims down to.
+	defaultConnLow = 32
+
+	// defaultConnHigh is the connection count that starts the trimming.
+	defaultConnHigh = 96
 )
 
 
@@ -51,6 +57,12 @@ type Config struct {
 
 	// PeerKeyPath is the file holding the node's libp2p private key.
 	PeerKeyPath string
+
+	// ConnLow is the connection count the manager trims down to.
+	ConnLow int
+
+	// ConnHigh is the connection count that makes the manager start trimming.
+	ConnHigh int
 
 	// MaxEventSize is this node's limit per event, in bytes.
 	MaxEventSize int
@@ -86,6 +98,11 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 
+	low, high, err := loadConnLimits()
+	if err != nil {
+		return Config{}, err
+	}
+
 	network := envOr("NETWORK", "ecoa-dev")
 	if !envelope.ValidProtocol(network) {
 		return Config{}, fmt.Errorf("NETWORK: %q is not ecoa or ecoa-<name>",
@@ -99,6 +116,8 @@ func Load() (Config, error) {
 		BootstrapAddrs: splitAddrs(os.Getenv("BOOTSTRAP_ADDRS")),
 		BoltDBPath:     envOr("BOLT_DB_PATH", "data/bbolt/bolt.db"),
 		PeerKeyPath:    envOr("PEER_KEY_PATH", "data/peer.key"),
+		ConnLow:        low,
+		ConnHigh:       high,
 		MaxEventSize:   size,
 		AdmissionRate:  rate,
 
@@ -198,6 +217,29 @@ func loadSyncLimits() ([3]int, error) {
 	}
 
 	return limits, nil
+}
+
+
+// loadConnLimits reads CONN_LOW and CONN_HIGH, with low <= high.
+func loadConnLimits() (int, int, error) {
+	low, err := positiveInt("CONN_LOW", defaultConnLow)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	high, err := positiveInt("CONN_HIGH", defaultConnHigh)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	if low > high {
+		return 0, 0, fmt.Errorf("CONN_LOW %d and CONN_HIGH %d: want "+
+		                        "low <= high",
+		                        low,
+		                        high)
+	}
+
+	return low, high, nil
 }
 
 
