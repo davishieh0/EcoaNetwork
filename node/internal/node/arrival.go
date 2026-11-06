@@ -12,6 +12,9 @@ const (
 
 	// Gateway is an event submitted over gRPC.
 	Gateway
+
+	// Sync is an event pulled from a peer by a sync call.
+	Sync
 )
 
 
@@ -21,6 +24,7 @@ const (
 var kindNames = map[ArrivalKind]string{
 	Gossip:  "gossip",
 	Gateway: "gateway",
+	Sync:    "sync",
 }
 
 
