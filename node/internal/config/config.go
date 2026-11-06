@@ -12,6 +12,12 @@ import (
 )
 
 
+// --- CONSTANTS ---
+
+// defaultAdmissionRate is the events per author per hour a node accepts.
+const defaultAdmissionRate = 100
+
+
 // --- CODE ---
 
 // Config is every setting the node reads at startup.
@@ -33,12 +39,20 @@ type Config struct {
 
 	// MaxEventSize is this node's limit per event, in bytes.
 	MaxEventSize int
+
+	// AdmissionRate is the events accepted per author per hour, 0 for no limit.
+	AdmissionRate int
 }
 
 
 // Load reads the environment and applies the default of each unset variable.
 func Load() (Config, error) {
 	size, err := loadMaxEventSize()
+	if err != nil {
+		return Config{}, err
+	}
+
+	rate, err := loadAdmissionRate()
 	if err != nil {
 		return Config{}, err
 	}
@@ -56,6 +70,7 @@ func Load() (Config, error) {
 		BootstrapAddrs: splitAddrs(os.Getenv("BOOTSTRAP_ADDRS")),
 		BoltDBPath:     envOr("BOLT_DB_PATH", "data/bbolt/bolt.db"),
 		MaxEventSize:   size,
+		AdmissionRate:  rate,
 	}
 
 	return cfg, nil
@@ -101,4 +116,24 @@ func loadMaxEventSize() (int, error) {
 	}
 
 	return size, nil
+}
+
+
+// loadAdmissionRate reads ADMISSION_RATE, or an error below zero.
+func loadAdmissionRate() (int, error) {
+	value := os.Getenv("ADMISSION_RATE")
+	if value == "" {
+		return defaultAdmissionRate, nil
+	}
+
+	rate, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("ADMISSION_RATE: %w", err)
+	}
+
+	if rate < 0 {
+		return 0, fmt.Errorf("ADMISSION_RATE: %d is below 0", rate)
+	}
+
+	return rate, nil
 }

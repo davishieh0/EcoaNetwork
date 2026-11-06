@@ -18,6 +18,7 @@ var names = []string{
 	"BOOTSTRAP_ADDRS",
 	"BOLT_DB_PATH",
 	"MAX_EVENT_SIZE",
+	"ADMISSION_RATE",
 }
 
 
@@ -42,11 +43,12 @@ func TestLoadAppliesTheDefaultsToAnEmptyEnvironment(t *testing.T) {
 	clearEnv(t)
 
 	want := Config{
-		Network:      "ecoa-dev",
-		ListenAddr:   "/ip4/127.0.0.1/tcp/4001",
-		GRPCAddr:     "127.0.0.1:50051",
-		BoltDBPath:   "data/bbolt/bolt.db",
-		MaxEventSize: 16384,
+		Network:       "ecoa-dev",
+		ListenAddr:    "/ip4/127.0.0.1/tcp/4001",
+		GRPCAddr:      "127.0.0.1:50051",
+		BoltDBPath:    "data/bbolt/bolt.db",
+		MaxEventSize:  16384,
+		AdmissionRate: 100,
 	}
 
 	// Act
@@ -109,6 +111,14 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		{
 			"MAX_EVENT_SIZE", "4096",
 			func(c Config) any { return c.MaxEventSize }, 4096,
+		},
+		{
+			"ADMISSION_RATE", "5",
+			func(c Config) any { return c.AdmissionRate }, 5,
+		},
+		{
+			"ADMISSION_RATE", "0",
+			func(c Config) any { return c.AdmissionRate }, 0,
 		},
 		{
 			"BOOTSTRAP_ADDRS", "/ip4/1.1.1.1/tcp/1,/ip4/2.2.2.2/tcp/2",
@@ -190,6 +200,25 @@ func TestLoadRefusesAnInvalidMaxEventSize(t *testing.T) {
 			// Assert
 			if err == nil {
 				t.Fatalf("Load accepted MAX_EVENT_SIZE=%s", value)
+			}
+		})
+	}
+}
+
+
+func TestLoadRefusesAnInvalidAdmissionRate(t *testing.T) {
+	for _, value := range []string{"-1", "many"} {
+		t.Run(value, func(t *testing.T) {
+			// Arrange
+			clearEnv(t)
+			t.Setenv("ADMISSION_RATE", value)
+
+			// Act
+			_, err := Load()
+
+			// Assert
+			if err == nil {
+				t.Fatalf("Load accepted ADMISSION_RATE=%s", value)
 			}
 		})
 	}
