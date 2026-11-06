@@ -214,9 +214,35 @@ func (n *Node) validate(_ context.Context,
 }
 
 
-// Receive runs one event through the whole checklist, however it arrived,
-// and hands back the orphans it frees.
+// Receive runs one event through the whole checklist, however it arrived. An
+// event from the gateway that is stored is rebroadcast here; Gossipsub relays
+// what the validator accepts, and sync never hands an event back to the peers.
 func (n *Node) Receive(raw []byte, arrival Arrival) (Outcome, error) {
+	outcome, err := n.process(raw, arrival)
+	n.after(outcome, arrival, raw, false)
+
+	return outcome, err
+}
+
+
+// after publishes what the door of arrival leaves to the node, once stored.
+func (n *Node) after(outcome Outcome,
+                     arrival Arrival,
+                     raw []byte,
+                     released bool) {
+	if outcome != Stored {
+		return
+	}
+
+	// the gateway, and a released orphan that did not come by sync
+	if arrival.Kind == Gateway || released && arrival.Kind != Sync {
+		n.rebroadcast(raw)
+	}
+}
+
+
+// process judges and stores one event, then hands back the orphans it frees.
+func (n *Node) process(raw []byte, arrival Arrival) (Outcome, error) {
 	env, err := envelope.Open(raw, n.rules)
 	if _, ok := errors.AsType[*envelope.OtherNetworkError](err); ok {
 		return Ignored, err
@@ -320,6 +346,26 @@ func (n *Node) commit(verified event.Event, arrival Arrival) (Outcome, error) {
 func (n *Node) notifyIndexer(_ []byte) {}
 
 
+// rebroadcast publishes raw in the background. A node with no network has no
+// one to tell.
+func (n *Node) rebroadcast(raw []byte) {
+	if n.offline() {
+		return
+	}
+
+	go func() {
+		err := n.host.WaitForPeers(n.ctx)
+		if err == nil {
+			err = n.host.Publish(n.ctx, raw)
+		}
+
+		if err != nil {
+			slog.Warn("rebroadcast", "reason", err)
+		}
+	}()
+}
+
+
 // offline reports whether n was built without a network.
 func (n *Node) offline() bool {
 	return n.host == nil
@@ -352,11 +398,15 @@ func (n *Node) hold(verified event.Event,
 }
 
 
-// release hands every orphan waiting for id back to Receive, as the arrival it
-// first came in by.
+// release runs every orphan waiting for id through the checklist again, as
+// the arrival it first came in by. Gossipsub never relayed an orphan, so a
+// freed one that was not pulled by sync is rebroadcast here.
 func (n *Node) release(id string) {
 	for _, entry := range n.orphans.Release(id) {
-		n.Receive(entry.Raw, arrivalOf(entry))
+		arrival := arrivalOf(entry)
+
+		outcome, _ := n.process(entry.Raw, arrival)
+		n.after(outcome, arrival, entry.Raw, true)
 	}
 }
 
@@ -374,16 +424,6 @@ func report(arrival Arrival, outcome Outcome, err error) (Outcome, error) {
 	         "reason", err)
 
 	return outcome, err
-}
-
-
-// Publish waits for the mesh first, since Gossipsub drops unroutable messages.
-func (n *Node) Publish(ctx context.Context, raw []byte) error {
-	if err := n.host.WaitForPeers(ctx); err != nil {
-		return err
-	}
-
-	return n.host.Publish(ctx, raw)
 }
 
 

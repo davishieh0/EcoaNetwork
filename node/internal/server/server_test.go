@@ -108,7 +108,7 @@ func endorsing(t *testing.T, seed byte, target string) []byte {
 func publish(t *testing.T, n *node.Node, raw []byte) *pb.PublishResponse {
 	t.Helper()
 
-	s := &Server{ctx: context.Background(), node: n}
+	s := &server{node: n}
 
 	resp, err := s.Publish(context.Background(), &pb.Event{Envelope: raw})
 	if err != nil {

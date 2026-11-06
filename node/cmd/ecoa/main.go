@@ -74,7 +74,7 @@ func run(args []string) error {
 		return fmt.Errorf("listen grpc %s: %w", cfg.GRPCAddr, err)
 	}
 
-	g := server.New(ctx, n)
+	g := server.New(n)
 
 	// Deferred after n.Close, so it stops before the node it calls into.
 	defer g.GracefulStop()

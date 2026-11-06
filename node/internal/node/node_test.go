@@ -430,7 +430,7 @@ func startNode(t *testing.T,
 }
 
 
-func TestPublishAfterReceiveStoresOnceAndReachesThePeer(t *testing.T) {
+func TestReceiveFromTheGatewayStoresOnceAndReachesThePeer(t *testing.T) {
 	// Arrange
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -441,16 +441,12 @@ func TestPublishAfterReceiveStoresOnceAndReachesThePeer(t *testing.T) {
 	raw := sign(t, 1, review())
 	id := field(t, raw, "eventId")
 
-	if outcome, err := a.Receive(raw, gateway); outcome != Stored {
-		t.Fatalf("Receive = %s, %v, want stored", outcome, err)
-	}
-
 	// Act
-	err := a.Publish(ctx, raw)
+	outcome, err := a.Receive(raw, gateway)
 
 	// Assert
-	if err != nil {
-		t.Fatalf("Publish: %v", err)
+	if outcome != Stored {
+		t.Fatalf("Receive = %s, %v, want stored", outcome, err)
 	}
 
 	for {

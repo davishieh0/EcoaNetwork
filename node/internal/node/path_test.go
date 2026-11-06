@@ -202,6 +202,43 @@ func TestReceiveCountsAReleasedOrphanOnce(t *testing.T) {
 }
 
 
+func TestReceiveRebroadcastsWhatTheGatewayStored(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	a := startNode(t, ctx)
+	b := startNode(t, ctx, a.Addrs()...)
+
+	raw := sign(t, 1, review())
+
+	// Act
+	a.Receive(raw, gateway)
+
+	// Assert
+	waitStored(t, ctx, b, []string{field(t, raw, "eventId")})
+}
+
+
+func TestReleaseRebroadcastsAnOrphanTheGatewayHeld(t *testing.T) {
+	// Arrange
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	a := startNode(t, ctx)
+	b := startNode(t, ctx, a.Addrs()...)
+
+	child, target := orphanOf(t)
+	a.Receive(child, gateway)
+
+	// Act
+	a.Receive(target, gateway)
+
+	// Assert
+	waitStored(t, ctx, b, []string{field(t, child, "eventId")})
+}
+
+
 func TestReceiveHoldsAnOrphanBeforeTheLimitApplies(t *testing.T) {
 	// Arrange
 	n, _ := newNode(t)
