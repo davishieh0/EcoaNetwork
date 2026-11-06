@@ -19,10 +19,15 @@ var metaBucket = []byte("meta")
 var tombstonesBucket = []byte("tombstones")
 
 
+// cursorsBucket holds, per peer ID, the last sync cursor received from it.
+var cursorsBucket = []byte("cursors")
+
+
 // buckets is every bucket New creates.
 var buckets = [][]byte{
 	eventsBucket,
 	logBucket,
 	metaBucket,
 	tombstonesBucket,
+	cursorsBucket,
 }
