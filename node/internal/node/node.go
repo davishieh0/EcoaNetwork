@@ -214,9 +214,7 @@ func (n *Node) validate(_ context.Context,
 }
 
 
-// Receive runs one event through the whole checklist, however it arrived. An
-// event from the gateway that is stored is rebroadcast here; Gossipsub relays
-// what the validator accepts, and sync never hands an event back to the peers.
+// Receive runs one event through the whole checklist, however it arrived.
 func (n *Node) Receive(raw []byte, arrival Arrival) (Outcome, error) {
 	outcome, err := n.process(raw, arrival)
 	n.after(outcome, arrival, raw, false)
@@ -313,8 +311,7 @@ func (n *Node) admitted(author string, arrival Arrival) bool {
 }
 
 
-// commit records a rotation or a revocation, stores the event and tells the
-// indexer.
+// commit records a rotation or a revocation, then stores the event.
 func (n *Node) commit(verified event.Event, arrival Arrival) (Outcome, error) {
 	env := verified.Envelope()
 
@@ -333,21 +330,16 @@ func (n *Node) commit(verified event.Event, arrival Arrival) (Outcome, error) {
 		return report(arrival, Failed, err)
 	}
 
-	slog.Info("stored", "arrival", arrival.Kind, "bytes", len(verified.Raw()))
-
-	n.notifyIndexer(verified.Raw())
+	slog.Info("stored",
+	          "arrival", arrival.Kind,
+	          "eventId", verified.ID(),
+	          "bytes", len(verified.Raw()))
 
 	return Stored, nil
 }
 
 
-// notifyIndexer is where a stored event will be handed to the indexer. There
-// is no indexer in this phase.
-func (n *Node) notifyIndexer(_ []byte) {}
-
-
-// rebroadcast publishes raw in the background. A node with no network has no
-// one to tell.
+// rebroadcast publishes raw in the background.
 func (n *Node) rebroadcast(raw []byte) {
 	if n.offline() {
 		return
@@ -398,9 +390,7 @@ func (n *Node) hold(verified event.Event,
 }
 
 
-// release runs every orphan waiting for id through the checklist again, as
-// the arrival it first came in by. Gossipsub never relayed an orphan, so a
-// freed one that was not pulled by sync is rebroadcast here.
+// release runs every orphan waiting for id through the checklist again.
 func (n *Node) release(id string) {
 	for _, entry := range n.orphans.Release(id) {
 		arrival := arrivalOf(entry)
