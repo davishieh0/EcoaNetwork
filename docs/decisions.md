@@ -600,6 +600,7 @@ The buckets:
 - `cursors`: peer ID → the last cursor received from that peer.
 - `tombstones`: `eventId` → the author and the time of pruning. It is created empty, because nodes do not prune, but the format exists.
 - `peers`: the multiaddr of every peer the node reached, dialed first on the next start (§15.6).
+- `info`: facts about the store itself. Today only the `logId`, 16 random bytes in hex, created with the store and never changed. Sequences are local and restart at 1 when a node loses its data, so a reader holding a cursor needs to know which log it counts in; when the `logId` changes, its cursor means nothing and it reads again from 0. Added for the indexer's stream (`indexer/docs/design.md`).
 
 The identity state of the node (rotations and revocations) has no bucket. It is rebuilt on every start by replaying `log` in sequence order, which is also the order the node observed them in (§2.3), so the state cannot disagree with the log.
 
