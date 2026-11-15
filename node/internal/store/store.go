@@ -20,6 +20,7 @@ const openTimeout = time.Second
 // Store is the event log, backed by a single bbolt file.
 type Store struct {
 	db *bolt.DB
+	logID string
 }
 
 
@@ -30,6 +31,9 @@ func New(path string) (*Store, error) {
 		return nil, err
 	}
 
+	// initialize the log id
+	var logID string
+
 	err = db.Update(func(tx *bolt.Tx) error {
 		for _, name := range buckets {
 			if _, err := tx.CreateBucketIfNotExists(name); err != nil {
@@ -37,7 +41,9 @@ func New(path string) (*Store, error) {
 			}
 		}
 
-		return nil
+		// get or create the log id
+		logID, err = ensureLogID(tx)
+		return err
 	})
 
 	// Closing releases the file lock taken by the open above.
@@ -46,7 +52,7 @@ func New(path string) (*Store, error) {
 		return nil, err
 	}
 
-	return &Store{db: db}, nil
+	return &Store{db: db, logID: logID}, nil
 }
 
 
