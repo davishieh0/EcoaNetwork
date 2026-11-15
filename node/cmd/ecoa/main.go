@@ -52,6 +52,8 @@ func run(args []string) error {
 	}
 	defer db.Close()
 
+	slog.Info("log", "path", cfg.BoltDBPath, "logId", db.LogID())
+
 	peers, err := peerConfig(cfg, db)
 	if err != nil {
 		return err
