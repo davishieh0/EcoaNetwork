@@ -18,11 +18,13 @@ import { ROUTES } from '@/routes'
 const SHORTCUTS: Shortcut[] = [
   {
     title: 'Write a review',
-    body: 'Sign an experience and publish it to the network.',
+    body: 'Describe your experience and preview your review.',
+    to: ROUTES.write,
   },
   {
     title: 'Explore',
-    body: 'Read what others wrote, and check every signature.',
+    body: 'Browse example reviews of businesses, products, and services.',
+    to: ROUTES.explore,
   },
   {
     title: 'Account',
