@@ -78,3 +78,16 @@ export function base58btc(bytes: Uint8Array): string {
 
   return text
 }
+
+/**
+ * Encodes bytes as base64url, without padding.
+ *
+ * @param bytes - The bytes to encode.
+ * @returns The text.
+ */
+export function base64url(bytes: Uint8Array): string {
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
