@@ -16,6 +16,9 @@ import type { JsonObject } from '@/logic/protocol/jcs.t'
 /** The network this client publishes to. */
 export const NETWORK = import.meta.env.VITE_ECOA_NETWORK ?? 'ecoa-dev'
 
+/** The largest envelope a node accepts, in bytes. */
+export const MAX_ENVELOPE = 16 * 1024
+
 // the domain separation prefix, with the 0x00 that ends it
 const PREFIX = new TextEncoder().encode('ecoa-event-v1\0')
 
@@ -80,4 +83,15 @@ export async function signEnvelope(
     payload: unsigned.payload,
     signature: base64url(signature),
   }
+}
+
+
+/**
+ * Measures an envelope the way the node does: its JSON, in UTF-8 bytes.
+ *
+ * @param envelope - The signed envelope.
+ * @returns Its size in bytes.
+ */
+export function sizeOf(envelope: Envelope): number {
+  return new TextEncoder().encode(JSON.stringify(envelope)).length
 }
