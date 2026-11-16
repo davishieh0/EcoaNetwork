@@ -8,7 +8,7 @@ import { errorOf } from '@/logic/errors/envelope'
 import { HttpError } from '@/logic/errors/httpError'
 
 // --- GLOBALS ---
-const BASE = import.meta.env.VITE_API_URL ?? '/api'
+export const BASE = import.meta.env.VITE_API_URL ?? '/api'
 
 // --- CODE ---
 // several requests can expire at once: they all wait on the same renewal
