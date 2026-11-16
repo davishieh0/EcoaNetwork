@@ -3,11 +3,42 @@
  */
 
 // --- GLOBALS ---
+// RFC 4648 §6 alphabet, lowercased
+const BASE32 = 'abcdefghijklmnopqrstuvwxyz234567'
+
 // Bitcoin's base58 alphabet, the one multibase `z` names
 const BASE58 =
   '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 // --- CODE ---
+/**
+ * Encodes bytes as base32, lowercase and without padding.
+ *
+ * @param bytes - The bytes to encode.
+ * @returns The text.
+ */
+export function base32(bytes: Uint8Array): string {
+  let text = ''
+  let buffer = 0
+  let bits = 0
+
+  for (const byte of bytes) {
+    buffer = (buffer << 8) | byte
+    bits += 8
+
+    while (bits >= 5) {
+      text += BASE32[(buffer >>> (bits - 5)) & 31]
+      bits -= 5
+    }
+
+    buffer &= (1 << bits) - 1
+  }
+
+  // the bits left over, padded with zeros up to a whole character
+  if (bits > 0) text += BASE32[(buffer << (5 - bits)) & 31]
+
+  return text
+}
 
 /**
  * Encodes bytes as base58btc, without the multibase prefix.
