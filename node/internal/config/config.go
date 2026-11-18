@@ -53,7 +53,7 @@ type Config struct {
 	// ListenAddr is the multiaddr the node listens on.
 	ListenAddr string
 
-	// GRPCAddr is the host:port the gateway submits events to.
+	// GRPCAddr is the host:port gateways and indexers reach the node on.
 	GRPCAddr string
 
 	// BootstrapAddrs is the peers to dial at start.

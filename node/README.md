@@ -21,10 +21,10 @@ can use one of them in `BOOTSTRAP_ADDRS`.
 | Port  | Use                                                 |
 |-------|-----------------------------------------------------|
 | 4001  | libp2p: peers connect here                          |
-| 50051 | gRPC: the gateway submits events here               |
+| 50051 | gRPC: gateways submit events, indexers follow the log |
 
-The gRPC port has no authentication. Publish it only to the gateway that needs
-it, not to the internet.
+The gRPC port has no authentication. Publish it only to the gateways and
+indexers that need it, not to the internet.
 
 ## Volume
 

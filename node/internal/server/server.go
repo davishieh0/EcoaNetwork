@@ -1,4 +1,5 @@
-// Package server is the gRPC entry a gateway uses to submit events.
+// Package server is the gRPC entry of the node: gateways submit events through
+// it, and indexers follow the log.
 package server
 
 
@@ -22,7 +23,7 @@ const MaxMessage = 16<<10 + 8
 
 // --- CODE ---
 
-// server answers Publish by handing the envelope to the node.
+// server answers Publish through the node and SubscribeEvents from the store.
 type server struct {
 	pb.UnimplementedNodeServiceServer
 
@@ -37,6 +38,8 @@ type server struct {
 
 
 // New returns a gRPC server with the node service registered on it.
+//
+// Streams end when ctx does, so a graceful stop does not wait on them.
 func New(ctx context.Context,
          n *node.Node,
          s *store.Store) *grpc.Server {
