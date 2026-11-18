@@ -137,3 +137,20 @@ func receivedAtOf(meta []byte) time.Time {
 
 	return time.Unix(0, int64(binary.BigEndian.Uint64(meta[8:16]))).UTC()
 }
+
+
+// Head returns the sequence of the last event stored, 0 for an empty log.
+func (s *Store) Head() (uint64, error) {
+	var head uint64
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		key, _ := tx.Bucket(logBucket).Cursor().Last()
+		if key != nil {
+			head = binary.BigEndian.Uint64(key)
+		}
+
+		return nil
+	})
+
+	return head, err
+}

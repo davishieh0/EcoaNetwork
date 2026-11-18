@@ -292,3 +292,34 @@ func TestEventsSinceReturnsTheIDAndTheTimeOfReceipt(t *testing.T) {
 		         found[0].ID, found[0].ReceivedAt, receivedAt)
 	}
 }
+
+
+func TestHeadIsZeroForAnEmptyLog(t *testing.T) {
+	// Arrange
+	s, _ := open(t)
+
+	// Act
+	head, err := s.Head()
+
+	// Assert
+	if err != nil || head != 0 {
+		t.Fatalf("Head = %d, %v, want 0", head, err)
+	}
+}
+
+
+func TestHeadIsTheSequenceOfTheLastEventStored(t *testing.T) {
+	// Arrange
+	s, _ := open(t)
+	add(t, s, "evt_a")
+	add(t, s, "evt_b")
+	add(t, s, "evt_c")
+
+	// Act
+	head, err := s.Head()
+
+	// Assert
+	if err != nil || head != sequenceOf(t, s, "evt_c") {
+		t.Fatalf("Head = %d, %v, want the sequence of evt_c", head, err)
+	}
+}
