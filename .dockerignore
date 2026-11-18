@@ -6,3 +6,4 @@ frontend
 infra
 node/bin
 node/data
+indexer/bin
