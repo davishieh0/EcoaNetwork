@@ -10,16 +10,20 @@ Already in v0.4.0: a local sequence and receive time for every stored event,
 reading the log from a position (`Store.EventsSince`), and one arrival path
 for every door. What is left:
 
-1. **`log_id`**, created at random with the store, in a bucket of its own.
-2. **Telling open streams when an event is stored**, so they send it at once.
-3. **The contract in `node_api.proto`:** `SubscribeEvents`, `Cursor`, and
-   `StoredEvent` with its six fields; regenerate the code.
-4. **Serving the stream:** the history after the cursor through
+1. ~~**`log_id`**, created at random with the store, in a bucket of its own.~~
+   Done: `Store.LogID()`.
+2. ~~**Telling open streams when an event is stored**, so they send it at
+   once.~~ Done: `Store.Changed()`.
+3. ~~**The contract in `node_api.proto`:** `SubscribeEvents`, `Cursor` (with
+   the `log_id` the cursor counts in) and `StoredEvent` (with `head`);
+   regenerate the code.~~ Done, with `make proto` and `scripts/proto`.
+4. ~~**Serving the stream:** the history after the cursor through
    `EventsSince`, then each new event, with a configurable cap on open
-   streams, read from the environment like the sync limits.
-5. **Tests:** a stream resumes from the right cursor, sees an event stored
-   while it is open, carries the same `log_id` across a restart, and is
-   refused over the cap.
+   streams, read from the environment like the sync limits.~~ Done:
+   `SUBSCRIBE_MAX_STREAMS`, and streams end when the node stops.
+5. ~~**Tests:** a stream resumes from the right cursor, sees an event stored
+   while it is open, starts over for another `log_id`, and is refused over
+   the cap.~~ Done, over an in-memory gRPC connection.
 
 ## Protocol (`protocol/go` 0.1.0, done)
 
@@ -107,5 +111,5 @@ blocks the indexer any more. One thing may be added:
   generator.
 - **Once the indexer's API is up** (indexer step 3): the backend, then the
   frontend.
-- **Once the node serves the stream** (node step 4): the stream client
-  (indexer step 4), and with it the guarantees against a real node (step 9).
+- **The node serves the stream now**, so the stream client (indexer step 4)
+  and the guarantees against a real node (step 9) wait on nothing either.

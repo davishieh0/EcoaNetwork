@@ -1,7 +1,7 @@
 # Indexer: design
 
-**Status: designed, not built.** Written in Go ([Stack](#stack)). Part of it
-is work on the node: the stream the indexer reads from
+**Status: designed, not built.** Written in Go ([Stack](#stack)). The node
+side, the stream the indexer reads from, is built
 ([What the node has to provide](#what-the-node-has-to-provide)). The order to
 build it in, across every service, is in [roadmap.md](./roadmap.md).
 
@@ -71,7 +71,8 @@ service NodeService {
 }
 
 message Cursor {
-    uint64 after = 1;  // 0 for the whole log
+    uint64 after  = 1;  // 0 for the whole log
+    string log_id = 2;  // the log `after` counts in; empty the first time
 }
 
 message StoredEvent {
@@ -81,8 +82,13 @@ message StoredEvent {
     string log_id      = 4;  // which log `sequence` counts in; see below
     string event_id    = 5;  // the envelope's, already read by the node
     string event_type  = 6;  // the envelope's, already read by the node
+    uint64 head        = 7;  // the node's last sequence when this was sent
 }
 ```
+
+The contract is in [protobuf/node_api.proto](../../protobuf/node_api.proto).
+`head` is what lets `/health` say how far behind each node the indexer is:
+`head - sequence`, without asking the node anything else.
 
 **When in doubt, a field goes in.** A field the indexer turns out not to need
 costs a few bytes per event; a field it needs and does not have costs a
@@ -118,8 +124,15 @@ control, so when the indexer reads slowly, the node's send waits.
 **`log_id` names the log a sequence counts in.** A node creates it, at
 random, when it creates its store. A node that loses its data starts counting
 from 1 again, and a cursor saved as "after 500" would then skip the first 500
-events of the new log. When the `log_id` changes, the indexer drops its cursor
-for that node and reads it again from 0.
+events of the new log.
+
+**The node compares it, on connecting.** The indexer sends the `log_id` its
+cursor counts in with the cursor. A node whose log is another one ignores
+`after` and sends its log from the start; the indexer sees the new `log_id`
+on the events and keeps its cursor in that log from then on. The comparison
+cannot wait for the events: a new log shorter than the old cursor would send
+nothing after "500" until it grew past it, and the indexer would never learn
+the log had changed, then skip its first 500 events.
 
 ### Reading from more than one node
 
@@ -147,18 +160,19 @@ stops nothing. One node is the same design with a list of one.
 
 ### What the node has to provide
 
-Most of it is already in the node (v0.4.0,
-[docs/decisions.md](../../docs/decisions.md) §15.2):
+All of it is in the node ([docs/decisions.md](../../docs/decisions.md)
+§15.2 and §15.8):
 
 | Needed | State |
 |---|---|
 | A monotonic local sequence and a receive time for every stored event (validation step 11) | **Done.** `AddEvent` writes the `events`, `log` and `meta` buckets in one bbolt transaction; the receive time is kept in nanoseconds |
 | Reading the log in sequence order from a given position | **Done.** `Store.EventsSince(cursor, limit)`, which node-to-node sync (`GetEventsSince`) already serves from |
 | Every arrival stored by the same path | **Done.** Gossipsub, the gateway, sync and released orphans all end in one function (§15.7), so the stream sees every stored event whichever door it came through |
-| A `log_id`, created at random with the store and kept with it | Missing. A bucket of its own: `meta` is keyed by `eventId` |
-| Telling open streams when a new event is stored (step 12, "notify the indexer") | Missing |
-| `SubscribeEvents` in `node_api.proto`, and serving it | Missing |
-| A small, configurable cap on open streams | Missing. Each stream reads the whole log, and `after = 0` reads all of it from disk; the same reasoning as the sync limits between nodes (§10.5: `SYNC_MAX_STREAMS` and the rest). A stream over the cap is refused, and the indexer retries later |
+| A `log_id`, created at random with the store and kept with it | **Done.** `Store.LogID()`, kept in the `info` bucket |
+| Telling open streams when a new event is stored (step 12, "notify the indexer") | **Done.** `Store.Changed()`: a channel closed after each stored event. It carries no event; whoever wakes reads the log from its own cursor |
+| `SubscribeEvents`, `Cursor` and `StoredEvent` in `node_api.proto` | **Done**, with the Go and Python code regenerated (`make proto` in `node/`, `scripts/proto` in `backend/`) |
+| Serving `SubscribeEvents` | **Done** (`node/internal/server/subscribe.go`, [docs/decisions.md](../../docs/decisions.md) §15.8) |
+| A small, configurable cap on open streams | **Done.** `SUBSCRIBE_MAX_STREAMS`, 16 by default. Each stream may read the whole log from disk; one over the cap is refused with `RESOURCE_EXHAUSTED`, and the indexer retries later |
 
 `receivedAt` is stored per event, but the sync contract between nodes does not
 carry it (`GetEventsSinceResponse` sends envelopes only), on purpose: a peer's
