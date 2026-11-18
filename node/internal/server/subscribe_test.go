@@ -43,8 +43,8 @@ type follower struct {
 }
 
 
-// serve starts a node and its gRPC server.
-func serve(t *testing.T) follower {
+// serve starts a node and its gRPC server, capped at maxStreams.
+func serve(t *testing.T, maxStreams int) follower {
 	t.Helper()
 
 	ctx, stop := context.WithCancel(context.Background())
@@ -53,7 +53,7 @@ func serve(t *testing.T) follower {
 	n, s := startNode(t, ctx, 0)
 
 	lis := bufconn.Listen(1 << 20)
-	g := New(ctx, n, s)
+	g := New(ctx, n, s, maxStreams)
 
 	go g.Serve(lis)
 	t.Cleanup(g.Stop)
@@ -147,7 +147,7 @@ func sequences(events []*pb.StoredEvent) []uint64 {
 
 func TestSubscribeSendsTheWholeLogInOrderWithEveryField(t *testing.T) {
 	// Arrange
-	f := serve(t)
+	f := serve(t, 4)
 	f.add(t, 3)
 
 	logged, _ := f.store.EventsSince(0, 10)
@@ -174,7 +174,7 @@ func TestSubscribeSendsTheWholeLogInOrderWithEveryField(t *testing.T) {
 
 func TestSubscribeResumesAfterTheCursorInTheSameLog(t *testing.T) {
 	// Arrange
-	f := serve(t)
+	f := serve(t, 4)
 	f.add(t, 3)
 
 	cursor := &pb.Cursor{After: 2, LogId: f.store.LogID()}
@@ -198,7 +198,7 @@ func TestSubscribeStartsOverForACursorInAnotherLog(t *testing.T) {
 	for name, logID := range cases {
 		t.Run(name, func(t *testing.T) {
 			// Arrange
-			f := serve(t)
+			f := serve(t, 4)
 			f.add(t, 3)
 
 			cursor := &pb.Cursor{After: 2, LogId: logID}
@@ -218,7 +218,7 @@ func TestSubscribeStartsOverForACursorInAnotherLog(t *testing.T) {
 
 func TestSubscribeSendsAnEventStoredWhileTheStreamIsOpen(t *testing.T) {
 	// Arrange
-	f := serve(t)
+	f := serve(t, 4)
 	f.add(t, 1)
 
 	stream := f.subscribe(t, &pb.Cursor{})
@@ -235,9 +235,65 @@ func TestSubscribeSendsAnEventStoredWhileTheStreamIsOpen(t *testing.T) {
 }
 
 
+func TestSubscribeRefusesAStreamOverTheCap(t *testing.T) {
+	// Arrange
+	f := serve(t, 2)
+	f.add(t, 1)
+
+	// each one has received an event, so each holds its slot
+	for range 2 {
+		receive(t, f.subscribe(t, &pb.Cursor{}), 1)
+	}
+
+	// Act
+	_, err := f.subscribe(t, &pb.Cursor{}).Recv()
+
+	// Assert
+	if status.Code(err) != codes.ResourceExhausted {
+		t.Fatalf("Recv = %v, want ResourceExhausted", err)
+	}
+}
+
+
+func TestSubscribeGivesTheSlotBackWhenAStreamEnds(t *testing.T) {
+	// Arrange
+	f := serve(t, 1)
+	f.add(t, 1)
+
+	ctx, leave := context.WithCancel(context.Background())
+
+	first, err := f.client.SubscribeEvents(ctx, &pb.Cursor{})
+	if err != nil {
+		t.Fatalf("SubscribeEvents: %v", err)
+	}
+
+	receive(t, first, 1)
+
+	// Act
+	leave()
+
+	// Assert: the slot comes back once the server sees the stream end
+	deadline := time.Now().Add(streamTimeout)
+
+	for {
+		_, err := f.subscribe(t, &pb.Cursor{}).Recv()
+		if err == nil {
+			return
+		}
+
+		if status.Code(err) != codes.ResourceExhausted ||
+		   time.Now().After(deadline) {
+			t.Fatalf("Recv = %v, want the freed slot", err)
+		}
+
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+
 func TestSubscribeEndsOpenStreamsWhenTheNodeStops(t *testing.T) {
 	// Arrange
-	f := serve(t)
+	f := serve(t, 4)
 	f.add(t, 1)
 
 	stream := f.subscribe(t, &pb.Cursor{})

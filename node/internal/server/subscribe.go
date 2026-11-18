@@ -27,6 +27,11 @@ type eventStream = grpc.ServerStreamingServer[pb.StoredEvent]
 var errStopping = status.Error(codes.Unavailable, "node is stopping")
 
 
+// errFull refuses a stream over the cap on open streams.
+var errFull = status.Error(codes.ResourceExhausted,
+                           "too many open streams; try again later")
+
+
 // --- CODE ---
 
 // SubscribeEvents sends the log after the cursor, then each new event.
@@ -34,6 +39,11 @@ var errStopping = status.Error(codes.Unavailable, "node is stopping")
 // History and live events are one loop: read what follows the cursor, send
 // it, and when nothing follows, sleep until the store stores something.
 func (s *server) SubscribeEvents(cursor *pb.Cursor, stream eventStream) error {
+	if !s.acquire() {
+		return errFull
+	}
+	defer s.release()
+
 	logID := s.store.LogID()
 	after := cursor.GetAfter()
 
@@ -85,6 +95,23 @@ func (s *server) follow(after uint64,
 			return errStopping
 		}
 	}
+}
+
+
+// acquire takes a slot for a stream, or reports that every slot is taken.
+func (s *server) acquire() bool {
+	select {
+	case s.slots <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+
+// release gives back the slot of a stream that ended.
+func (s *server) release() {
+	<-s.slots
 }
 
 

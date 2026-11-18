@@ -34,20 +34,26 @@ type server struct {
 
 	// ctx ends every open stream when the node stops
 	ctx context.Context
+
+	// slots holds one token per open stream, at most its capacity
+	slots chan struct{}
 }
 
 
 // New returns a gRPC server with the node service registered on it.
 //
-// Streams end when ctx does, so a graceful stop does not wait on them.
+// Streams end when ctx does, so a graceful stop does not wait on them, and at
+// most maxStreams are open at once.
 func New(ctx context.Context,
          n *node.Node,
-         s *store.Store) *grpc.Server {
+         s *store.Store,
+         maxStreams int) *grpc.Server {
 	g := grpc.NewServer(grpc.MaxRecvMsgSize(MaxMessage))
 	pb.RegisterNodeServiceServer(g, &server{
 		node:  n,
 		store: s,
 		ctx:   ctx,
+		slots: make(chan struct{}, maxStreams),
 	})
 
 	return g
