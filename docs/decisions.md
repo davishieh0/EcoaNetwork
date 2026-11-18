@@ -653,6 +653,16 @@ What differs between doors is what the node does after the verdict:
 - **Sync** stores, and never hands an event back to the peer it was pulled from.
 - **A released orphan** is rebroadcast unless it came by sync, because Gossipsub never relayed it while it was held.
 
+### 15.8 Indexers follow the log over one gRPC stream, woken by the store — **call**
+
+The architecture has the indexer read the node's log in sequence order, and step 12 of the checklist says "notify the indexer", without a contract or a mechanism. The node serves `SubscribeEvents(Cursor) returns (stream StoredEvent)` on the gateway's gRPC port (`protobuf/node_api.proto`); the indexer side is `indexer/docs/design.md`.
+
+- **History and live events are one loop.** Read what follows the cursor, at most 256 events, send it, and when nothing follows, sleep until the store stores something. There is no switch from a history mode to a live mode for an event to fall through.
+- **The store wakes streams; it hands them nothing.** `Store.Changed()` returns a channel `AddEvent` closes after each commit. Whoever wakes reads the log from its own cursor, so a slow reader misses nothing and never holds up a write, and memory does not grow with readers or their lag. **Rejected: a queue per reader**, fed after each write. A full queue forces a choice between blocking every write, dropping events, or growing without bound, and the hand-over from history to queue is a second path to keep consistent.
+- **The node compares the `log_id`, on connecting.** The reader sends the `log_id` its cursor counts in; a node whose log is another one sends its log from the start. Leaving the comparison to the reader, on the events it receives, fails when the new log is shorter than the old cursor: nothing is sent, the reader never learns the log changed, and it later skips the start of the new log.
+- **At most 16 streams at once** (`SUBSCRIBE_MAX_STREAMS`), refused over the cap with `RESOURCE_EXHAUSTED`. Each stream may read the whole log from disk. One limit for all, unlike sync's per-peer limits, because the port has no authentication and is published only to the gateways and indexers that need it.
+- **Streams end when the node stops**, with `UNAVAILABLE`, so a graceful stop of the gRPC server does not wait forever on a stream that never ends on its own.
+
 ## Still open, and owned by the project
 
 - **Payload schemas per event type.** The largest remaining gap before Phase 0 closes. The rating scale is settled (§1.5) because its meaning has to be uniform across the network; the rest of each payload is ordinary schema work and nothing above depends on how it lands.
