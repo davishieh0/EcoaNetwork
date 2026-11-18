@@ -7,6 +7,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/node"
 	pb "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf"
+	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,13 +27,25 @@ type server struct {
 	pb.UnimplementedNodeServiceServer
 
 	node *node.Node
+
+	// store is the log SubscribeEvents reads
+	store *store.Store
+
+	// ctx ends every open stream when the node stops
+	ctx context.Context
 }
 
 
 // New returns a gRPC server with the node service registered on it.
-func New(n *node.Node) *grpc.Server {
+func New(ctx context.Context,
+         n *node.Node,
+         s *store.Store) *grpc.Server {
 	g := grpc.NewServer(grpc.MaxRecvMsgSize(MaxMessage))
-	pb.RegisterNodeServiceServer(g, &server{node: n})
+	pb.RegisterNodeServiceServer(g, &server{
+		node:  n,
+		store: s,
+		ctx:   ctx,
+	})
 
 	return g
 }
