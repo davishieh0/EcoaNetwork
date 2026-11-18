@@ -38,3 +38,9 @@ func (b *bell) ring() {
 	close(b.ch)
 	b.ch = make(chan struct{})
 }
+
+
+// Changed returns a channel closed when the next event is stored.
+func (s *Store) Changed() <-chan struct{} {
+	return s.changed.wait()
+}

@@ -35,9 +35,16 @@ type StoredEvent struct {
 func (s *Store) AddEvent(id string,
                          raw []byte,
                          receivedAt time.Time) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
 		return addEvent(tx, id, raw, receivedAt)
 	})
+
+	// rung only after the commit, so whoever wakes can read the event
+	if err == nil {
+		s.changed.ring()
+	}
+
+	return err
 }
 
 

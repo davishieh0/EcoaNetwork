@@ -21,6 +21,7 @@ const openTimeout = time.Second
 type Store struct {
 	db *bolt.DB
 	logID string
+	changed *bell
 }
 
 
@@ -52,7 +53,7 @@ func New(path string) (*Store, error) {
 		return nil, err
 	}
 
-	return &Store{db: db, logID: logID}, nil
+	return &Store{db: db, logID: logID, changed: newBell()}, nil
 }
 
 
