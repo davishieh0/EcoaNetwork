@@ -29,6 +29,9 @@ const (
 	// defaultSyncEventsPerPeer is SYNC_EVENTS_PER_PEER when unset.
 	defaultSyncEventsPerPeer = 4096
 
+	// defaultSubscribeMaxStreams is SUBSCRIBE_MAX_STREAMS when unset.
+	defaultSubscribeMaxStreams = 16
+
 	// defaultConnLow is the connection count the manager trims down to.
 	defaultConnLow = 32
 
@@ -85,6 +88,9 @@ type Config struct {
 
 	// SyncEventsPerPeer is the most events served to one peer per minute.
 	SyncEventsPerPeer int
+
+	// SubscribeMaxStreams is the most SubscribeEvents streams open at once.
+	SubscribeMaxStreams int
 }
 
 
@@ -101,6 +107,12 @@ func Load() (Config, error) {
 	}
 
 	limits, err := loadSyncLimits()
+	if err != nil {
+		return Config{}, err
+	}
+
+	subscribers, err := positiveInt("SUBSCRIBE_MAX_STREAMS",
+	                                defaultSubscribeMaxStreams)
 	if err != nil {
 		return Config{}, err
 	}
@@ -131,6 +143,8 @@ func Load() (Config, error) {
 		SyncMaxStreams:        limits[0],
 		SyncMaxStreamsPerPeer: limits[1],
 		SyncEventsPerPeer:     limits[2],
+
+		SubscribeMaxStreams: subscribers,
 	}
 
 	return cfg, nil

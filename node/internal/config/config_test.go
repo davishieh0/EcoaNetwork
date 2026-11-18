@@ -26,6 +26,7 @@ var names = []string{
 	"SYNC_MAX_STREAMS",
 	"SYNC_MAX_STREAMS_PER_PEER",
 	"SYNC_EVENTS_PER_PEER",
+	"SUBSCRIBE_MAX_STREAMS",
 }
 
 
@@ -63,6 +64,8 @@ func TestLoadAppliesTheDefaultsToAnEmptyEnvironment(t *testing.T) {
 		SyncMaxStreams:        32,
 		SyncMaxStreamsPerPeer: 2,
 		SyncEventsPerPeer:     4096,
+
+		SubscribeMaxStreams: 16,
 	}
 
 	// Act
@@ -157,6 +160,10 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		{
 			"SYNC_EVENTS_PER_PEER", "100",
 			func(c Config) any { return c.SyncEventsPerPeer }, 100,
+		},
+		{
+			"SUBSCRIBE_MAX_STREAMS", "4",
+			func(c Config) any { return c.SubscribeMaxStreams }, 4,
 		},
 		{
 			"BOOTSTRAP_ADDRS", "/ip4/1.1.1.1/tcp/1,/ip4/2.2.2.2/tcp/2",
@@ -268,6 +275,7 @@ func TestLoadRefusesAnInvalidSyncLimit(t *testing.T) {
 		"SYNC_MAX_STREAMS",
 		"SYNC_MAX_STREAMS_PER_PEER",
 		"SYNC_EVENTS_PER_PEER",
+		"SUBSCRIBE_MAX_STREAMS",
 	}
 
 	for _, name := range names {

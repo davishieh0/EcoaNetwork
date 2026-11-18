@@ -46,6 +46,7 @@ node's copy of the network. Losing the key gives the node a new identity.
 | `CONN_LOW`              | `32`                     | Connection count the manager trims down to    |
 | `CONN_HIGH`             | `96`                     | Connection count that starts the trimming     |
 | `MAX_EVENT_SIZE`        | `16384`                  | Largest event accepted, in bytes              |
+| `SUBSCRIBE_MAX_STREAMS` | `16`                     | Indexer streams (`SubscribeEvents`) open at once |
 
 Address lists are comma-separated. The embedded bootstrap list is empty until
 a public node exists, so a new node needs `BOOTSTRAP_ADDRS` to find the
