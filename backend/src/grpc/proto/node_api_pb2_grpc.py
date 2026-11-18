@@ -26,7 +26,7 @@ if _version_not_supported:
 
 
 class NodeServiceStub:
-    """The interface the gateway uses to submit events to a node.
+    """The interface gateways and indexers use to reach a node.
     """
 
     def __init__(self, channel):
@@ -40,14 +40,30 @@ class NodeServiceStub:
                 request_serializer=node__api__pb2.Event.SerializeToString,
                 response_deserializer=node__api__pb2.PublishResponse.FromString,
                 _registered_method=True)
+        self.SubscribeEvents = channel.unary_stream(
+                '/node_api.NodeService/SubscribeEvents',
+                request_serializer=node__api__pb2.Cursor.SerializeToString,
+                response_deserializer=node__api__pb2.StoredEvent.FromString,
+                _registered_method=True)
 
 
 class NodeServiceServicer:
-    """The interface the gateway uses to submit events to a node.
+    """The interface gateways and indexers use to reach a node.
     """
 
     def Publish(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """Submits one event, as the gateway does.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SubscribeEvents(self, request, context):
+        """Every event after the cursor, in sequence order, then each new one as
+        it is stored. The stream does not end on its own. A node caps how many
+        are open at once and refuses one over the cap with RESOURCE_EXHAUSTED;
+        the reader tries again later.
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -60,6 +76,11 @@ def add_NodeServiceServicer_to_server(servicer, server):
                     request_deserializer=node__api__pb2.Event.FromString,
                     response_serializer=node__api__pb2.PublishResponse.SerializeToString,
             ),
+            'SubscribeEvents': grpc.unary_stream_rpc_method_handler(
+                    servicer.SubscribeEvents,
+                    request_deserializer=node__api__pb2.Cursor.FromString,
+                    response_serializer=node__api__pb2.StoredEvent.SerializeToString,
+            ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
             'node_api.NodeService', rpc_method_handlers)
@@ -69,7 +90,7 @@ def add_NodeServiceServicer_to_server(servicer, server):
 
  # This class is part of an EXPERIMENTAL API.
 class NodeService:
-    """The interface the gateway uses to submit events to a node.
+    """The interface gateways and indexers use to reach a node.
     """
 
     @staticmethod
@@ -89,6 +110,33 @@ class NodeService:
             '/node_api.NodeService/Publish',
             node__api__pb2.Event.SerializeToString,
             node__api__pb2.PublishResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SubscribeEvents(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_stream(
+            request,
+            target,
+            '/node_api.NodeService/SubscribeEvents',
+            node__api__pb2.Cursor.SerializeToString,
+            node__api__pb2.StoredEvent.FromString,
             options,
             channel_credentials,
             insecure,
