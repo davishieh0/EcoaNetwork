@@ -2,11 +2,15 @@ package server
 
 
 import (
+	"errors"
+	"log/slog"
+
 	pb "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -40,6 +44,11 @@ var errFull = status.Error(codes.ResourceExhausted,
 // it, and when nothing follows, sleep until the store stores something.
 func (s *server) SubscribeEvents(cursor *pb.Cursor, stream eventStream) error {
 	if !s.acquire() {
+		slog.Warn("subscribe refused",
+		          "client", clientOf(stream),
+		          "reason", "every stream slot is taken",
+		          "maxStreams", cap(s.slots))
+
 		return errFull
 	}
 	defer s.release()
@@ -48,39 +57,55 @@ func (s *server) SubscribeEvents(cursor *pb.Cursor, stream eventStream) error {
 	after := cursor.GetAfter()
 
 	// a cursor in another log means nothing here: send this one from the start
-	if cursor.GetLogId() != logID {
+	sameLog := cursor.GetLogId() == logID
+	if !sameLog {
 		after = 0
 	}
 
-	return s.follow(after, logID, stream)
+	slog.Info("subscribed",
+	          "client", clientOf(stream),
+	          "after", after,
+	          "sameLog", sameLog)
+
+	sent, err := s.follow(after, logID, stream)
+
+	slog.Info("unsubscribed",
+	          "client", clientOf(stream),
+	          "sent", sent,
+	          "reason", reasonOf(err))
+
+	return err
 }
 
 
-// follow runs the loop of SubscribeEvents.
+// follow runs the loop of SubscribeEvents, returning how many events it sent.
 func (s *server) follow(after uint64,
                         logID string,
-                        stream eventStream) error {
+                        stream eventStream) (int, error) {
+	sent := 0
+
 	for {
 		// taken before reading, so an event stored meanwhile still wakes it
 		changed := s.store.Changed()
 
 		events, err := s.store.EventsSince(after, page)
 		if err != nil {
-			return status.Error(codes.Internal, err.Error())
+			return sent, status.Error(codes.Internal, err.Error())
 		}
 
 		// read after the page, so it is never below a sequence in it
 		head, err := s.store.Head()
 		if err != nil {
-			return status.Error(codes.Internal, err.Error())
+			return sent, status.Error(codes.Internal, err.Error())
 		}
 
 		for _, e := range events {
 			if err := stream.Send(storedEvent(e, logID, head)); err != nil {
-				return err
+				return sent, err
 			}
 
 			after = e.Sequence
+			sent++
 		}
 
 		if len(events) > 0 {
@@ -90,9 +115,9 @@ func (s *server) follow(after uint64,
 		select {
 		case <-changed:
 		case <-stream.Context().Done():
-			return nil
+			return sent, nil
 		case <-s.ctx.Done():
-			return errStopping
+			return sent, errStopping
 		}
 	}
 }
@@ -140,4 +165,27 @@ func eventTypeOf(raw []byte) string {
 	}
 
 	return env.EventType
+}
+
+
+// clientOf is the address a stream comes from, for the log.
+func clientOf(stream eventStream) string {
+	if p, ok := peer.FromContext(stream.Context()); ok {
+		return p.Addr.String()
+	}
+
+	return "unknown"
+}
+
+
+// reasonOf is why a stream ended, for the log.
+func reasonOf(err error) string {
+	switch {
+	case err == nil:
+		return "client left"
+	case errors.Is(err, errStopping):
+		return "node stopping"
+	}
+
+	return err.Error()
 }
