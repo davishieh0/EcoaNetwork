@@ -117,3 +117,14 @@ func (s *Store) EventsSince(cursor uint64, limit int) ([]StoredEvent, error) {
 
 	return found, err
 }
+
+
+// receivedAtOf reads the time of receipt from a meta value.
+func receivedAtOf(meta []byte) time.Time {
+	// the sequence comes first, then the time of receipt in Unix nanoseconds
+	if len(meta) < 16 {
+		return time.Time{}
+	}
+
+	return time.Unix(0, int64(binary.BigEndian.Uint64(meta[8:16]))).UTC()
+}
