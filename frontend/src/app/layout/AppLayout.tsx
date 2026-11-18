@@ -4,7 +4,7 @@
 
 // --- IMPORTS ---
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { Link, Outlet } from 'react-router'
+import { Link, NavLink, Outlet } from 'react-router'
 
 import { Wordmark } from '@/components/ecoa/Wordmark'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +12,12 @@ import { Container } from '@/components/ui/Container'
 import { cn } from '@/components/ui/cn'
 import { useSession } from '@/logic/session/session'
 import { ROUTES } from '@/routes'
+
+// --- GLOBALS ---
+const APP_LINKS = [
+  { label: 'Explore', to: ROUTES.explore },
+  { label: 'Write a review', to: ROUTES.write },
+] as const
 
 // --- CODE ---
 /**
@@ -71,21 +77,51 @@ export function AppLayout() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-60 bg-canvas">
+      <header className="fixed inset-x-0 top-0 z-60 border-b border-line bg-canvas">
         <Container
           className={cn(
-            'flex h-[var(--header-h)] items-center justify-between',
+            'grid min-h-[var(--header-h)] grid-cols-[1fr_auto] items-center',
+            'gap-x-4 gap-y-2 py-3 sm:grid-cols-[1fr_auto_1fr]',
           )}
         >
           <Link
             to={home}
-            className="flex items-center gap-3"
+            className="col-start-1 row-start-1 flex items-center gap-3"
             aria-label="Ecoa — home"
           >
             <Wordmark />
           </Link>
 
-          <Identity />
+          <nav
+            aria-label="App navigation"
+            className={cn(
+              'col-span-2 row-start-2 flex flex-wrap gap-x-5 gap-y-2',
+              'sm:col-span-1 sm:col-start-2 sm:row-start-1',
+            )}
+          >
+            {APP_LINKS.map(({ label, to }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={cn(
+                  'border-b-2 border-transparent py-2 font-mono text-mono-m',
+                  'text-secondary hover:text-primary',
+                  'aria-[current=page]:border-signal',
+                  'aria-[current=page]:text-primary',
+                )}
+              >
+                {label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div
+            className={cn(
+              'col-start-2 row-start-1 justify-self-end sm:col-start-3',
+            )}
+          >
+            <Identity />
+          </div>
         </Container>
       </header>
 
