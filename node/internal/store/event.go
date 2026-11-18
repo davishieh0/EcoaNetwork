@@ -20,6 +20,12 @@ type StoredEvent struct {
 	// Sequence is the local receive sequence number of the event.
 	Sequence uint64
 
+	// ID is the eventId the event is stored under.
+	ID string
+
+	// ReceivedAt is when this node stored the event.
+	ReceivedAt time.Time
+
 	// Raw is the event, byte for byte as it was received.
 	Raw []byte
 }
@@ -94,6 +100,7 @@ func (s *Store) EventsSince(cursor uint64, limit int) ([]StoredEvent, error) {
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 		events := tx.Bucket(eventsBucket)
+		meta := tx.Bucket(metaBucket)
 		log := tx.Bucket(logBucket).Cursor()
 
 		key, id := log.Seek(sequenceKey(cursor))
@@ -107,8 +114,10 @@ func (s *Store) EventsSince(cursor uint64, limit int) ([]StoredEvent, error) {
 			}
 
 			found = append(found, StoredEvent{
-				Sequence: sequence,
-				Raw:      bytes.Clone(events.Get(id)),
+				Sequence:   sequence,
+				ID:         string(id),
+				ReceivedAt: receivedAtOf(meta.Get(id)),
+				Raw:        bytes.Clone(events.Get(id)),
 			})
 		}
 
