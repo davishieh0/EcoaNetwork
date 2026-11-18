@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/api"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/config"
 )
 
@@ -21,7 +22,7 @@ import (
 var commands = map[string]func(context.Context, config.Config) error{
 	"migrate": notBuilt,
 	"project": notBuilt,
-	"serve":   notBuilt,
+	"serve":   serve,
 	"rebuild": notBuilt,
 }
 
@@ -65,6 +66,12 @@ func run(args []string) error {
 	defer stop()
 
 	return commands[args[0]](ctx, cfg)
+}
+
+
+// serve answers the HTTP API.
+func serve(ctx context.Context, cfg config.Config) error {
+	return api.Serve(ctx, cfg.HTTPAddr)
 }
 
 
