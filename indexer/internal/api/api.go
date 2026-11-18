@@ -3,11 +3,51 @@ package api
 
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
 	"net/http"
+	"time"
 )
 
 
+// --- CONSTANTS ---
+
+// shutdownTimeout bounds the wait for open requests when the API stops.
+const shutdownTimeout = 5 * time.Second
+
+
 // --- CODE ---
+
+// Serve answers the API on addr until ctx ends.
+func Serve(ctx context.Context, addr string) error {
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
+
+	failed := make(chan error, 1)
+
+	go func() {
+		failed <- srv.ListenAndServe()
+	}()
+
+	slog.Info("http", "addr", addr)
+
+	select {
+	case err := <-failed:
+		return fmt.Errorf("serve http %s: %w", addr, err)
+	case <-ctx.Done():
+	}
+
+	shutdown, cancel := context.WithTimeout(context.Background(),
+		shutdownTimeout)
+	defer cancel()
+
+	return srv.Shutdown(shutdown)
+}
+
 
 // Handler returns the router of every endpoint the API answers.
 //
