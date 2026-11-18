@@ -4,7 +4,8 @@
 // 	protoc        v7.36.2
 // source: node_api.proto
 
-// Contract between a gateway and a node; node-to-node sync is a separate file.
+// Contract between a node and the services that reach it over gRPC, gateways
+// and indexers; node-to-node sync is a separate file.
 
 package protobuf
 
@@ -177,6 +178,164 @@ func (x *PublishResponse) GetReason() string {
 	return ""
 }
 
+// Where a reader of the log stands: the last sequence it has, and in which log.
+type Cursor struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The last sequence the reader holds; 0 for the whole log.
+	After uint64 `protobuf:"varint,1,opt,name=after,proto3" json:"after,omitempty"`
+	// The log `after` counts in, as the reader last received it; empty the
+	// first time. A node whose log is another one ignores `after` and sends
+	// its log from the start, since that position means nothing in it.
+	LogId         string `protobuf:"bytes,2,opt,name=log_id,json=logId,proto3" json:"log_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Cursor) Reset() {
+	*x = Cursor{}
+	mi := &file_node_api_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Cursor) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Cursor) ProtoMessage() {}
+
+func (x *Cursor) ProtoReflect() protoreflect.Message {
+	mi := &file_node_api_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Cursor.ProtoReflect.Descriptor instead.
+func (*Cursor) Descriptor() ([]byte, []int) {
+	return file_node_api_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Cursor) GetAfter() uint64 {
+	if x != nil {
+		return x.After
+	}
+	return 0
+}
+
+func (x *Cursor) GetLogId() string {
+	if x != nil {
+		return x.LogId
+	}
+	return ""
+}
+
+// One event of the log, with what this node observed about it.
+type StoredEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The envelope byte for byte as it was signed and stored.
+	Envelope []byte `protobuf:"bytes,1,opt,name=envelope,proto3" json:"envelope,omitempty"`
+	// This node's position for the event; the next Cursor's `after`.
+	Sequence uint64 `protobuf:"varint,2,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	// When this node accepted the event, in Unix nanoseconds.
+	ReceivedAt int64 `protobuf:"varint,3,opt,name=received_at,json=receivedAt,proto3" json:"received_at,omitempty"`
+	// The log `sequence` counts in, created at random with the node's store.
+	// It changes only when the node starts over with an empty store.
+	LogId string `protobuf:"bytes,4,opt,name=log_id,json=logId,proto3" json:"log_id,omitempty"`
+	// The envelope's eventId and eventType, already read by the node.
+	EventId   string `protobuf:"bytes,5,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	EventType string `protobuf:"bytes,6,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// The last sequence of this node's log when the event was sent; how far
+	// behind the reader is, as head minus sequence.
+	Head          uint64 `protobuf:"varint,7,opt,name=head,proto3" json:"head,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StoredEvent) Reset() {
+	*x = StoredEvent{}
+	mi := &file_node_api_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StoredEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StoredEvent) ProtoMessage() {}
+
+func (x *StoredEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_node_api_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StoredEvent.ProtoReflect.Descriptor instead.
+func (*StoredEvent) Descriptor() ([]byte, []int) {
+	return file_node_api_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *StoredEvent) GetEnvelope() []byte {
+	if x != nil {
+		return x.Envelope
+	}
+	return nil
+}
+
+func (x *StoredEvent) GetSequence() uint64 {
+	if x != nil {
+		return x.Sequence
+	}
+	return 0
+}
+
+func (x *StoredEvent) GetReceivedAt() int64 {
+	if x != nil {
+		return x.ReceivedAt
+	}
+	return 0
+}
+
+func (x *StoredEvent) GetLogId() string {
+	if x != nil {
+		return x.LogId
+	}
+	return ""
+}
+
+func (x *StoredEvent) GetEventId() string {
+	if x != nil {
+		return x.EventId
+	}
+	return ""
+}
+
+func (x *StoredEvent) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *StoredEvent) GetHead() uint64 {
+	if x != nil {
+		return x.Head
+	}
+	return 0
+}
+
 var File_node_api_proto protoreflect.FileDescriptor
 
 const file_node_api_proto_rawDesc = "" +
@@ -186,16 +345,30 @@ const file_node_api_proto_rawDesc = "" +
 	"\benvelope\x18\x01 \x01(\fR\benvelope\"V\n" +
 	"\x0fPublishResponse\x12+\n" +
 	"\aoutcome\x18\x01 \x01(\x0e2\x11.node_api.OutcomeR\aoutcome\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason*^\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\"5\n" +
+	"\x06Cursor\x12\x14\n" +
+	"\x05after\x18\x01 \x01(\x04R\x05after\x12\x15\n" +
+	"\x06log_id\x18\x02 \x01(\tR\x05logId\"\xcb\x01\n" +
+	"\vStoredEvent\x12\x1a\n" +
+	"\benvelope\x18\x01 \x01(\fR\benvelope\x12\x1a\n" +
+	"\bsequence\x18\x02 \x01(\x04R\bsequence\x12\x1f\n" +
+	"\vreceived_at\x18\x03 \x01(\x03R\n" +
+	"receivedAt\x12\x15\n" +
+	"\x06log_id\x18\x04 \x01(\tR\x05logId\x12\x19\n" +
+	"\bevent_id\x18\x05 \x01(\tR\aeventId\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x06 \x01(\tR\teventType\x12\x12\n" +
+	"\x04head\x18\a \x01(\x04R\x04head*^\n" +
 	"\aOutcome\x12\x17\n" +
 	"\x13OUTCOME_UNSPECIFIED\x10\x00\x12\f\n" +
 	"\bACCEPTED\x10\x01\x12\x12\n" +
 	"\x0eALREADY_EXISTS\x10\x02\x12\n" +
 	"\n" +
 	"\x06ORPHAN\x10\x03\x12\f\n" +
-	"\bREJECTED\x10\x042D\n" +
+	"\bREJECTED\x10\x042\x82\x01\n" +
 	"\vNodeService\x125\n" +
-	"\aPublish\x12\x0f.node_api.Event\x1a\x19.node_api.PublishResponseB;Z9github.com/eduardokairalla1/EcoaNetwork/internal/protobufb\x06proto3"
+	"\aPublish\x12\x0f.node_api.Event\x1a\x19.node_api.PublishResponse\x12<\n" +
+	"\x0fSubscribeEvents\x12\x10.node_api.Cursor\x1a\x15.node_api.StoredEvent0\x01B;Z9github.com/eduardokairalla1/EcoaNetwork/internal/protobufb\x06proto3"
 
 var (
 	file_node_api_proto_rawDescOnce sync.Once
@@ -210,18 +383,22 @@ func file_node_api_proto_rawDescGZIP() []byte {
 }
 
 var file_node_api_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_node_api_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_node_api_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_node_api_proto_goTypes = []any{
 	(Outcome)(0),            // 0: node_api.Outcome
 	(*Event)(nil),           // 1: node_api.Event
 	(*PublishResponse)(nil), // 2: node_api.PublishResponse
+	(*Cursor)(nil),          // 3: node_api.Cursor
+	(*StoredEvent)(nil),     // 4: node_api.StoredEvent
 }
 var file_node_api_proto_depIdxs = []int32{
 	0, // 0: node_api.PublishResponse.outcome:type_name -> node_api.Outcome
 	1, // 1: node_api.NodeService.Publish:input_type -> node_api.Event
-	2, // 2: node_api.NodeService.Publish:output_type -> node_api.PublishResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
+	3, // 2: node_api.NodeService.SubscribeEvents:input_type -> node_api.Cursor
+	2, // 3: node_api.NodeService.Publish:output_type -> node_api.PublishResponse
+	4, // 4: node_api.NodeService.SubscribeEvents:output_type -> node_api.StoredEvent
+	3, // [3:5] is the sub-list for method output_type
+	1, // [1:3] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
 	1, // [1:1] is the sub-list for extension extendee
 	0, // [0:1] is the sub-list for field type_name
@@ -238,7 +415,7 @@ func file_node_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_node_api_proto_rawDesc), len(file_node_api_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
