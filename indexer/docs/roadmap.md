@@ -39,15 +39,19 @@ blocks the indexer any more. One thing may be added:
 
 ## Indexer
 
-1. **Skeleton:** `go.mod` with a `replace` to `../protocol/go`, as the node
-   has; one binary with `migrate`, `project`, `serve` and `rebuild`, flags,
-   `slog`, a Makefile. Postgres from `infra/local`. *Waits on nothing.*
-2. **Database:** `goose` migrations for the deterministic tables, the observed
+1. ~~**Skeleton:** `go.mod` with a `replace` to `../protocol/go`, as the node
+   has; one binary with `migrate`, `project`, `serve` and `rebuild`,
+   configuration from the environment, `slog`, a Makefile.~~ Done: `serve`
+   answers `/health`, and the other subcommands say they are not built yet.
+   Each setting is added with the step that uses it.
+2. **Database:** in `internal/platform/database/`. The `indexer` role and
+   the `ecoa_indexer` databases in `infra/local`, `DATABASE_URL`, `goose`
+   migrations for the deterministic tables, the observed
    ones and `projector_cursors`; `sqlc` set up. *Waits on nothing.*
 3. **HTTP API over rows inserted by hand:** the endpoints, the envelope as a
    raw string, `derived` apart from `observed`, `/health`. This unblocks the
    backend and the frontend before the projector exists. *Waits on nothing.*
-4. **Stream client:** a list of nodes, one cursor each, back to 0 when a
+4. **Stream client:** `NODE_ADDRS`, a list of nodes, one cursor each, back to 0 when a
    `log_id` changes, reconnecting on its own, everything into one applier.
    *Waits on the node, steps 3 and 4.*
 5. **Projector, one event type at a time**, calling the `projection`
