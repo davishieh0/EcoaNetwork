@@ -10,6 +10,44 @@ import (
 	"time"
 )
 
+const chainVersions = `-- name: ChainVersions :many
+SELECT r.event_id,
+       e.envelope,
+       o.received_at
+FROM reviews r
+JOIN events e ON e.event_id = r.event_id
+LEFT JOIN event_observations o ON o.event_id = r.event_id
+WHERE r.chain_root = $1
+ORDER BY r.created_at, r.event_id
+`
+
+type ChainVersionsRow struct {
+	EventID    string
+	Envelope   []byte
+	ReceivedAt *time.Time
+}
+
+// Every version of a chain, forks included, oldest first.
+func (q *Queries) ChainVersions(ctx context.Context, chainRoot string) ([]ChainVersionsRow, error) {
+	rows, err := q.db.Query(ctx, chainVersions, chainRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ChainVersionsRow
+	for rows.Next() {
+		var i ChainVersionsRow
+		if err := rows.Scan(&i.EventID, &i.Envelope, &i.ReceivedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const headsByEntity = `-- name: HeadsByEntity :many
 
 SELECT c.chain_root,
@@ -83,4 +121,45 @@ func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const reviewByID = `-- name: ReviewByID :one
+SELECT r.event_id,
+       r.chain_root,
+       c.head,
+       c.withdrawn,
+       c.truncated,
+       e.envelope,
+       o.received_at
+FROM reviews r
+JOIN review_chains c ON c.chain_root = r.chain_root
+JOIN events e ON e.event_id = r.event_id
+LEFT JOIN event_observations o ON o.event_id = r.event_id
+WHERE r.event_id = $1
+`
+
+type ReviewByIDRow struct {
+	EventID    string
+	ChainRoot  string
+	Head       *string
+	Withdrawn  bool
+	Truncated  bool
+	Envelope   []byte
+	ReceivedAt *time.Time
+}
+
+// One version, with the state of its chain.
+func (q *Queries) ReviewByID(ctx context.Context, eventID string) (ReviewByIDRow, error) {
+	row := q.db.QueryRow(ctx, reviewByID, eventID)
+	var i ReviewByIDRow
+	err := row.Scan(
+		&i.EventID,
+		&i.ChainRoot,
+		&i.Head,
+		&i.Withdrawn,
+		&i.Truncated,
+		&i.Envelope,
+		&i.ReceivedAt,
+	)
+	return i, err
 }

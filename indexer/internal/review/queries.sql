@@ -23,3 +23,29 @@ WHERE c.entity = sqlc.arg(entity)
              sqlc.narg(after_root)::text))
 ORDER BY c.created_at DESC, c.chain_root DESC
 LIMIT sqlc.arg(row_limit);
+
+-- name: ReviewByID :one
+-- One version, with the state of its chain.
+SELECT r.event_id,
+       r.chain_root,
+       c.head,
+       c.withdrawn,
+       c.truncated,
+       e.envelope,
+       o.received_at
+FROM reviews r
+JOIN review_chains c ON c.chain_root = r.chain_root
+JOIN events e ON e.event_id = r.event_id
+LEFT JOIN event_observations o ON o.event_id = r.event_id
+WHERE r.event_id = $1;
+
+-- name: ChainVersions :many
+-- Every version of a chain, forks included, oldest first.
+SELECT r.event_id,
+       e.envelope,
+       o.received_at
+FROM reviews r
+JOIN events e ON e.event_id = r.event_id
+LEFT JOIN event_observations o ON o.event_id = r.event_id
+WHERE r.chain_root = $1
+ORDER BY r.created_at, r.event_id;
