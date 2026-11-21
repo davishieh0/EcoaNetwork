@@ -3,6 +3,8 @@ package api
 
 import (
 	"net/http"
+
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/respond"
 )
 
 
@@ -10,5 +12,5 @@ import (
 
 // health answers that the API is up.
 func health(w http.ResponseWriter, _ *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
