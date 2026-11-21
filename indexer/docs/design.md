@@ -26,10 +26,12 @@ READ    Client --HTTP--> Gateway --HTTP--> Indexer --> its own Postgres
 
 Two things follow from the log being the truth:
 
-- **The indexer keeps no events of its own.** The node's log is the event
-  store. The indexer holds projections of it and the position it has read up
-  to, nothing more. A second copy of the log would be a second truth that can
-  drift.
+- **The indexer is never the source of an event.** The node's log is the
+  event store. The indexer does keep every envelope, because every item of
+  its API carries one for the client to verify, but as a projection like any
+  other table: it is never written to except from the log, and it comes back
+  whole from reading the log again. A copy that could be written to on its
+  own would be a second truth that can drift.
 - **Everything the indexer holds can be thrown away.** Dropping the database
   and reading the log again from the start must rebuild it. That is an
   acceptance criterion of the MVP
@@ -258,6 +260,15 @@ row and ignores the observed ones.
 A starting point for the MVP's event types, not a schema. Each event is
 written by `eventId`, so applying the same event twice changes nothing.
 
+The first migration (`migrations/00001_base.sql`) creates only what every
+event goes through, whatever its type: `events` (each envelope, as `bytea`),
+`event_observations` and `projector_cursors`. The tables of each subject come
+in a migration of their own, with the step that projects or reads it.
+
+**The envelope is `bytea`, never `jsonb`.** `jsonb` reorders keys, drops
+spacing and rewrites numbers; the bytes a client checks the signature over
+would no longer be the bytes that were signed.
+
 **Deterministic:**
 
 | Table | From | Holds |
@@ -409,13 +420,13 @@ Go, following the node's conventions where there is one to follow.
 | Protocol | `protocol/go` (0.1.0) | The repository's protocol library; the same code the node validates with, and the projection rules |
 | Stream from the node | `google.golang.org/grpc` | Same library and version as the node |
 | Database | PostgreSQL 18, through `pgx/v5` (`pgxpool`) | Already in `infra/local`; `pgx` is the native driver, no `database/sql` layer |
-| Queries | `sqlc` | Projections are upserts and the API is selects: plain SQL, checked against the schema, with typed Go generated from it |
-| Migrations | `goose`, SQL files embedded in the binary | Plain SQL, the same files `sqlc` reads the schema from |
+| Queries | `sqlc`, from the first step with a query (the API) | Projections are upserts and the API is selects: plain SQL, checked against the schema, with typed Go generated from it |
+| Migrations | `goose`, SQL files embedded in the binary | Plain SQL, the same files `sqlc` reads the schema from. goose runs on `database/sql`, so `migrate` uses pgx's `database/sql` driver; everything else uses pgx directly |
 | HTTP API | `net/http` | Its pattern routing (`GET /entities/{entity}`) is all the API needs; no framework |
 | Search | Postgres full text, the stemmer chosen by `lang` | What the MVP asks for, with no extra service |
 | Logging | `log/slog`, JSON | As the node |
 | Configuration | environment variables only, with a Makefile that reads `.env` | As the node |
-| Tests | `go test`, Postgres from `testcontainers-go` | Each test run gets a real, empty database |
+| Tests | `go test`, against `ecoa_indexer_test` from `infra/local` | A real database, emptied by each test, as the backend does; no extra dependency. Without it, the database tests skip and say why |
 
 One binary, with a subcommand per job:
 
