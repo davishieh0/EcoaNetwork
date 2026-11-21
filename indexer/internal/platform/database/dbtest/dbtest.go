@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 
@@ -99,4 +100,19 @@ func randomBytes(n int) []byte {
 	rand.Read(b)
 
 	return b
+}
+
+
+// Pool returns a pool over url, closed with the test.
+func Pool(t *testing.T, url string) *pgxpool.Pool {
+	t.Helper()
+
+	pool, err := pgxpool.New(context.Background(), url)
+	if err != nil {
+		t.Fatalf("pool: %v", err)
+	}
+
+	t.Cleanup(pool.Close)
+
+	return pool
 }
