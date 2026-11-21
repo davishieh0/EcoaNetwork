@@ -25,3 +25,26 @@ func TestIsEventID(t *testing.T) {
 		}
 	}
 }
+
+
+func TestIsEntityID(t *testing.T) {
+	cases := map[string]bool{
+		"cnpj:12345678000199":              true,
+		"gtin:07891000100103":              true,
+		"domain:padaria-joao.com.br":       true,
+		"place:osm:n123":                   true,
+		"entity:" + strings.Repeat("a", 52): true,
+		"cnpj:123":                         false,
+		"domain:localhost":                 false,
+		"domain:Padaria.com":               false,
+		"place:osm:n0":                     false,
+		"twitter:someone":                  false,
+		"":                                 false,
+	}
+
+	for s, want := range cases {
+		if got := IsEntityID(s); got != want {
+			t.Errorf("IsEntityID(%q) = %v, want %v", s, got, want)
+		}
+	}
+}
