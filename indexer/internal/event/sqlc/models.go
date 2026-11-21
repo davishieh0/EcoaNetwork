@@ -26,3 +26,25 @@ type ProjectorCursor struct {
 	LogID    string
 	Sequence int64
 }
+
+type Review struct {
+	EventID   string
+	ChainRoot string
+	Replaces  *string
+	Author    string
+	Entity    string
+	Rating    int16
+	Title     *string
+	Body      string
+	Lang      *string
+	CreatedAt time.Time
+}
+
+type ReviewChain struct {
+	ChainRoot string
+	Entity    string
+	Head      *string
+	Withdrawn bool
+	Truncated bool
+	CreatedAt time.Time
+}
