@@ -7,8 +7,11 @@ package respond
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 
@@ -50,4 +53,22 @@ func JSON(w http.ResponseWriter, status int, body any) {
 // Error sends a failure: a slug a program can branch on, and a message.
 func Error(w http.ResponseWriter, status int, code, message string) {
 	JSON(w, status, errorBody{Error: code, Message: message})
+}
+
+
+// Failed answers a read the database could not serve: 503 when it does not
+// answer, so the client tries again, and 500 for anything else.
+func Failed(w http.ResponseWriter, err error) {
+	var unreachable *pgconn.ConnectError
+
+	if errors.As(err, &unreachable) {
+		slog.Warn("database unavailable", "err", err)
+		Error(w, http.StatusServiceUnavailable, "database_unavailable",
+		      "The database does not answer; try again later.")
+		return
+	}
+
+	slog.Error("read", "err", err)
+	Error(w, http.StatusInternalServerError, "internal_error",
+	      "Something went wrong.")
 }
