@@ -498,12 +498,19 @@ indexer/
     stream/             the SubscribeEvents client
     projector/          reads the stream, opens the transaction, hands each
                         event to its subject, saves the cursor
+    platform/
+      respond/          the answer shapes every route shares: Item, Error
+    platform/ids/       whether a string is a well-formed eventId or entity id
+    event/              GET /events/{eventId}, the events table
     review/
-      handler.go        GET /reviews/...
+      handler.go        GET /entities/{entity}/reviews, GET /reviews/{eventId}
+      cursor.go         the opaque pagination cursor
       service.go        only when there is logic to put in it
       projector.go      applies review.created, review.replaced, ...
-      repository.go     the queries
+      repository.go     methods over the generated queries
       model.go
+      queries.sql       the SQL, written by hand
+      sqlc/             generated from queries.sql, never edited
     entity/             the same shape
     protobuf/           generated from protobuf/node_api.proto
   migrations/           goose SQL
@@ -524,6 +531,17 @@ indexer is not a usual API:
   subjects at once (a vote: the event, the vote, the review's score, the
   node's cursor), in one transaction. So no repository opens its own: each
   takes the transaction, or the pool for a read, as a parameter.
+- **Every database operation is a method of a subject's repository.** The
+  SQL is written by hand in the subject's `queries.sql`; `sqlc` turns each
+  query into a typed function in the subject's `sqlc/` folder, checked
+  against the migrations; `repository.go` wraps those functions in methods
+  named for the subject (`ByID`, `Head`). Handlers and projectors call the
+  methods and never write SQL. The generated code sits in a folder of its
+  own because `sqlc` also writes a struct for every table, which would mix
+  with the subject's own code.
+- **Shared answer shapes live in `platform/respond`,** not in `api`: `api`
+  imports the subjects to register their routes, so a subject importing
+  `api` back would be an import cycle.
 - **`service.go` only where there is logic.** Most reads are "query and
   answer", and a service that only forwards to the repository is a file
   with nothing in it. One appears where a read has a rule to apply, such
