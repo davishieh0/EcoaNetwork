@@ -78,7 +78,13 @@ func migrate(ctx context.Context, cfg config.Config) error {
 
 // serve answers the HTTP API.
 func serve(ctx context.Context, cfg config.Config) error {
-	return api.Serve(ctx, cfg.HTTPAddr)
+	pool, err := database.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	return api.Serve(ctx, cfg.HTTPAddr, pool)
 }
 
 

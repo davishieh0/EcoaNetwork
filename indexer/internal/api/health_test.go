@@ -16,7 +16,7 @@ func TestHealthAnswersOK(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	// Act
-	Handler().ServeHTTP(rec, req)
+	Handler(nil).ServeHTTP(rec, req)
 
 	// Assert
 	if rec.Code != http.StatusOK ||
