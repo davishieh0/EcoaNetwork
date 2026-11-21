@@ -3,6 +3,8 @@ package config
 
 
 import (
+	"fmt"
+	"net/url"
 	"os"
 )
 
@@ -34,6 +36,9 @@ type Config struct {
 // Load reads the environment and applies the default of each unset variable.
 func Load() (Config, error) {
 	databaseURL := envOr("DATABASE_URL", defaultDatabaseURL)
+	if err := checkDatabaseURL(databaseURL); err != nil {
+		return Config{}, err
+	}
 
 	cfg := Config{
 		DatabaseURL: databaseURL,
@@ -51,4 +56,20 @@ func envOr(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+
+// checkDatabaseURL refuses a DATABASE_URL that is not a Postgres URL.
+func checkDatabaseURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil {
+		// the error quotes the URL, password included, so it is not wrapped
+		return fmt.Errorf("DATABASE_URL: not a valid URL")
+	}
+
+	if u.Scheme != "postgres" && u.Scheme != "postgresql" {
+		return fmt.Errorf("DATABASE_URL: scheme %q, want postgres", u.Scheme)
+	}
+
+	return nil
 }

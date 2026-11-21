@@ -85,3 +85,18 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		})
 	}
 }
+
+
+func TestLoadRefusesADatabaseURLThatIsNotPostgres(t *testing.T) {
+	// Arrange
+	clearEnv(t)
+	t.Setenv("DATABASE_URL", "mysql://u:p@db/x")
+
+	// Act
+	_, err := Load()
+
+	// Assert
+	if err == nil {
+		t.Fatal("a mysql:// DATABASE_URL should fail")
+	}
+}
