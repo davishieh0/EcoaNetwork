@@ -9,14 +9,23 @@ import (
 
 // --- CONSTANTS ---
 
-// defaultHTTPAddr is HTTP_ADDR when unset.
-const defaultHTTPAddr = "127.0.0.1:8081"
+const (
+	// defaultDatabaseURL is DATABASE_URL when unset: the local Postgres.
+	defaultDatabaseURL = "postgres://indexer:goodpassword@127.0.0.1:5432/" +
+	                     "ecoa_indexer?sslmode=disable"
+
+	// defaultHTTPAddr is HTTP_ADDR when unset.
+	defaultHTTPAddr = "127.0.0.1:8081"
+)
 
 
 // --- CODE ---
 
 // Config is every setting the indexer reads at startup.
 type Config struct {
+	// DatabaseURL is the Postgres the projections live in.
+	DatabaseURL string
+
 	// HTTPAddr is the host:port the API answers on.
 	HTTPAddr string
 }
@@ -24,8 +33,11 @@ type Config struct {
 
 // Load reads the environment and applies the default of each unset variable.
 func Load() (Config, error) {
+	databaseURL := envOr("DATABASE_URL", defaultDatabaseURL)
+
 	cfg := Config{
-		HTTPAddr: envOr("HTTP_ADDR", defaultHTTPAddr),
+		DatabaseURL: databaseURL,
+		HTTPAddr:    envOr("HTTP_ADDR", defaultHTTPAddr),
 	}
 
 	return cfg, nil
