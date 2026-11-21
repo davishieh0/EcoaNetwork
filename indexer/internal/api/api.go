@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -57,10 +58,12 @@ func Serve(ctx context.Context, addr string, pool *pgxpool.Pool) error {
 // Each route lives in a file of its own; this is the one list of them all.
 func Handler(pool *pgxpool.Pool) http.Handler {
 	events := event.NewHandler(event.NewRepository(pool))
+	reviews := review.NewHandler(review.NewRepository(pool))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))
 	mux.HandleFunc("GET /events/{eventId}", events.Get)
+	mux.HandleFunc("GET /entities/{entity}/reviews", reviews.ListByEntity)
 
 	return mux
 }
