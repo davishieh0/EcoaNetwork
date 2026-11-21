@@ -146,6 +146,7 @@ func call(t *testing.T, pool *pgxpool.Pool, path string) *httptest.ResponseRecor
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /entities/{entity}/reviews", h.ListByEntity)
+	mux.HandleFunc("GET /reviews/{eventId}", h.Get)
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))

@@ -2,6 +2,7 @@ package review
 
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -37,6 +38,7 @@ type derived struct {
 	Head      bool   `json:"head"`
 	Withdrawn bool   `json:"withdrawn"`
 	Edited    *bool  `json:"edited,omitempty"`
+	Truncated bool   `json:"truncated,omitempty"`
 }
 
 
@@ -52,6 +54,13 @@ type listing struct {
 
 	// Next is the ?after= of the next page, null on the last one.
 	Next *string `json:"next"`
+}
+
+
+// detail is the answer of GET /reviews/{eventId}.
+type detail struct {
+	Review   respond.Item   `json:"review"`
+	Versions []respond.Item `json:"versions"`
 }
 
 
@@ -104,6 +113,56 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 }
 
 
+// Get answers GET /reviews/{eventId}: one version, with every version of its
+// chain.
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("eventId")
+
+	if !ids.IsEventID(id) {
+		respond.Error(w, http.StatusBadRequest, "invalid_event_id",
+		              "An eventId is evt_ and 52 base32 characters.")
+		return
+	}
+
+	review, err := h.repo.ByID(r.Context(), id)
+	if errors.Is(err, ErrNotFound) {
+		respond.Error(w, http.StatusNotFound, "review_not_found",
+		              "No review with this id.")
+		return
+	}
+
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	// the author withdrew it: what it said leaves the reading path
+	if review.Withdrawn {
+		respond.Error(w, http.StatusGone, "review_withdrawn",
+		              "This review was withdrawn by its author.")
+		return
+	}
+
+	versions, err := h.repo.Versions(r.Context(), review.ChainRoot)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	answer := detail{
+		Review:   item(review.Version, derivedOf(review, review.EventID)),
+		Versions: make([]respond.Item, 0, len(versions)),
+	}
+
+	for _, v := range versions {
+		answer.Versions = append(answer.Versions,
+		                         item(v, derivedOf(review, v.EventID)))
+	}
+
+	respond.JSON(w, http.StatusOK, answer)
+}
+
+
 // pageOf reads ?after= and ?limit=, or answers 400 and reports false.
 func pageOf(w http.ResponseWriter, r *http.Request) (Page, bool) {
 	page := Page{Limit: defaultLimit}
@@ -131,6 +190,17 @@ func pageOf(w http.ResponseWriter, r *http.Request) (Page, bool) {
 	}
 
 	return page, true
+}
+
+
+// derivedOf is what version id of review's chain is, in that chain.
+func derivedOf(review Review, id string) derived {
+	return derived{
+		ChainRoot: review.ChainRoot,
+		Head:      id == review.Head,
+		Withdrawn: review.Withdrawn,
+		Truncated: review.Truncated,
+	}
 }
 
 

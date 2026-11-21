@@ -2,6 +2,7 @@ package review
 
 
 import (
+	"bytes"
 	"net/http"
 	"testing"
 )
@@ -126,5 +127,97 @@ func TestListRefusesAMalformedRequest(t *testing.T) {
 				         rec.Code, rec.Body.String(), code)
 			}
 		})
+	}
+}
+
+
+func TestGetReturnsAnOldVersionWithEveryVersionOfItsChain(t *testing.T) {
+	// Arrange: a1 edited twice from the same version, a3 winning the fork
+	pool := migrated(t)
+
+	version(t, pool, "a1", "a1", "", bakery, 0)
+	version(t, pool, "a2", "a1", "a1", bakery, 1)
+	version(t, pool, "a3", "a1", "a1", bakery, 2)
+	chain(t, pool, "a1", bakery, "a3", 0, false, false)
+
+	// Act
+	rec := call(t, pool, "/reviews/"+evt("a1"))
+
+	// Assert
+	a := decode(t, rec)
+
+	if rec.Code != http.StatusOK ||
+	   a.Review.Envelope != string(envelope("a1")) ||
+	   a.Review.Derived.Head {
+		t.Fatalf("review = %d %+v, want a1, not the head", rec.Code, a.Review)
+	}
+
+	if !same(names(a.Versions), []string{"a1", "a2", "a3"}) {
+		t.Fatalf("versions = %v, want a1, a2, a3", names(a.Versions))
+	}
+
+	heads := [3]bool{a.Versions[0].Derived.Head,
+	                 a.Versions[1].Derived.Head,
+	                 a.Versions[2].Derived.Head}
+
+	if heads != [3]bool{false, false, true} {
+		t.Fatalf("heads = %v, want only a3", heads)
+	}
+}
+
+
+func TestGetKeepsEveryEnvelopeByteForByte(t *testing.T) {
+	// Arrange
+	pool := migrated(t)
+	review(t, pool, "a1", bakery, 0)
+
+	// Act
+	rec := call(t, pool, "/reviews/"+evt("a1"))
+
+	// Assert
+	a := decode(t, rec)
+
+	if !bytes.Equal([]byte(a.Review.Envelope), envelope("a1")) ||
+	   !bytes.Equal([]byte(a.Versions[0].Envelope), envelope("a1")) {
+		t.Fatalf("envelopes = %q, %q", a.Review.Envelope, a.Versions[0].Envelope)
+	}
+}
+
+
+func TestGetAnswersGoneForAWithdrawnReview(t *testing.T) {
+	// Arrange
+	pool := migrated(t)
+
+	version(t, pool, "gone", "gone", "", bakery, 0)
+	chain(t, pool, "gone", bakery, "gone", 0, true, false)
+
+	// Act
+	rec := call(t, pool, "/reviews/"+evt("gone"))
+
+	// Assert: nothing of what it said comes back
+	if rec.Code != http.StatusGone || decode(t, rec).Error != "review_withdrawn" ||
+	   bytes.Contains(rec.Body.Bytes(), []byte("envelope")) {
+		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
+	}
+}
+
+
+func TestGetAnswersNotFoundAndBadRequest(t *testing.T) {
+	// Arrange
+	pool := migrated(t)
+
+	// Act
+	unknown := call(t, pool, "/reviews/"+evt("nobody"))
+	malformed := call(t, pool, "/reviews/evt_short")
+
+	// Assert
+	if unknown.Code != http.StatusNotFound ||
+	   decode(t, unknown).Error != "review_not_found" {
+		t.Fatalf("unknown = %d %q", unknown.Code, unknown.Body.String())
+	}
+
+	if malformed.Code != http.StatusBadRequest ||
+	   decode(t, malformed).Error != "invalid_event_id" {
+		t.Fatalf("malformed = %d %q", malformed.Code, malformed.Body.String())
 	}
 }
