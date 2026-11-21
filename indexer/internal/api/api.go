@@ -56,7 +56,7 @@ func Serve(ctx context.Context, addr string, pool *pgxpool.Pool) error {
 // Each route lives in a file of its own; this is the one list of them all.
 func Handler(pool *pgxpool.Pool) http.Handler {
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", health)
+	mux.HandleFunc("GET /health", health(pool))
 
 	return mux
 }
