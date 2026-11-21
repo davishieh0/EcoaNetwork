@@ -26,3 +26,23 @@ func TestErrorHasTheBackendsShape(t *testing.T) {
 		t.Fatalf("Error = %d %q", rec.Code, rec.Body.String())
 	}
 }
+
+
+func TestItemAlwaysHasDerivedAndObserved(t *testing.T) {
+	// Arrange
+	rec := httptest.NewRecorder()
+
+	// Act
+	JSON(rec, http.StatusOK, Item{
+		Envelope: `{"a":1}`,
+		Derived:  struct{}{},
+		Observed: struct{}{},
+	})
+
+	// Assert
+	want := "{\"envelope\":\"{\\\"a\\\":1}\",\"derived\":{},\"observed\":{}}\n"
+
+	if rec.Body.String() != want {
+		t.Fatalf("Item = %q, want %q", rec.Body.String(), want)
+	}
+}

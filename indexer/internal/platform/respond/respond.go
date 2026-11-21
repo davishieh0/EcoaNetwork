@@ -14,6 +14,21 @@ import (
 
 // --- CODE ---
 
+// Item is one thing the API returns: its signed envelope, and beside it what
+// the indexer worked out, deterministic apart from observed.
+type Item struct {
+	// Envelope is the stored bytes as a string, never a parsed object, so no
+	// JSON parser on the way can change what the signature covers.
+	Envelope string `json:"envelope"`
+
+	// Derived is what any honest indexer must agree on.
+	Derived any `json:"derived"`
+
+	// Observed depends on when and where this indexer looked.
+	Observed any `json:"observed"`
+}
+
+
 // errorBody is the shape of every failure, the same as the backend's.
 type errorBody struct {
 	Error   string `json:"error"`
