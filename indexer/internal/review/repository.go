@@ -109,3 +109,26 @@ func (r *Repository) ByID(ctx context.Context, id string) (Review, error) {
 
 	return review, nil
 }
+
+
+// Versions returns every version of the chain that starts at root, forks
+// included, oldest first.
+func (r *Repository) Versions(ctx context.Context,
+                              root string) ([]Version, error) {
+	rows, err := r.queries.ChainVersions(ctx, root)
+	if err != nil {
+		return nil, err
+	}
+
+	versions := make([]Version, 0, len(rows))
+
+	for _, row := range rows {
+		versions = append(versions, Version{
+			EventID:    row.EventID,
+			Envelope:   row.Envelope,
+			ReceivedAt: row.ReceivedAt,
+		})
+	}
+
+	return versions, nil
+}
