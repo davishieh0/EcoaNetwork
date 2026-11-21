@@ -19,7 +19,7 @@ Every port is published on `127.0.0.1`, reachable from this machine only.
 
 | Service | Port | Used by |
 |---|---|---|
-| `postgres` | 5432 | backend |
+| `postgres` | 5432 | backend, indexer |
 
 ## Layout
 
