@@ -50,9 +50,21 @@ blocks the indexer any more. One thing may be added:
    the base tables (`events`, `event_observations`, `projector_cursors`).
    The tables of each subject come with the step that uses them, and `sqlc`
    with step 3.
-3. **HTTP API over rows inserted by hand:** the endpoints, the envelope as a
-   raw string, `derived` apart from `observed`, `/health`. This unblocks the
-   backend and the frontend before the projector exists. *Waits on nothing.*
+3. **HTTP API over rows inserted by hand**, in three parts. This unblocks
+   the backend and the frontend before the projector exists.
+   - ~~**3.1 Foundation:** the `pgx` pool, `sqlc`, the `event` subject and
+     `GET /events/{eventId}`, the answer shapes (`platform/respond`), and
+     `/health` checking the database.~~ Done.
+   - ~~**3.2 Reviews:** the `reviews` and `review_chains` tables,
+     `GET /entities/{entity}/reviews` (paged by cursor) and
+     `GET /reviews/{eventId}`.~~ Done. Until the projector fills
+     `review_chains`, rows are inserted by hand.
+   - **3.3 Entities:** the `entities` table, `GET /entities/{entity}` and
+     search. Needs full text and metadata resolution; may come after the
+     projector.
+
+   `GET /reviews/{eventId}/responses` comes with responses, in step 5.
+   *Waits on nothing.*
 4. **Stream client:** `NODE_ADDRS`, a list of nodes, one cursor each, back to 0 when a
    `log_id` changes, reconnecting on its own, everything into one applier.
    *Waits on the node, steps 3 and 4.*
@@ -93,7 +105,7 @@ blocks the indexer any more. One thing may be added:
    when it does not answer.
 2. **Read routes** under `/api`: entity search, an entity, its reviews, one
    review with its chain, one raw event. The envelope passes through
-   untouched. *Waits on the indexer, step 3.*
+   untouched. *Waits on the indexer, step 3.2.*
 3. **Route tests**, with the indexer stubbed.
 
 ## Frontend
