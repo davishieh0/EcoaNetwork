@@ -31,7 +31,7 @@ func TestRunRefusesAMissingOrUnknownSubcommand(t *testing.T) {
 
 
 func TestRunSaysWhichSubcommandsAreNotBuiltYet(t *testing.T) {
-	for _, name := range []string{"migrate", "project", "rebuild"} {
+	for _, name := range []string{"project", "rebuild"} {
 		t.Run(name, func(t *testing.T) {
 			// Act
 			err := run([]string{name})
