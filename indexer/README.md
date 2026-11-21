@@ -54,7 +54,7 @@ One binary, one subcommand per job:
 |------------|------|-------|
 | `migrate`  | Applies the database migrations | built |
 | `project`  | Follows the nodes and writes the projections | not built yet |
-| `serve`    | Answers the HTTP API | `/health` only |
+| `serve`    | Answers the HTTP API | events and reviews |
 | `rebuild`  | Rebuilds the projections from cursor 0, then switches | not built yet |
 
 ## Configuration
@@ -66,9 +66,31 @@ One binary, one subcommand per job:
 
 The nodes to follow come with the step that uses them.
 
+## API
+
+| Route | Answers |
+|-------|---------|
+| `GET /health` | 200 when the database answers, 503 when it does not |
+| `GET /events/{eventId}` | the signed envelope, as a string, with `derived` and `observed` |
+| `GET /entities/{entity}/reviews` | the current version of each review, newest first; `?limit=` (1 to 100, 20 by default) and `?after=` (the `next` of the previous page) |
+| `GET /reviews/{eventId}` | one version with every version of its chain; 410 when the author withdrew it |
+
+A failure is `{"error": "<slug>", "message": "..."}`, as the backend answers.
+
+## Queries
+
+Each subject writes its SQL in `internal/<subject>/queries.sql`, and `sqlc`
+generates typed Go from it into `internal/<subject>/sqlc/`, which is never
+edited by hand. After changing a query or a migration:
+
+    go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
+    make sqlc
+
 ## Tests
 
     make test
 
-The database tests use `ecoa_indexer_test` from `infra/local`, emptied by each
-test, or `TEST_DATABASE_URL` when set. Without it they skip, and say why.
+The database tests use `ecoa_indexer_test` from `infra/local`, or
+`TEST_DATABASE_URL` when set. Each test works in a schema of its own, dropped
+when it ends, so packages tested at the same time never meet. Without the
+database they skip, and say why.
