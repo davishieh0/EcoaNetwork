@@ -3,9 +3,17 @@ package review
 
 import (
 	"context"
+	"errors"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review/sqlc"
+	"github.com/jackc/pgx/v5"
 )
+
+
+// --- GLOBALS ---
+
+// ErrNotFound is returned for an eventId that is no version of a review.
+var ErrNotFound = errors.New("review not found")
 
 
 // --- CODE ---
@@ -69,4 +77,35 @@ func (r *Repository) HeadsByEntity(ctx context.Context,
 	}
 
 	return listed, next, nil
+}
+
+
+// ByID returns the version with eventId id and its chain's state, or
+// ErrNotFound.
+func (r *Repository) ByID(ctx context.Context, id string) (Review, error) {
+	row, err := r.queries.ReviewByID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Review{}, ErrNotFound
+	}
+
+	if err != nil {
+		return Review{}, err
+	}
+
+	review := Review{
+		Version: Version{
+			EventID:    row.EventID,
+			Envelope:   row.Envelope,
+			ReceivedAt: row.ReceivedAt,
+		},
+		ChainRoot: row.ChainRoot,
+		Withdrawn: row.Withdrawn,
+		Truncated: row.Truncated,
+	}
+
+	if row.Head != nil {
+		review.Head = *row.Head
+	}
+
+	return review, nil
 }

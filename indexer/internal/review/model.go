@@ -35,6 +35,24 @@ type Listed struct {
 }
 
 
+// Review is one version with the state of its chain.
+type Review struct {
+	Version
+
+	// ChainRoot is the original of the chain.
+	ChainRoot string
+
+	// Head is the chain's current version, "" when the chain is truncated.
+	Head string
+
+	// Withdrawn reports a withdrawal aimed at any version of the chain.
+	Withdrawn bool
+
+	// Truncated reports a chain longer than the walk to its head allows.
+	Truncated bool
+}
+
+
 // Page is where a listing starts and how much of it to return.
 type Page struct {
 	// After is the cursor the previous page ended on, nil for the first.
