@@ -373,7 +373,51 @@ escape or the order of keys, and the client's check would fail on an event
 that was valid. The gateway passes it through untouched.
 
 `derived` is deterministic and `observed` is not, in the same split as the
-tables, so a client knows which part another indexer must agree with.
+tables, so a client knows which part another indexer must agree with. Both
+are always present, empty when there is nothing in them, so every item has
+the same shape. Field names are camelCase, as in the protocol.
+
+**A failure has the backend's shape**, a slug a program can branch on and a
+message, so the gateway can pass it on or translate it without converting:
+
+```json
+{ "error": "event_not_found", "message": "No event with this id." }
+```
+
+| Case | Status | `error` |
+|---|---|---|
+| malformed id | 400 | `invalid_event_id`, `invalid_entity_id` |
+| malformed page | 400 | `invalid_limit`, `invalid_cursor` |
+| nothing with that id | 404 | `event_not_found`, `review_not_found` |
+| a review its author withdrew | 410 | `review_withdrawn` |
+| the database does not answer | 503 | `database_unavailable` |
+| anything else | 500 | `internal_error` |
+
+`/health` answers 200 when the database answers, and 503
+`database_unavailable` when it does not. The API starts even with the
+database down, and recovers when it comes back.
+
+**An entity's reviews are listed newest original first**: the head of each
+chain, ordered by the `createdAt` of the chain's original, never of its
+head, so an edit does not move a review while someone pages through. That
+date is the author's, but a node refuses one more than five minutes ahead,
+so nobody pins a review to the top. Ranking, an observed order, replaces it
+later. Withdrawn and truncated chains are left out. An entity with no
+reviews answers an empty list, not 404: until the entities table exists,
+the indexer cannot tell an unknown entity from one nobody reviewed yet.
+
+**A review is returned with every version of its chain**, forks included,
+oldest first, each with its envelope; `derived.head` marks the current one,
+and any version can be asked for. **A withdrawn review answers 410** with
+nothing of what it said: withdrawing is how an author takes a review back,
+`privacy` among the reasons, and the review page is where that has to show.
+Its envelope stays reachable at `/events/{eventId}`, for inspection, as it
+stays on every node's log.
+
+**Lists page by cursor**, `?after=<cursor>&limit=20` (at most 100), never by
+page number. A review published while someone scrolls shifts every page by
+one, so a page number shows an item twice or skips one; a cursor says
+"after this one" and does neither.
 
 ### Reading what you just wrote
 
