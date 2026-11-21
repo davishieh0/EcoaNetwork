@@ -64,6 +64,7 @@ func Handler(pool *pgxpool.Pool) http.Handler {
 	mux.HandleFunc("GET /health", health(pool))
 	mux.HandleFunc("GET /events/{eventId}", events.Get)
 	mux.HandleFunc("GET /entities/{entity}/reviews", reviews.ListByEntity)
+	mux.HandleFunc("GET /reviews/{eventId}", reviews.Get)
 
 	return mux
 }
