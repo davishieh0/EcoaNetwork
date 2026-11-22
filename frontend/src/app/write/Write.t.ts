@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import type { useWriteData } from '@/app/write/useWriteData'
 import type { PublishResult } from '@/logic/datasource/events.t'
+import type { EntityKind } from '@/logic/protocol/entity.t'
 import type { Envelope } from '@/logic/protocol/envelope.t'
 import type { ReviewPayload } from '@/logic/protocol/review.t'
 
@@ -36,6 +37,15 @@ export type WritePhase =
 /** The phases that have a checked payload to show. */
 export type SignedPhase = Exclude<WritePhase, { name: 'editing' }>
 
+/** One identifier kind the composer offers. */
+export type KindOption = {
+  value: EntityKind
+  label: string
+  placeholder: string
+  /** What the kind identifies and how to type it. */
+  hint: string
+}
+
 export type SealProps = {
   ready: boolean
   /** Whether the node took the signed event. */
@@ -50,3 +60,6 @@ export type SignedPreviewProps = {
 
 /** Everything the screen's data hook returns. */
 export type WriteData = ReturnType<typeof useWriteData>
+
+/** What the composer receives. */
+export type ComposerProps = { data: WriteData }
