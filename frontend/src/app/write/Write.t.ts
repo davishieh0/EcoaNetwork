@@ -36,5 +36,17 @@ export type WritePhase =
 /** The phases that have a checked payload to show. */
 export type SignedPhase = Exclude<WritePhase, { name: 'editing' }>
 
+export type SealProps = {
+  ready: boolean
+  /** Whether the node took the signed event. */
+  sealed?: boolean
+}
+
+export type SignedPreviewProps = {
+  /** The phase the review is in, from checked on. */
+  phase: SignedPhase
+  onEdit: () => void
+}
+
 /** Everything the screen's data hook returns. */
 export type WriteData = ReturnType<typeof useWriteData>
