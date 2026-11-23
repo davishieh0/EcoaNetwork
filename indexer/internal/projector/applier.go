@@ -11,6 +11,7 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/stream"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/vote"
@@ -39,6 +40,8 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 	"review.endorsed":  vote.Apply,
 	"review.disputed":  vote.Apply,
 
+	"review.response_created": response.Apply,
+
 	"moderation.label_created": label.ApplyCreated,
 	"moderation.label_revoked": label.ApplyRevoked,
 
@@ -52,6 +55,7 @@ var skippable = []error{
 	review.ErrUnplaced,
 	review.ErrMalformed,
 	vote.ErrMalformed,
+	response.ErrMalformed,
 	label.ErrMalformed,
 	entity.ErrMalformed,
 }
