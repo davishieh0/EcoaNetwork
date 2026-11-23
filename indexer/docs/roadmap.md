@@ -108,6 +108,70 @@ blocks the indexer any more. One thing may be added:
    instances agree, applying twice changes nothing, a crash mid-way loses
    and doubles nothing.
 
+## What remains for the MVP (indexer)
+
+Checked against `docs/mvp.md` on 2026-11-23, with every step above run end to
+end through `infra/local`: three peered nodes, every write and read through
+the backend behind nginx, a node down, and a rebuild that reproduced all 14
+deterministic tables from the logs. In the order to build it:
+
+1. **Which nodes hold each event.** The MVP's inspection view shows it. The
+   projector receives an event from every node it follows but keeps only the
+   earliest time (`event_observations`). Wanted: an observed table of
+   `(event_id, node, sequence, received_at)`, and `/events/{eventId}` listing
+   the nodes in `observed`. *Small.*
+2. **`?moderators=`, moderators chosen by the client.** An MVP acceptance
+   criterion: a label changes what a client following its moderator sees and
+   nothing for one that does not, which one shared list cannot show. Every
+   label is stored already, so this is a query change on every read route,
+   falling back to `MODERATORS_FILE`, and the backend's routes pass it on.
+   *Small.*
+3. **Loose ends of step 5 and the API.** Unknown event types counted in the
+   progress log (they are stored and skipped already); `/health` showing how
+   far behind each node the projector is (`head - sequence`, the design's
+   promise). *Small.*
+4. **Step 8, the generator and the seeded dataset.** A few hundred signed
+   synthetic reviews, and `cnpj:` entities from the Receita Federal's public
+   data as `entity.updated` proposals signed by the operator's identity,
+   competing under the same rules as anyone's (`docs/entities.md`),
+   published to a node through `Publish`. Gives every screen real data.
+   *Medium.*
+5. **Claims: `domain` and `human`.** The MVP asks `domain` verification end
+   to end (a DNS TXT record, self-verifiable) and `human` through a CAPTCHA
+   verifier. Recognizing a claim is the indexer's job. Wanted: projecting
+   `verification.claim_created` and `claim_revoked`; checking the DNS TXT of
+   each `domain` claim, an observation re-checked from time to time; a list
+   of recognized verifiers for `human`; and handing the recognized claims to
+   `ResolveFields` (tier-1 metadata), to responses (official answers) and to
+   the summary (conflicts of interest). *Large; unblocks 6.*
+6. **Step 6, the entity summary.** The distribution 1 to 5 and the mean,
+   over the head of each chain, leaving out withdrawn chains, those labeled
+   by a followed moderator, and those by an identity holding a claim on the
+   same entity (shown, marked, not counted). With it, the metadata that holds
+   kept in a table, so the search can filter by `category`. *Medium.*
+7. **Steps 7 and 9, rebuild and the guarantees, in the repository.**
+   `indexer rebuild` still answers "not built yet"; the end-to-end run proved
+   the rebuild by hand. Wanted: the subcommand (for the MVP, empty and
+   project again with the API down meanwhile; building beside the live
+   tables and switching can come later), and automated tests that a rebuild
+   reproduces the deterministic tables, that two instances agree, that
+   applying twice changes nothing, and that a crash mid-way loses and
+   doubles nothing. *Medium; last, once every table exists.*
+
+**Raised along the way, outside the indexer:**
+
+- `protocol/fixtures/chain-head.json`, "chain beyond the 64-link cap": its
+  times run past minute 59 (`10:60:00Z` to `10:67:00Z`), so its events cannot
+  be signed; the protocol's own test passes because it never builds real
+  envelopes.
+- `chain-head.json` and `vote-and-label-binding.json`, the ties on
+  `createdAt`: the expected winner holds for the fixtures' symbolic names,
+  not for signed events, whose ids are real hashes.
+- A contest between nodes (two rotations of one key, each node keeping its
+  own first) was shown with standalone nodes. Through the backend it cannot
+  be, since the gateway publishes to its first node; a test that needs it
+  publishes to two nodes directly.
+
 ## Backend (gateway)
 
 1. ~~**Indexer client:** `INDEXER_URL`, and an `indexer_unavailable_error` for
