@@ -53,7 +53,7 @@ One binary, one subcommand per job:
 | Subcommand | Does | State |
 |------------|------|-------|
 | `migrate`  | Applies the database migrations | built |
-| `project`  | Follows the nodes and writes the projections | not built yet |
+| `project`  | Follows the nodes and writes the projections | every event type of v1 the indexer understands |
 | `serve`    | Answers the HTTP API | events and reviews |
 | `rebuild`  | Rebuilds the projections from cursor 0, then switches | not built yet |
 
@@ -62,9 +62,10 @@ One binary, one subcommand per job:
 | Variable       | Default                          | Meaning                           |
 |----------------|----------------------------------|-----------------------------------|
 | `DATABASE_URL` | the local `ecoa_indexer`         | Postgres the projections live in  |
+| `NODE_ADDRS`   | `127.0.0.1:50051`                | gRPC addresses of the nodes `project` follows, comma-separated |
 | `HTTP_ADDR`    | `127.0.0.1:8081`                 | host:port the HTTP API answers on |
+| `MODERATORS_FILE` | none, so nobody is followed   | JSON file of the moderators whose labels count, read when `serve` starts |
 
-The nodes to follow come with the step that uses them.
 
 ## API
 
@@ -72,10 +73,48 @@ The nodes to follow come with the step that uses them.
 |-------|---------|
 | `GET /health` | 200 when the database answers, 503 when it does not |
 | `GET /events/{eventId}` | the signed envelope, as a string, with `derived` and `observed` |
+| `GET /entities?q=` | entities with a name that holds `q`, ignoring case and accents, newest first, paged; every entity without `q` |
+| `GET /entities/{entity}` | the value of each field (name, category, description) and the proposal that set it; 404 when nothing named it |
+| `GET /profiles/{did}` | the identity's current profile, as a signed item; 404 when it published none |
+| `GET /profiles?ids=` | the current profiles of up to 100 identities, in the order asked, for the authors of a page in one call |
+| `GET /identities/{did}` | the identity a key belongs to: its keys in order, the current one, whether it is contested, its revocations |
 | `GET /entities/{entity}/reviews` | the current version of each review, newest first; `?limit=` (1 to 100, 20 by default) and `?after=` (the `next` of the previous page) |
 | `GET /reviews/{eventId}` | one version with every version of its chain; 410 when the author withdrew it |
+| `GET /reviews/{eventId}/responses` | the conversation on a review, in order, paged like the listing; each says what it answers and whether the text changed since |
 
 A failure is `{"error": "<slug>", "message": "..."}`, as the backend answers.
+
+## Moderation
+
+Every label is stored, whoever signed it; the ones that count are those of
+the moderators in `MODERATORS_FILE`:
+
+    {"moderators": ["did:key:z6Mk…"]}
+
+`illegal` and `personal-data` leave every list and answer 451 by id;
+`spam`, `harassment` and `impersonation` leave lists unless `?labeled=show`;
+`off-topic` and `other` are shown. The labels that count come in each item's
+`observed.labels`. A file that is not valid stops `serve`. Change it and
+restart `serve`; nothing needs rebuilding.
+
+## Following the nodes
+
+With a node running (see `node/README.md`):
+
+    make migrate
+    ./bin/indexer project
+
+`project` reads each node's log from where it stopped and keeps up with it;
+it reconnects on its own when a node goes away. Run `serve` beside it to
+answer the API.
+
+The client code for the node's gRPC is generated from
+`protobuf/node_api.proto`:
+
+    make proto
+
+It needs `protoc`, and `protoc-gen-go` v1.36.12 and `protoc-gen-go-grpc`
+v1.6.2 from `go install`, as the node does.
 
 ## Queries
 

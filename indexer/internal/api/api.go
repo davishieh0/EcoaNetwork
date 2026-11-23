@@ -9,7 +9,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/identities"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/profile"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,11 +28,15 @@ const shutdownTimeout = 5 * time.Second
 
 // --- CODE ---
 
-// Serve answers the API on addr, reading from pool, until ctx ends.
-func Serve(ctx context.Context, addr string, pool *pgxpool.Pool) error {
+// Serve answers the API on addr, reading from pool and acting on the labels
+// of the moderators policy follows, until ctx ends.
+func Serve(ctx context.Context,
+           addr string,
+           pool *pgxpool.Pool,
+           policy label.Policy) error {
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           Handler(pool),
+		Handler:           Handler(pool, policy),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -56,15 +65,29 @@ func Serve(ctx context.Context, addr string, pool *pgxpool.Pool) error {
 // Handler returns the router of every endpoint the API answers.
 //
 // Each route lives in a file of its own; this is the one list of them all.
-func Handler(pool *pgxpool.Pool) http.Handler {
-	events := event.NewHandler(event.NewRepository(pool))
-	reviews := review.NewHandler(review.NewRepository(pool))
+func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
+	moderation := label.NewModeration(policy, pool)
+
+	events := event.NewHandler(event.NewRepository(pool), moderation)
+	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
+	profiles := profile.NewHandler(profile.NewRepository(pool), moderation)
+	keys := identities.NewHandler(identities.NewRepository(pool))
+	reviews := review.NewHandler(review.NewRepository(pool), moderation)
+	responses := response.NewHandler(response.NewRepository(pool),
+	                                 review.NewRepository(pool),
+	                                 moderation)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))
 	mux.HandleFunc("GET /events/{eventId}", events.Get)
+	mux.HandleFunc("GET /entities", entities.Search)
+	mux.HandleFunc("GET /entities/{entity}", entities.Get)
 	mux.HandleFunc("GET /entities/{entity}/reviews", reviews.ListByEntity)
 	mux.HandleFunc("GET /reviews/{eventId}", reviews.Get)
+	mux.HandleFunc("GET /reviews/{eventId}/responses", responses.ListByReview)
+	mux.HandleFunc("GET /profiles", profiles.List)
+	mux.HandleFunc("GET /profiles/{did}", profiles.Get)
+	mux.HandleFunc("GET /identities/{did}", keys.Get)
 
 	return mux
 }

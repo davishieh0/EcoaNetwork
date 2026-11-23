@@ -147,7 +147,7 @@ func TestGetReturnsAnOldVersionWithEveryVersionOfItsChain(t *testing.T) {
 	a := decode(t, rec)
 
 	if rec.Code != http.StatusOK ||
-	   a.Review.Envelope != string(envelope("a1")) ||
+	   a.Review.Envelope != string(envelopeOf("a1")) ||
 	   a.Review.Derived.Head {
 		t.Fatalf("review = %d %+v, want a1, not the head", rec.Code, a.Review)
 	}
@@ -177,8 +177,8 @@ func TestGetKeepsEveryEnvelopeByteForByte(t *testing.T) {
 	// Assert
 	a := decode(t, rec)
 
-	if !bytes.Equal([]byte(a.Review.Envelope), envelope("a1")) ||
-	   !bytes.Equal([]byte(a.Versions[0].Envelope), envelope("a1")) {
+	if !bytes.Equal([]byte(a.Review.Envelope), envelopeOf("a1")) ||
+	   !bytes.Equal([]byte(a.Versions[0].Envelope), envelopeOf("a1")) {
 		t.Fatalf("envelopes = %q, %q", a.Review.Envelope, a.Versions[0].Envelope)
 	}
 }

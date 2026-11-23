@@ -4,22 +4,12 @@ package review
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/ids"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/respond"
-)
-
-
-// --- CONSTANTS ---
-
-const (
-	// defaultLimit is a page's size when ?limit= is absent.
-	defaultLimit = 20
-
-	// maxLimit is the largest ?limit= accepted.
-	maxLimit = 100
 )
 
 
@@ -27,7 +17,8 @@ const (
 
 // Handler answers the routes of the reviews.
 type Handler struct {
-	repo *Repository
+	repo       *Repository
+	moderation *label.Moderation
 }
 
 
@@ -39,12 +30,20 @@ type derived struct {
 	Withdrawn bool   `json:"withdrawn"`
 	Edited    *bool  `json:"edited,omitempty"`
 	Truncated bool   `json:"truncated,omitempty"`
+
+	// the votes that count on this very version
+	Endorsements int32 `json:"endorsements"`
+	Disputes     int32 `json:"disputes"`
 }
 
 
 // observed is what the indexer observed of a version.
 type observed struct {
 	ReceivedAt *time.Time `json:"receivedAt,omitempty"`
+
+	// the labels that count, by the moderators this indexer follows: another
+	// indexer, following others, shows others
+	Labels []label.Applied `json:"labels,omitempty"`
 }
 
 
@@ -64,9 +63,10 @@ type detail struct {
 }
 
 
-// NewHandler returns the handler of the review routes, reading from repo.
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+// NewHandler returns the handler of the review routes, reading from repo and
+// acting on labels by moderation.
+func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
+	return &Handler{repo: repo, moderation: moderation}
 }
 
 
@@ -81,12 +81,39 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, ok := pageOf(w, r)
+	p, ok := page.FromRequest(w, r)
 	if !ok {
 		return
 	}
 
-	listed, next, err := h.repo.HeadsByEntity(r.Context(), entity, page)
+	show, ok := label.ShowLabeled(w, r)
+	if !ok {
+		return
+	}
+
+	moderators, err := h.moderation.Moderators(r.Context())
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	hide := Hide{
+		Moderators: moderators,
+		Labels:     label.Hiding(show),
+	}
+
+	listed, next, err := h.repo.HeadsByEntity(r.Context(), entity, p, hide)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	roots := make([]string, 0, len(listed))
+	for _, l := range listed {
+		roots = append(roots, l.ChainRoot)
+	}
+
+	labels, err := h.moderation.OnChains(r.Context(), roots)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -101,13 +128,10 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 			ChainRoot: l.ChainRoot,
 			Head:      true,
 			Edited:    &edited,
-		}))
+		}, labels[l.ChainRoot]))
 	}
 
-	if next != nil {
-		cursor := next.Encode()
-		answer.Next = &cursor
-	}
+	answer.Next = page.Next(next)
 
 	respond.JSON(w, http.StatusOK, answer)
 }
@@ -143,6 +167,20 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	labels, err := h.moderation.OnChains(r.Context(),
+	                                     []string{review.ChainRoot})
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	// a followed moderator removed it: nothing of it comes back
+	applied := labels[review.ChainRoot]
+	if label.AnyRemoves(applied) {
+		respond.Removed(w)
+		return
+	}
+
 	versions, err := h.repo.Versions(r.Context(), review.ChainRoot)
 	if err != nil {
 		respond.Failed(w, err)
@@ -150,46 +188,17 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	answer := detail{
-		Review:   item(review.Version, derivedOf(review, review.EventID)),
+		Review: item(review.Version, derivedOf(review, review.EventID),
+		             applied),
 		Versions: make([]respond.Item, 0, len(versions)),
 	}
 
 	for _, v := range versions {
 		answer.Versions = append(answer.Versions,
-		                         item(v, derivedOf(review, v.EventID)))
+		                         item(v, derivedOf(review, v.EventID), applied))
 	}
 
 	respond.JSON(w, http.StatusOK, answer)
-}
-
-
-// pageOf reads ?after= and ?limit=, or answers 400 and reports false.
-func pageOf(w http.ResponseWriter, r *http.Request) (Page, bool) {
-	page := Page{Limit: defaultLimit}
-
-	if raw := r.URL.Query().Get("limit"); raw != "" {
-		limit, err := strconv.Atoi(raw)
-		if err != nil || limit < 1 || limit > maxLimit {
-			respond.Error(w, http.StatusBadRequest, "invalid_limit",
-			              "limit is a whole number from 1 to 100.")
-			return Page{}, false
-		}
-
-		page.Limit = limit
-	}
-
-	if raw := r.URL.Query().Get("after"); raw != "" {
-		cursor, err := DecodeCursor(raw)
-		if err != nil {
-			respond.Error(w, http.StatusBadRequest, "invalid_cursor",
-			              "after is the next of a previous page.")
-			return Page{}, false
-		}
-
-		page.After = &cursor
-	}
-
-	return page, true
 }
 
 
@@ -204,12 +213,14 @@ func derivedOf(review Review, id string) derived {
 }
 
 
-// item is v as the API returns it.
-func item(v Version, d derived) respond.Item {
+// item is v as the API returns it, with the labels that count on its chain.
+func item(v Version, d derived, labels []label.Applied) respond.Item {
+	d.Endorsements, d.Disputes = v.Endorsements, v.Disputes
+
 	return respond.Item{
 		Envelope: string(v.Envelope),
 		Derived:  d,
-		Observed: observed{ReceivedAt: utc(v.ReceivedAt)},
+		Observed: observed{ReceivedAt: utc(v.ReceivedAt), Labels: labels},
 	}
 }
 

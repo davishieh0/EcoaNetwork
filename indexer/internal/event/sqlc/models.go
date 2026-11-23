@@ -8,6 +8,23 @@ import (
 	"time"
 )
 
+type Entity struct {
+	Entity    string
+	FirstSeen time.Time
+}
+
+type EntityProposal struct {
+	EventID     string
+	Entity      string
+	Author      string
+	CreatedAt   time.Time
+	Name        *string
+	Category    *string
+	Description *string
+	Descriptor  []byte
+	SearchName  *string
+}
+
 type Event struct {
 	EventID   string
 	EventType string
@@ -21,10 +38,66 @@ type EventObservation struct {
 	ReceivedAt time.Time
 }
 
+type Identity struct {
+	Key       string
+	Identity  string
+	Position  int32
+	Contested bool
+}
+
+type KeyRevocation struct {
+	EventID   string
+	Key       string
+	Reason    *string
+	CreatedAt time.Time
+}
+
+type KeyRotation struct {
+	EventID   string
+	Key       string
+	Successor string
+	CreatedAt string
+}
+
+type Label struct {
+	EventID   string
+	Target    string
+	ChainRoot *string
+	Response  *string
+	Moderator string
+	Label     string
+	Note      *string
+	Revoked   bool
+	Proposal  *string
+	Profile   *string
+}
+
+type Profile struct {
+	Identity    string
+	EventID     string
+	DisplayName *string
+	Bio         *string
+	Lang        *string
+	CreatedAt   time.Time
+}
+
 type ProjectorCursor struct {
 	Node     string
 	LogID    string
 	Sequence int64
+}
+
+type Response struct {
+	EventID          string
+	ChainRoot        string
+	Target           string
+	RespondedVersion string
+	Depth            int32
+	Author           string
+	Body             string
+	Lang             *string
+	CreatedAt        time.Time
+	SortAt           time.Time
 }
 
 type Review struct {
@@ -46,5 +119,25 @@ type ReviewChain struct {
 	Head      *string
 	Withdrawn bool
 	Truncated bool
+	CreatedAt time.Time
+}
+
+type ReviewWithdrawal struct {
+	EventID   string
+	ChainRoot string
+	Target    string
+}
+
+type VersionVote struct {
+	Version      string
+	Endorsements int32
+	Disputes     int32
+}
+
+type Vote struct {
+	EventID   string
+	Target    string
+	Voter     string
+	Kind      string
 	CreatedAt time.Time
 }

@@ -212,8 +212,9 @@ different things:
   refuses the second one once a successor is held (`Observe`). An indexer
   reading several nodes meets the second rotation later, on another stream,
   so it cannot use the tracker as it is. It keeps every rotation in a table
-  and calls a key contested when it has two different successors. If this
-  rule is wanted in the library too, it is a small addition to
+  and calls a key contested when it has two different successors
+  (`identities.Resolve`, [The identities](#handing-an-event-to-its-subject)).
+  If this rule is wanted in the library too, it is a small addition to
   `protocol/go`.
 
   v1 has one key per identity and rejects `deviceKey`
@@ -273,13 +274,18 @@ would no longer be the bytes that were signed.
 
 | Table | From | Holds |
 |---|---|---|
-| `entities` | `entity.updated`, and the first review of an entity | the identifier, and every metadata proposal as its own row |
+| `entities` | `entity.updated`, and the first review of an entity | the identifier, and the earliest `createdAt` of an event that named it |
+| `entity_proposals` | `entity.updated` | every metadata proposal as its own row: `name`, `category`, `description`, `descriptor`, and `search_name`, the name folded for search |
 | `reviews` | `review.created`, `review.replaced` | one row per version: `event_id`, `chain_root`, `replaces`, `author`, `entity` (from the root), `rating`, `title`, `body`, `lang`, `created_at` |
 | `review_chains` | the versions above, `review.withdrawn` | per chain: `head`, `withdrawn`, `truncated` |
-| `votes` | `review.endorsed`, `review.disputed` | `event_id`, `target` (the exact version), `author`, `kind` |
-| `responses` | `review.response_created` | `event_id`, `chain_root`, `target`, `author`, `body` |
-| `labels` | `moderation.label_created`, `moderation.label_revoked` | `event_id`, `chain_root`, `moderator`, `label`, `revoked` |
-| `profiles` | `profile.updated` | the latest per identity |
+| `review_withdrawals` | `review.withdrawn` | `event_id`, `chain_root`, `target`: kept so a chain can be resolved again with every event that decides it |
+| `votes` | `review.endorsed`, `review.disputed` | `event_id`, `target` (the exact version), `voter`, `kind` |
+| `version_votes` | the votes above | per version: the endorsements and disputes that count, one per voter, the latest |
+| `responses` | `review.response_created` | `event_id`, `chain_root`, `target` (a version or a response), `responded_version`, `depth`, `author`, `body`, `sort_at` |
+| `labels` | `moderation.label_created`, `moderation.label_revoked` | `event_id`, `target`, `chain_root` or `response`, `moderator`, `label`, `note`, `revoked`; every label, whoever signed it |
+| `profiles` | `profile.updated` | per identity, its current `profile.updated` and what it says; the one before is replaced entirely |
+| `key_rotations`, `key_revocations` | `identity.key_rotated`, `identity.key_revoked` | every rotation and revocation any node accepted |
+| `identities` | the rotations above | for each key that rotated or was rotated to, its identity (the first key of the chain), its place in it, and whether the identity is contested; worked out again from every rotation when one arrives |
 | `projector_cursors` | every event | per node: its `log_id` and the last `sequence` applied |
 
 **Observed:**
@@ -342,6 +348,152 @@ loses the work and the cursor together, so the same events arrive again; the
 upserts make the second pass a no-op. Committing per batch rather than per
 event is a later optimization and changes none of this.
 
+### How it runs
+
+`indexer project` is its own process, beside `indexer serve`, on the same
+database.
+
+```
+node A --stream--> follower A -.
+                                +--> channel --> applier (one) --> Postgres
+node B --stream--> follower B -'
+```
+
+- **One follower per node** (`internal/stream`) opens `SubscribeEvents` from
+  that node's saved cursor and hands every event to a channel. When a
+  stream ends, it opens another after a wait that doubles from 1 s to 30 s,
+  each wait drawn between half and all of it, so the readers of a node that
+  went down do not all come back in the same instant. A stream that
+  delivered something starts the wait over.
+- **A stream always resumes from the cursor saved in the database**, never
+  from the last event received: events received but not applied yet come
+  again, and the upserts absorb them; none is lost.
+- **One applier** (`internal/projector`) writes one event at a time, so two
+  copies of an event from two nodes never race. The channel holds 64; past
+  that the followers wait, and gRPC holds the nodes back.
+- **A database error is retried, never skipped**: the events after it would
+  be applied before it. **An envelope that cannot be read is skipped**, its
+  cursor still saved, so the projector does not stop on it forever; the
+  node validated it, so this should not happen.
+- **A node is known by its address in `NODE_ADDRS`.** A node whose address
+  changes is read from the start again: duplicates, which cost little.
+- **The `log_id` needs nothing here**: a node whose log is another one sends
+  its log from the start, and the cursor saved with the first event of it
+  carries the new `log_id`.
+- **Progress goes to the log** every 10 seconds per node: sequence, head,
+  how far behind. Showing it in `/health` comes when something reads it.
+
+### Handing an event to its subject
+
+Every event goes into `events` and `event_observations`. Then, **the first
+time the indexer sees it**, the applier hands it to the subject of its type,
+in the same transaction:
+
+- **One list of the types the indexer understands**, `subjects` in
+  `internal/projector/applier.go`, as `api.go` is the one list of routes. A
+  type missing from it is stored in `events` and nothing more; once it is
+  added, a rebuild projects what was stored.
+- **Only the first time.** `Save` reports whether the event was new; a copy
+  from another node, or the same event read again after a reconnect, is not
+  applied twice.
+- **An event with no place is skipped, not retried**: an edit or a
+  withdrawal whose target is no review the indexer holds
+  (`review.ErrUnplaced`), or a payload that cannot be read
+  (`review.ErrMalformed`). The node checked both, so neither should happen,
+  and trying again would fail the same way. The event stays in `events`,
+  the warning goes to the log, and the cursor moves on.
+
+**The reviews** (`internal/review/projector.go`):
+
+| Event | Does |
+|---|---|
+| `review.created` | a row in `reviews`, its own chain root, and the chain it opens, with itself as head |
+| `review.replaced` | a row in `reviews`, in the chain of the version it edits and with the entity of that chain's root, then the chain resolved again |
+| `review.withdrawn` | a row in `review_withdrawals`, then the chain resolved again |
+
+**The votes** (`internal/vote/projector.go`): a `review.endorsed` or
+`review.disputed` is stored against the exact version it names, and that
+version's tally is worked out again with `projection.CurrentVote`: one vote
+per voter, the latest by the author's ordering. A vote never follows an
+edit, so a new version starts at zero and the old one keeps its votes. A
+vote on anything but a review is valid and has no effect: it stays in
+`events`, as the protocol's fixture says ("stored and ignored").
+
+**The responses** (`internal/response/projector.go`): a
+`review.response_created` lands in the chain of what it answers, a version
+of a review or another response, so a conversation stays together across
+edits. It records the version the conversation answered, so a client can
+say when the text has changed since, and its depth. A response to anything
+else is valid and has no effect, as a vote is. A response never sorts before
+what it answers: `createdAt` counts whole seconds, so a quick reply shares
+its parent's, and an author's clock can be behind; `sort_at` is then one
+microsecond after the parent's.
+
+**The labels** (`internal/label/projector.go`): every
+`moderation.label_created` is stored, whoever signed it, against a review's
+whole chain when it names one of its versions, so an edit does not escape
+it, or against the response it names. A label on anything else stays in
+`events` for now; labels on `entity.updated` come with the entities. A
+`moderation.label_revoked` takes the label back, only from the moderator
+who published it: the node checked it, and the update checks it again.
+Reports (`moderation.report_created`) feed a moderator's queue, not the
+reading path, and stay in `events`.
+
+**The entities** (`internal/entity/projector.go`): an entity needs no event
+to exist; the first `review.created` or `entity.updated` that names it
+records it, with the earliest `createdAt` among them. Every `entity.updated`
+is stored as a proposal, never as a fact. A label can name a proposal too,
+and a proposal labeled by a followed moderator, whatever the label, leaves
+the contest: a label on an edit says the edit is bad. Aliases
+(`entity.alias_proposed`) are not projected by any v1 indexer and stay in
+`events`.
+
+**The profiles** (`internal/profile/projector.go`): a profile is always its
+signer's. A `profile.updated` becomes the author's profile when it outranks
+the current one by the author's own ordering (`projection.Event.Outranks`:
+the later `createdAt`, then the lower eventId), so an old profile arriving
+late, from a node that was away, does not overwrite the current one. A
+profile is total: a field it leaves out is cleared. Until key rotations are
+projected, a profile stays with the key that signed it.
+
+**The identities** (`internal/identities`): one person can sign with several
+keys over time. Every rotation and revocation is stored, and on each
+rotation every identity is worked out again from all of them
+(`identities.Resolve`, a pure function), since one rotation can join two
+keys or contest an identity. Rotations are rare, so this is cheap, and the
+result is the rule's whatever order they came in:
+
+- A key with one successor passes its identity on; the identity is named by
+  the first key of its chain.
+- A key with two different successors, which the indexer can hold from two
+  nodes that each kept a different first one, makes its identity
+  **contested**: neither successor is honored, each starts an identity of
+  its own, and what came before stays.
+- A rotation that would close a cycle is dropped, taking them in the
+  author's order.
+- A key named as successor by two different keys joins neither: anyone can
+  name any key, so honoring one would let a stranger take a key, and
+  contesting would let a stranger contest anyone. The cost, accepted: such a
+  stranger can split a successor off its identity, which only makes that
+  person's keys count apart.
+
+What follows the person rather than the key: **votes** count one per
+identity, and a rotation counts again every version its keys voted on;
+**profiles** are one per identity, the latest among all its keys', worked
+out again when a rotation changes it; a **label** is revoked by the same
+identity that published it; and the **moderators file** follows every key
+of each identity it names, resolved when the API answers. Editing and
+withdrawing a review need nothing here: the node checks them through
+rotations. A revocation is stored and shown, and hides nothing: which events
+fall after it is each node's observation.
+
+**Resolving a chain again** loads every event that decides it, its versions
+and its withdrawals, from their stored envelopes, and hands them to
+`projection.ResolveHead`. The envelopes, not the columns: the rule compares
+`createdAt` as the signed text and reads the payload. The whole chain is
+resolved each time rather than patched, so the head is always the rule's,
+whatever order the edits came in.
+
 ## Output: the HTTP API
 
 Read only, called by the gateway, which passes the answers on to the client.
@@ -388,14 +540,22 @@ message, so the gateway can pass it on or translate it without converting:
 |---|---|---|
 | malformed id | 400 | `invalid_event_id`, `invalid_entity_id` |
 | malformed page | 400 | `invalid_limit`, `invalid_cursor` |
-| nothing with that id | 404 | `event_not_found`, `review_not_found` |
+| nothing with that id | 404 | `event_not_found`, `review_not_found`, `entity_not_found`, `profile_not_found` |
+| not a did:key, or `?ids=` empty or over 100 | 400 | `invalid_identity`, `invalid_ids` |
+| `q` longer than 120 characters | 400 | `invalid_query` |
 | a review its author withdrew | 410 | `review_withdrawn` |
+| removed by a followed moderator | 451 | `removed_by_moderation` |
+| `?labeled=` other than `show` | 400 | `invalid_labeled` |
 | the database does not answer | 503 | `database_unavailable` |
 | anything else | 500 | `internal_error` |
 
 `/health` answers 200 when the database answers, and 503
 `database_unavailable` when it does not. The API starts even with the
 database down, and recovers when it comes back.
+
+**Every version carries its votes** in `derived`: `endorsements` and
+`disputes`, the ones that count on that very version. The head's are its
+score; an old version's stay visible as history.
 
 **An entity's reviews are listed newest original first**: the head of each
 chain, ordered by the `createdAt` of the chain's original, never of its
@@ -413,6 +573,63 @@ nothing of what it said: withdrawing is how an author takes a review back,
 `privacy` among the reasons, and the review page is where that has to show.
 Its envelope stays reachable at `/events/{eventId}`, for inspection, as it
 stays on every node's log.
+
+**A review's responses** (`GET /reviews/{eventId}/responses`, any version of
+it) come in the order of the conversation, a page at a time, each with
+`replyTo`, `respondedVersion`, `textChanged` (the version answered is no
+longer the current one) and `depth`. The protocol leaves the cap on nesting
+to each indexer: deeper than 2 is shown at 2, still saying what it answers,
+so none is hidden and a client never indents more than twice; the stored
+depth is the real one. A withdrawn review answers 410 here too.
+
+**Labels act at query time.** Which ones count is who this indexer follows
+(`MODERATORS_FILE`, read when `serve` starts), so changing the list rebuilds
+nothing, and the labels that count are **observed**, not derived: another
+indexer, following others, shows others.
+
+| Label (by a followed moderator) | Lists | The item's own route, `/events/{eventId}` |
+|---|---|---|
+| `illegal`, `personal-data` | left out, even with `?labeled=show` | `451 removed_by_moderation`, nothing of it; its responses too |
+| `spam`, `harassment`, `impersonation` | left out, unless `?labeled=show`, then marked | shown, marked: asking for it by id is asking to see it |
+| `off-topic`, `other` | shown, marked | shown, marked |
+
+The filter is in the query, so a page is never short or skipped because of
+what it left out. 451 is the status for what is withheld for legal reasons,
+which is what `illegal` and `personal-data` are about; `/events/{eventId}`
+answers it too, or removed content would still leave the indexer by that
+route.
+
+**An entity's metadata is worked out when the API answers.** For each field,
+`projection.ResolveFields` picks the value from the proposals still in the
+contest: a recognized representative's latest first, otherwise the first
+value unless a challenger outweighs it by 20%. Weights and claims are what
+this indexer observes, so the result is `observed`, with the proposal that
+set each field; changing who is followed, or later the weights, rebuilds
+nothing. v1 has neither weights nor claims, so each field holds its first
+proposal; when they come, the same call starts using them.
+
+`GET /entities/{entity}` answers the value of each field, how many proposals
+there are and, for an `entity:` identifier, its descriptor and whether its
+hash is the identifier. An entity nothing named answers 404; one only
+reviewed answers its fields empty. `GET /entities?q=` finds entities with a
+name, any of their proposals' not labeled, that holds `q` ignoring case and
+accents, newest first, every entity without `q`. Filtering by category waits
+for step 6: the category that holds is worked out at answer time, and
+filtering by it in SQL would repeat the rule there.
+
+**A profile** comes from `GET /profiles/{did}`, as a signed item, or many at
+once from `GET /profiles?ids=` (up to 100, in the order asked, those with
+none left out), so a client gets the authors of a page in one call; reviews
+do not embed them. A display name is verified by nothing: a client shows it
+beside the identity, never as if it were one. A label names one
+`profile.updated` and stays with it; a new profile, a new statement, does not
+inherit it. `illegal` and `personal-data` answer 451 and leave a list; the
+others mark it.
+
+**An identity** comes from `GET /identities/{did}`, through any of its keys:
+its name, its keys in the order of its chain, the one it signs with now,
+whether it is contested, and its revocations. A contested identity is the
+sign of a stolen key, and a client should say so.
 
 **Lists page by cursor**, `?after=<cursor>&limit=20` (at most 100), never by
 page number. A review published while someone scrolls shifts every page by
@@ -442,11 +659,18 @@ rebuild, switch.
 
 | Test | Proves |
 |---|---|
-| Each fixture in `protocol/fixtures/` through the projector, with `fixturetest` | the projector feeds the rules what they need; the rules themselves are tested in `protocol/go` |
+| Each fixture in `protocol/fixtures/` through the projector, with `fixturetest` | the projector feeds the rules what they need and stores what they say; the rules themselves are tested in `protocol/go` |
 | Rebuild, then compare the deterministic tables row by row | the index is a projection of the log |
 | Two instances fed the same log, compared the same way | two indexers agree on what they must |
 | The same event applied twice | applying is idempotent |
 | A crash between applying and committing, then a restart | no event is lost or counted twice |
+
+A fixture's events are signed for real by `fixturetest`, so their eventIds
+are real hashes, not the fixture's names. Each case is checked against what
+`projection.ResolveHead` says of those events, and against the fixture's
+own expectation except where it depends on the order of the names (a tie on
+`createdAt`). Events are applied with every target before what names it, as
+a node's log has them.
 
 The events come from a small generator that signs synthetic reviews with
 `testevent.Sign` from `protocol/go`, which is also what the MVP's seeded
@@ -462,12 +686,12 @@ Go, following the node's conventions where there is one to follow.
 |---|---|---|
 | Language | Go 1.26 | The node's language and version; one language on the network side |
 | Protocol | `protocol/go` (0.1.0) | The repository's protocol library; the same code the node validates with, and the projection rules |
-| Stream from the node | `google.golang.org/grpc` | Same library and version as the node |
+| Stream from the node | `google.golang.org/grpc` | The node's library. v1.85, one minor above the node's v1.84, which goose needs; the wire protocol is the same |
 | Database | PostgreSQL 18, through `pgx/v5` (`pgxpool`) | Already in `infra/local`; `pgx` is the native driver, no `database/sql` layer |
 | Queries | `sqlc`, from the first step with a query (the API) | Projections are upserts and the API is selects: plain SQL, checked against the schema, with typed Go generated from it |
 | Migrations | `goose`, SQL files embedded in the binary | Plain SQL, the same files `sqlc` reads the schema from. goose runs on `database/sql`, so `migrate` uses pgx's `database/sql` driver; everything else uses pgx directly |
 | HTTP API | `net/http` | Its pattern routing (`GET /entities/{entity}`) is all the API needs; no framework |
-| Search | Postgres full text, the stemmer chosen by `lang` | What the MVP asks for, with no extra service |
+| Search | Entity names: by any part, ignoring case and accents, against a folded copy of each name (`golang.org/x/text`) | A stemmer cuts names ("padaria" becomes "padar") and people search a name by a piece of it. Postgres's `unaccent` and `pg_trgm` would do it in the database, but extensions are per database and the tests run in parallel, each in a schema of its own; the trigram index can come when the volume asks for it. Searching review text, with full text and the stemmer chosen by `lang`, is later |
 | Logging | `log/slog`, JSON | As the node |
 | Configuration | environment variables only, with a Makefile that reads `.env` | As the node |
 | Tests | `go test`, against `ecoa_indexer_test` from `infra/local` | A real database, emptied by each test, as the backend does; no extra dependency. Without it, the database tests skip and say why |
@@ -495,16 +719,20 @@ indexer/
     platform/
       database/         the Postgres pool and the migrations
     api/                Serve, the router (the one list of routes), /health
-    stream/             the SubscribeEvents client
-    projector/          reads the stream, opens the transaction, hands each
+    stream/             one follower per node: SubscribeEvents, reconnecting
+    projector/          the one applier: opens the transaction, hands each
                         event to its subject, saves the cursor
     platform/
       respond/          the answer shapes every route shares: Item, Error
     platform/ids/       whether a string is a well-formed eventId or entity id
+    platform/page/      the paging every list shares: the cursor, ?limit=
+    label/              labels, the moderators file, what each label does
+    entity/             entities, their proposals, GET /entities, search
+    profile/            profiles, GET /profiles
+    identities/         keys to identities, contests, GET /identities
     event/              GET /events/{eventId}, the events table
     review/
       handler.go        GET /entities/{entity}/reviews, GET /reviews/{eventId}
-      cursor.go         the opaque pagination cursor
       service.go        only when there is logic to put in it
       projector.go      applies review.created, review.replaced, ...
       repository.go     methods over the generated queries

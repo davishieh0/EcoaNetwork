@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database/dbtest"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -48,7 +49,7 @@ func evt(name string) string {
 
 // envelope is the stored bytes of the version named name, with what a JSON
 // parser on the way would change: spacing and an escape.
-func envelope(name string) []byte {
+func envelopeOf(name string) []byte {
 	return []byte(`{"name":"` + name + `",  "body":"café"}`)
 }
 
@@ -81,7 +82,7 @@ func version(t *testing.T,
 	_, err := pool.Exec(ctx,
 		`INSERT INTO events (event_id, event_type, author, created_at, envelope)
 		 VALUES ($1, 'review.created', 'did:key:z6Mk', $2, $3)`,
-		evt(name), at, envelope(name))
+		evt(name), at, envelopeOf(name))
 	if err != nil {
 		t.Fatalf("insert event %s: %v", name, err)
 	}
@@ -142,7 +143,8 @@ func review(t *testing.T, pool *pgxpool.Pool, name, entity string, day int) {
 func call(t *testing.T, pool *pgxpool.Pool, path string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	h := NewHandler(NewRepository(pool))
+	moderation := label.NewModeration(label.Policy{}, pool)
+	h := NewHandler(NewRepository(pool), moderation)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /entities/{entity}/reviews", h.ListByEntity)

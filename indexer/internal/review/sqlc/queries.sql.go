@@ -10,21 +10,57 @@ import (
 	"time"
 )
 
+const chainEnvelopes = `-- name: ChainEnvelopes :many
+SELECT e.envelope
+FROM reviews r JOIN events e ON e.event_id = r.event_id
+WHERE r.chain_root = $1
+UNION ALL
+SELECT e.envelope
+FROM review_withdrawals w JOIN events e ON e.event_id = w.event_id
+WHERE w.chain_root = $1
+`
+
+// Every event that decides a chain: its versions and its withdrawals.
+func (q *Queries) ChainEnvelopes(ctx context.Context, chainRoot string) ([][]byte, error) {
+	rows, err := q.db.Query(ctx, chainEnvelopes, chainRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items [][]byte
+	for rows.Next() {
+		var envelope []byte
+		if err := rows.Scan(&envelope); err != nil {
+			return nil, err
+		}
+		items = append(items, envelope)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const chainVersions = `-- name: ChainVersions :many
 SELECT r.event_id,
        e.envelope,
-       o.received_at
+       o.received_at,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM reviews r
 JOIN events e ON e.event_id = r.event_id
 LEFT JOIN event_observations o ON o.event_id = r.event_id
+LEFT JOIN version_votes t ON t.version = r.event_id
 WHERE r.chain_root = $1
 ORDER BY r.created_at, r.event_id
 `
 
 type ChainVersionsRow struct {
-	EventID    string
-	Envelope   []byte
-	ReceivedAt *time.Time
+	EventID      string
+	Envelope     []byte
+	ReceivedAt   *time.Time
+	Endorsements int32
+	Disputes     int32
 }
 
 // Every version of a chain, forks included, oldest first.
@@ -37,7 +73,13 @@ func (q *Queries) ChainVersions(ctx context.Context, chainRoot string) ([]ChainV
 	var items []ChainVersionsRow
 	for rows.Next() {
 		var i ChainVersionsRow
-		if err := rows.Scan(&i.EventID, &i.Envelope, &i.ReceivedAt); err != nil {
+		if err := rows.Scan(
+			&i.EventID,
+			&i.Envelope,
+			&i.ReceivedAt,
+			&i.Endorsements,
+			&i.Disputes,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -56,23 +98,34 @@ SELECT c.chain_root,
        e.envelope,
        o.received_at,
        (SELECT count(*) FROM reviews v WHERE v.chain_root = c.chain_root)
-           AS versions
+           AS versions,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM review_chains c
 JOIN events e ON e.event_id = c.head
 LEFT JOIN event_observations o ON o.event_id = c.head
+LEFT JOIN version_votes t ON t.version = c.head
 WHERE c.entity = $1
   AND NOT c.withdrawn
   AND NOT c.truncated
-  AND ($2::timestamptz IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM labels l
+      WHERE l.chain_root = c.chain_root
+        AND NOT l.revoked
+        AND l.moderator = ANY ($2::text[])
+        AND l.label = ANY ($3::text[]))
+  AND ($4::timestamptz IS NULL
        OR (c.created_at, c.chain_root)
-          < ($2::timestamptz,
-             $3::text))
+          < ($4::timestamptz,
+             $5::text))
 ORDER BY c.created_at DESC, c.chain_root DESC
-LIMIT $4
+LIMIT $6
 `
 
 type HeadsByEntityParams struct {
 	Entity         string
+	Moderators     []string
+	Hiding         []string
 	AfterCreatedAt *time.Time
 	AfterRoot      *string
 	RowLimit       int32
@@ -85,15 +138,20 @@ type HeadsByEntityRow struct {
 	Envelope       []byte
 	ReceivedAt     *time.Time
 	Versions       int64
+	Endorsements   int32
+	Disputes       int32
 }
 
 // The queries of the reviews. `make sqlc` turns each into a function of the
 // generated package, which repository.go wraps.
 // The head of each visible chain of an entity, newest original first, after
-// the cursor when there is one.
+// the cursor when there is one. A chain a followed moderator labeled with one
+// of the hiding labels is not visible.
 func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([]HeadsByEntityRow, error) {
 	rows, err := q.db.Query(ctx, headsByEntity,
 		arg.Entity,
+		arg.Moderators,
+		arg.Hiding,
 		arg.AfterCreatedAt,
 		arg.AfterRoot,
 		arg.RowLimit,
@@ -112,6 +170,8 @@ func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([
 			&i.Envelope,
 			&i.ReceivedAt,
 			&i.Versions,
+			&i.Endorsements,
+			&i.Disputes,
 		); err != nil {
 			return nil, err
 		}
@@ -123,6 +183,23 @@ func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([
 	return items, nil
 }
 
+const placeOf = `-- name: PlaceOf :one
+SELECT chain_root, entity FROM reviews WHERE event_id = $1
+`
+
+type PlaceOfRow struct {
+	ChainRoot string
+	Entity    string
+}
+
+// The chain a version belongs to, and the entity its root reviews.
+func (q *Queries) PlaceOf(ctx context.Context, eventID string) (PlaceOfRow, error) {
+	row := q.db.QueryRow(ctx, placeOf, eventID)
+	var i PlaceOfRow
+	err := row.Scan(&i.ChainRoot, &i.Entity)
+	return i, err
+}
+
 const reviewByID = `-- name: ReviewByID :one
 SELECT r.event_id,
        r.chain_root,
@@ -130,22 +207,27 @@ SELECT r.event_id,
        c.withdrawn,
        c.truncated,
        e.envelope,
-       o.received_at
+       o.received_at,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM reviews r
 JOIN review_chains c ON c.chain_root = r.chain_root
 JOIN events e ON e.event_id = r.event_id
 LEFT JOIN event_observations o ON o.event_id = r.event_id
+LEFT JOIN version_votes t ON t.version = r.event_id
 WHERE r.event_id = $1
 `
 
 type ReviewByIDRow struct {
-	EventID    string
-	ChainRoot  string
-	Head       *string
-	Withdrawn  bool
-	Truncated  bool
-	Envelope   []byte
-	ReceivedAt *time.Time
+	EventID      string
+	ChainRoot    string
+	Head         *string
+	Withdrawn    bool
+	Truncated    bool
+	Envelope     []byte
+	ReceivedAt   *time.Time
+	Endorsements int32
+	Disputes     int32
 }
 
 // One version, with the state of its chain.
@@ -160,6 +242,105 @@ func (q *Queries) ReviewByID(ctx context.Context, eventID string) (ReviewByIDRow
 		&i.Truncated,
 		&i.Envelope,
 		&i.ReceivedAt,
+		&i.Endorsements,
+		&i.Disputes,
 	)
 	return i, err
+}
+
+const saveChain = `-- name: SaveChain :exec
+INSERT INTO review_chains (chain_root, entity, head, created_at)
+VALUES ($1, $2, $1,
+        $3)
+`
+
+type SaveChainParams struct {
+	ChainRoot string
+	Entity    string
+	CreatedAt time.Time
+}
+
+// Opens the chain a review.created starts, with the review as its head.
+func (q *Queries) SaveChain(ctx context.Context, arg SaveChainParams) error {
+	_, err := q.db.Exec(ctx, saveChain, arg.ChainRoot, arg.Entity, arg.CreatedAt)
+	return err
+}
+
+const saveVersion = `-- name: SaveVersion :exec
+INSERT INTO reviews (event_id, chain_root, replaces, author, entity, rating,
+                     title, body, lang, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+`
+
+type SaveVersionParams struct {
+	EventID   string
+	ChainRoot string
+	Replaces  *string
+	Author    string
+	Entity    string
+	Rating    int16
+	Title     *string
+	Body      string
+	Lang      *string
+	CreatedAt time.Time
+}
+
+// Stores one version of a review.
+func (q *Queries) SaveVersion(ctx context.Context, arg SaveVersionParams) error {
+	_, err := q.db.Exec(ctx, saveVersion,
+		arg.EventID,
+		arg.ChainRoot,
+		arg.Replaces,
+		arg.Author,
+		arg.Entity,
+		arg.Rating,
+		arg.Title,
+		arg.Body,
+		arg.Lang,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const saveWithdrawal = `-- name: SaveWithdrawal :exec
+INSERT INTO review_withdrawals (event_id, chain_root, target)
+VALUES ($1, $2, $3)
+`
+
+type SaveWithdrawalParams struct {
+	EventID   string
+	ChainRoot string
+	Target    string
+}
+
+// Stores one review.withdrawn.
+func (q *Queries) SaveWithdrawal(ctx context.Context, arg SaveWithdrawalParams) error {
+	_, err := q.db.Exec(ctx, saveWithdrawal, arg.EventID, arg.ChainRoot, arg.Target)
+	return err
+}
+
+const updateChain = `-- name: UpdateChain :exec
+UPDATE review_chains
+SET head = $1,
+    withdrawn = $2,
+    truncated = $3
+WHERE chain_root = $4
+`
+
+type UpdateChainParams struct {
+	Head      *string
+	Withdrawn bool
+	Truncated bool
+	ChainRoot string
+}
+
+// Records what the rules resolved for a chain.
+func (q *Queries) UpdateChain(ctx context.Context, arg UpdateChainParams) error {
+	_, err := q.db.Exec(ctx, updateChain,
+		arg.Head,
+		arg.Withdrawn,
+		arg.Truncated,
+		arg.ChainRoot,
+	)
+	return err
 }

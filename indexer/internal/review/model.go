@@ -20,6 +20,18 @@ type Version struct {
 
 	// ReceivedAt is when the network had it, nil when no node reported it.
 	ReceivedAt *time.Time
+
+	// Endorsements and Disputes are the votes that count on this version:
+	// one per voter, the latest, and never a vote on another version.
+	Endorsements, Disputes int32
+}
+
+
+// Hide is what leaves a chain out of a listing: a label among Labels, by a
+// moderator among Moderators.
+type Hide struct {
+	Moderators []string
+	Labels     []string
 }
 
 
@@ -52,12 +64,3 @@ type Review struct {
 	Truncated bool
 }
 
-
-// Page is where a listing starts and how much of it to return.
-type Page struct {
-	// After is the cursor the previous page ended on, nil for the first.
-	After *Cursor
-
-	// Limit is the most items to return.
-	Limit int
-}

@@ -46,3 +46,157 @@ sql:
             go_type:
               type: string
               pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/projector/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/projector/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/vote/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/vote/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/response/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/response/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/label/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/label/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/entity/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/entity/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/profile/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/profile/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/identities/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/identities/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true

@@ -72,3 +72,11 @@ func Failed(w http.ResponseWriter, err error) {
 	Error(w, http.StatusInternalServerError, "internal_error",
 	      "Something went wrong.")
 }
+
+
+// Removed answers for something a followed moderator removed: nothing of it
+// comes back, with the status for what is withheld for legal reasons.
+func Removed(w http.ResponseWriter) {
+	Error(w, http.StatusUnavailableForLegalReasons, "removed_by_moderation",
+	      "Removed by a moderator this indexer follows.")
+}
