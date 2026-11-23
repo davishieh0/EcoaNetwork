@@ -1,6 +1,6 @@
 # Architecture
 
-This describes the *roles* components play and how they relate. For the same material as diagrams — the publish path, the validation branches, sync, the determinism boundary — see [docs/diagrams.md](./diagrams.md). That's a decision for whenever each piece actually gets implemented, and different implementations of the same role are expected to coexist. See [docs/protocol.md](./protocol.md) for the one thing every implementation must actually agree on.
+This describes the *roles* components play and how they relate. For the same material as diagrams — the publish path, the validation branches, sync, the determinism boundary — see [docs/diagrams/diagrams.md](./diagrams/diagrams.md). That's a decision for whenever each piece actually gets implemented, and different implementations of the same role are expected to coexist. See [docs/protocol.md](./protocol.md) for the one thing every implementation must actually agree on.
 
 ## High-level flow
 
