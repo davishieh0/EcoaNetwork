@@ -11,6 +11,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/identities"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/profile"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
@@ -70,6 +71,7 @@ func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
 	events := event.NewHandler(event.NewRepository(pool), moderation)
 	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
 	profiles := profile.NewHandler(profile.NewRepository(pool), moderation)
+	keys := identities.NewHandler(identities.NewRepository(pool))
 	reviews := review.NewHandler(review.NewRepository(pool), moderation)
 	responses := response.NewHandler(response.NewRepository(pool),
 	                                 review.NewRepository(pool),
@@ -85,6 +87,7 @@ func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
 	mux.HandleFunc("GET /reviews/{eventId}/responses", responses.ListByReview)
 	mux.HandleFunc("GET /profiles", profiles.List)
 	mux.HandleFunc("GET /profiles/{did}", profiles.Get)
+	mux.HandleFunc("GET /identities/{did}", keys.Get)
 
 	return mux
 }
