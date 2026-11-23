@@ -12,7 +12,7 @@ Every experience leaves an echo.
 - [Overview](docs/overview.md) — what this is and why
 - [Concepts](docs/concepts.md) — the ideas behind it, in plain terms
 - [Architecture](docs/architecture.md) — component roles and how they talk to each other
-- [How It Fits Together](docs/diagrams.md) — the same thing as diagrams, for the flows that are hard to read as prose
+- [How It Fits Together](docs/diagrams/diagrams.md) — the same thing as diagrams, for the flows that are hard to read as prose
 - [Protocol](docs/protocol.md) — event format, signing, sync
 - [Entities](docs/entities.md) — what's being reviewed, and who can edit it
 - [Identity, Trust & Security](docs/identity.md) — keys, verification, threat model

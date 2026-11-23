@@ -109,11 +109,11 @@ func TestListOfAnEntityWithNoReviewsIsEmpty(t *testing.T) {
 
 func TestListRefusesAMalformedRequest(t *testing.T) {
 	cases := map[string]string{
-		"/entities/twitter:x/reviews": "invalid_entity_id",
-		list("?limit=0"):              "invalid_limit",
-		list("?limit=101"):            "invalid_limit",
-		list("?limit=many"):           "invalid_limit",
-		list("?after=not-a-cursor"):   "invalid_cursor",
+		"/entities/twitter:x/reviews": "invalid_entity_id_error",
+		list("?limit=0"):              "invalid_limit_error",
+		list("?limit=101"):            "invalid_limit_error",
+		list("?limit=many"):           "invalid_limit_error",
+		list("?after=not-a-cursor"):   "invalid_cursor_error",
 	}
 
 	for path, code := range cases {
@@ -195,7 +195,7 @@ func TestGetAnswersGoneForAWithdrawnReview(t *testing.T) {
 	rec := call(t, pool, "/reviews/"+evt("gone"))
 
 	// Assert: nothing of what it said comes back
-	if rec.Code != http.StatusGone || decode(t, rec).Error != "review_withdrawn" ||
+	if rec.Code != http.StatusGone || decode(t, rec).Error != "review_withdrawn_error" ||
 	   bytes.Contains(rec.Body.Bytes(), []byte("envelope")) {
 		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
 	}
@@ -212,12 +212,12 @@ func TestGetAnswersNotFoundAndBadRequest(t *testing.T) {
 
 	// Assert
 	if unknown.Code != http.StatusNotFound ||
-	   decode(t, unknown).Error != "review_not_found" {
+	   decode(t, unknown).Error != "review_not_found_error" {
 		t.Fatalf("unknown = %d %q", unknown.Code, unknown.Body.String())
 	}
 
 	if malformed.Code != http.StatusBadRequest ||
-	   decode(t, malformed).Error != "invalid_event_id" {
+	   decode(t, malformed).Error != "invalid_event_id_error" {
 		t.Fatalf("malformed = %d %q", malformed.Code, malformed.Body.String())
 	}
 }

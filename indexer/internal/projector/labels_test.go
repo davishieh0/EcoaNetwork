@@ -414,7 +414,7 @@ func TestLabeledMustBeShowOrAbsent(t *testing.T) {
 
 	// Assert
 	if rec.Code != http.StatusBadRequest ||
-	   !strings.Contains(rec.Body.String(), "invalid_labeled") {
+	   !strings.Contains(rec.Body.String(), "invalid_labeled_error") {
 		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
 	}
 }

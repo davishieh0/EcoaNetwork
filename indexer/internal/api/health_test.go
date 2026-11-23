@@ -48,7 +48,7 @@ func TestHealthAnswers503WhenTheDatabaseDoesNot(t *testing.T) {
 	health(fakeDB{err: errors.New("connection refused")})(rec, req)
 
 	// Assert
-	want := "{\"error\":\"database_unavailable\"," +
+	want := "{\"error\":\"database_unavailable_error\"," +
 	        "\"message\":\"The database does not answer.\"}\n"
 
 	if rec.Code != http.StatusServiceUnavailable || rec.Body.String() != want {

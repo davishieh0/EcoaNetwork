@@ -76,7 +76,7 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 	entity := r.PathValue("entity")
 
 	if !ids.IsEntityID(entity) {
-		respond.Error(w, http.StatusBadRequest, "invalid_entity_id",
+		respond.Error(w, http.StatusBadRequest, "invalid_entity_id_error",
 		              "Not an entity identifier the protocol allows.")
 		return
 	}
@@ -143,14 +143,14 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
-		respond.Error(w, http.StatusBadRequest, "invalid_event_id",
+		respond.Error(w, http.StatusBadRequest, "invalid_event_id_error",
 		              "An eventId is evt_ and 52 base32 characters.")
 		return
 	}
 
 	review, err := h.repo.ByID(r.Context(), id)
 	if errors.Is(err, ErrNotFound) {
-		respond.Error(w, http.StatusNotFound, "review_not_found",
+		respond.Error(w, http.StatusNotFound, "review_not_found_error",
 		              "No review with this id.")
 		return
 	}
@@ -162,7 +162,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// the author withdrew it: what it said leaves the reading path
 	if review.Withdrawn {
-		respond.Error(w, http.StatusGone, "review_withdrawn",
+		respond.Error(w, http.StatusGone, "review_withdrawn_error",
 		              "This review was withdrawn by its author.")
 		return
 	}

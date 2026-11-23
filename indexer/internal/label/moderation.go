@@ -175,7 +175,7 @@ func ShowLabeled(w http.ResponseWriter, r *http.Request) (bool, bool) {
 		return true, true
 	}
 
-	respond.Error(w, http.StatusBadRequest, "invalid_labeled",
+	respond.Error(w, http.StatusBadRequest, "invalid_labeled_error",
 	              "labeled is show, or absent.")
 
 	return false, false

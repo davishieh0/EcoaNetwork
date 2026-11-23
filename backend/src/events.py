@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from src.clients.aws import Aws
 from src.clients.cognito import CognitoClient
 from src.clients.database import Database
+from src.clients.indexer import IndexerClient
 from src.clients.node import NodeClient
 from src.clients.tokens import TokenVerifier
 from src.config import config
@@ -77,6 +78,9 @@ async def on_startup(app: FastAPI) -> None:
     # initialize the event service
     app.state.events = EventService(app.state.node)
 
+    # set up the indexer connection, which the read routes pass on
+    app.state.indexer = IndexerClient(config.INDEXER_URL)
+
     # set app health as OK
     app.state.health.status = 'OK'
 
@@ -96,6 +100,9 @@ async def on_shutdown(app: FastAPI) -> None:
 
     # close the node connections
     await app.state.node.close()
+
+    # close the indexer connection
+    await app.state.indexer.close()
 
     # close the aws connection
     await app.state.aws.close()

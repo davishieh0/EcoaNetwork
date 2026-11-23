@@ -63,7 +63,7 @@ func Failed(w http.ResponseWriter, err error) {
 
 	if errors.As(err, &unreachable) {
 		slog.Warn("database unavailable", "err", err)
-		Error(w, http.StatusServiceUnavailable, "database_unavailable",
+		Error(w, http.StatusServiceUnavailable, "database_unavailable_error",
 		      "The database does not answer; try again later.")
 		return
 	}
@@ -77,6 +77,6 @@ func Failed(w http.ResponseWriter, err error) {
 // Removed answers for something a followed moderator removed: nothing of it
 // comes back, with the status for what is withheld for legal reasons.
 func Removed(w http.ResponseWriter) {
-	Error(w, http.StatusUnavailableForLegalReasons, "removed_by_moderation",
+	Error(w, http.StatusUnavailableForLegalReasons, "removed_by_moderation_error",
 	      "Removed by a moderator this indexer follows.")
 }

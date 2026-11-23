@@ -47,7 +47,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("entity")
 
 	if !ids.IsEntityID(id) {
-		respond.Error(w, http.StatusBadRequest, "invalid_entity_id",
+		respond.Error(w, http.StatusBadRequest, "invalid_entity_id_error",
 		              "Not an entity identifier the protocol allows.")
 		return
 	}
@@ -60,7 +60,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	e, err := h.repo.ByID(r.Context(), id, moderators)
 	if errors.Is(err, ErrNotFound) {
-		respond.Error(w, http.StatusNotFound, "entity_not_found",
+		respond.Error(w, http.StatusNotFound, "entity_not_found_error",
 		              "No review or proposal names this entity.")
 		return
 	}
@@ -81,7 +81,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 
 	if utf8.RuneCountInString(q) > maxQuery {
-		respond.Error(w, http.StatusBadRequest, "invalid_query",
+		respond.Error(w, http.StatusBadRequest, "invalid_query_error",
 		              "q is at most 120 characters.")
 		return
 	}

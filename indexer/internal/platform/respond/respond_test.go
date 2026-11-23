@@ -15,10 +15,10 @@ func TestErrorHasTheBackendsShape(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	// Act
-	Error(rec, http.StatusNotFound, "event_not_found", "No event with this id.")
+	Error(rec, http.StatusNotFound, "event_not_found_error", "No event with this id.")
 
 	// Assert
-	want := "{\"error\":\"event_not_found\",\"message\":\"No event with this id.\"}\n"
+	want := "{\"error\":\"event_not_found_error\",\"message\":\"No event with this id.\"}\n"
 
 	if rec.Code != http.StatusNotFound ||
 	   rec.Header().Get("Content-Type") != "application/json" ||

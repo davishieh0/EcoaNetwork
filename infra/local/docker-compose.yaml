@@ -34,6 +34,7 @@ x-backend: &backend
   environment:
     DATABASE_URL: postgresql+asyncpg://backend:${BACKEND_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_backend
     NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    INDEXER_URL: http://indexer-serve:8081
     BIND: 0.0.0.0
     PORT: "8000"
     COOKIE_SECURE: "false"
@@ -153,6 +154,8 @@ services:
       backend-migrate:
         condition: service_completed_successfully
       node-1:
+        condition: service_started
+      indexer-serve:
         condition: service_started
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
