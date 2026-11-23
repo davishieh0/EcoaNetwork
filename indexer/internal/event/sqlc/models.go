@@ -48,3 +48,9 @@ type ReviewChain struct {
 	Truncated bool
 	CreatedAt time.Time
 }
+
+type ReviewWithdrawal struct {
+	EventID   string
+	ChainRoot string
+	Target    string
+}
