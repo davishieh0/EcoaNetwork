@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/stream"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/jackc/pgx/v5"
@@ -28,12 +29,17 @@ const applyTimeout = 10 * time.Second
 // subjects maps each event type to the subject that projects it: the one
 // list of the types the indexer understands. A type missing here is stored
 // in events and nothing more; a rebuild picks it up once it is added.
-var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) error{}
+var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) error{
+	"moderation.label_created": label.ApplyCreated,
+	"moderation.label_revoked": label.ApplyRevoked,
+}
 
 
 // skippable are the subjects' errors that mean the event has no place in the
 // projection: trying it again would fail the same way.
-var skippable = []error{}
+var skippable = []error{
+	label.ErrMalformed,
+}
 
 
 // --- CODE ---
