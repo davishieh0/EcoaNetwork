@@ -12,6 +12,7 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -68,6 +69,9 @@ func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
 	events := event.NewHandler(event.NewRepository(pool))
 	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
 	reviews := review.NewHandler(review.NewRepository(pool), moderation)
+	responses := response.NewHandler(response.NewRepository(pool),
+	                                 review.NewRepository(pool),
+	                                 moderation)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))
@@ -76,6 +80,7 @@ func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
 	mux.HandleFunc("GET /entities/{entity}", entities.Get)
 	mux.HandleFunc("GET /entities/{entity}/reviews", reviews.ListByEntity)
 	mux.HandleFunc("GET /reviews/{eventId}", reviews.Get)
+	mux.HandleFunc("GET /reviews/{eventId}/responses", responses.ListByReview)
 
 	return mux
 }
