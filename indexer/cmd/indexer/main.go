@@ -14,6 +14,7 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/api"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/projector"
 )
 
 
@@ -22,7 +23,7 @@ import (
 // commands maps each subcommand to what it runs.
 var commands = map[string]func(context.Context, config.Config) error{
 	"migrate": migrate,
-	"project": notBuilt,
+	"project": project,
 	"serve":   serve,
 	"rebuild": notBuilt,
 }
@@ -73,6 +74,18 @@ func run(args []string) error {
 // migrate brings the database up to the latest migration.
 func migrate(ctx context.Context, cfg config.Config) error {
 	return database.Migrate(ctx, cfg.DatabaseURL)
+}
+
+
+// project follows the nodes and writes what they send.
+func project(ctx context.Context, cfg config.Config) error {
+	pool, err := database.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	return projector.Run(ctx, pool, cfg.NodeAddrs)
 }
 
 
