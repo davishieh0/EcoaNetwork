@@ -1,6 +1,45 @@
 # --- Ecoa local services ---
 name: ecoa
 
+
+# --- settings ---
+x-node: &node
+  build:
+    context: ../..
+    dockerfile: node/Dockerfile
+  image: ecoa-node:local
+  restart: unless-stopped
+  environment: &node-env
+    NETWORK: ecoa-dev
+    PEER_KEY_PATH: /keys/peer.key
+
+x-indexer: &indexer
+  build:
+    context: ../..
+    dockerfile: indexer/Dockerfile
+  image: ecoa-indexer:local
+  environment:
+    DATABASE_URL: postgres://indexer:${INDEXER_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_indexer?sslmode=disable
+    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    MODERATORS_FILE: /config/moderators.json
+  volumes:
+    - ./configs/indexer/moderators.json:/config/moderators.json:ro
+
+x-backend: &backend
+  build: ../../backend
+  image: ecoa-backend:local
+  env_file:
+    - path: ../../backend/.env
+      required: false
+  environment:
+    DATABASE_URL: postgresql+asyncpg://backend:${BACKEND_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_backend
+    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    BIND: 0.0.0.0
+    PORT: "8000"
+    COOKIE_SECURE: "false"
+
+
+# --- the services ---
 services:
 
   # --- data services ---
@@ -13,6 +52,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+      start_interval: 1s
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -24,3 +64,106 @@ services:
       - ./data/postgres:/var/lib/postgresql
     ports:
       - "127.0.0.1:5432:5432"
+
+
+  # --- cluster of nodes ---
+  node-1:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs
+    volumes:
+      - ./configs/nodes/node-1.key:/keys/peer.key:ro
+      - ./data/node-1:/data
+    ports:
+      - "127.0.0.1:4001:4001"
+      - "127.0.0.1:50051:50051"
+
+  node-2:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs
+    volumes:
+      - ./configs/nodes/node-2.key:/keys/peer.key:ro
+      - ./data/node-2:/data
+    ports:
+      - "127.0.0.1:4002:4001"
+      - "127.0.0.1:50052:50051"
+
+  node-3:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7
+    volumes:
+      - ./configs/nodes/node-3.key:/keys/peer.key:ro
+      - ./data/node-3:/data
+    ports:
+      - "127.0.0.1:4003:4001"
+      - "127.0.0.1:50053:50051"
+
+  # --- the indexer ---
+  indexer-migrate:
+    <<: *indexer
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  indexer-project:
+    <<: *indexer
+    command: ["project"]
+    restart: unless-stopped
+    depends_on:
+      indexer-migrate:
+        condition: service_completed_successfully
+
+  indexer-serve:
+    <<: *indexer
+    command: ["serve"]
+    restart: unless-stopped
+    depends_on:
+      indexer-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8081:8081"
+
+  # --- the backend ---
+  backend-migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    <<: *backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/api/system/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
+      node-1:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+
+  # --- the frontend ---
+  frontend:
+    build: ../../frontend
+    image: ecoa-frontend:local
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
