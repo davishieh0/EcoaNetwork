@@ -13,6 +13,18 @@ x-node: &node
     NETWORK: ecoa-dev
     PEER_KEY_PATH: /keys/peer.key
 
+x-indexer: &indexer
+  build:
+    context: ../..
+    dockerfile: indexer/Dockerfile
+  image: ecoa-indexer:local
+  environment:
+    DATABASE_URL: postgres://indexer:${INDEXER_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_indexer?sslmode=disable
+    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    MODERATORS_FILE: /config/moderators.json
+  volumes:
+    - ./configs/indexer/moderators.json:/config/moderators.json:ro
+
 
 # --- the services ---
 services:
@@ -77,3 +89,30 @@ services:
     ports:
       - "127.0.0.1:4003:4001"
       - "127.0.0.1:50053:50051"
+
+  # --- the indexer ---
+  indexer-migrate:
+    <<: *indexer
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  indexer-project:
+    <<: *indexer
+    command: ["project"]
+    restart: unless-stopped
+    depends_on:
+      indexer-migrate:
+        condition: service_completed_successfully
+
+  indexer-serve:
+    <<: *indexer
+    command: ["serve"]
+    restart: unless-stopped
+    depends_on:
+      indexer-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8081:8081"
