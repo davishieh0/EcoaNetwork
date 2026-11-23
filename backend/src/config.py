@@ -43,6 +43,9 @@ class Config(BaseSettings):
     # nodes (comma-separated host:port, primary first)
     NODE_ADDRS: str
 
+    # indexer (base URL of its read API)
+    INDEXER_URL: str
+
     @property
     def cors_origins(self) -> list[str]:
         """
