@@ -4,6 +4,7 @@ package event
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event/sqlc"
 	"github.com/jackc/pgx/v5"
@@ -62,4 +63,16 @@ func (r *Repository) Save(ctx context.Context, e Signed) (bool, error) {
 	})
 
 	return stored == 1, err
+}
+
+
+// Observe records that a node had event id at receivedAt, keeping the
+// earliest time any node reported.
+func (r *Repository) Observe(ctx context.Context,
+                             id string,
+                             receivedAt time.Time) error {
+	return r.queries.ObserveEvent(ctx, sqlc.ObserveEventParams{
+		EventID:    id,
+		ReceivedAt: receivedAt,
+	})
 }

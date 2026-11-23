@@ -14,3 +14,10 @@ WHERE e.event_id = $1;
 INSERT INTO events (event_id, event_type, author, created_at, envelope)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (event_id) DO NOTHING;
+
+-- name: ObserveEvent :exec
+-- Records when a node had the event, keeping the earliest any node reported.
+INSERT INTO event_observations (event_id, received_at)
+VALUES ($1, $2)
+ON CONFLICT (event_id) DO UPDATE
+SET received_at = LEAST(event_observations.received_at, EXCLUDED.received_at);

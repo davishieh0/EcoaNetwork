@@ -34,6 +34,24 @@ func (q *Queries) EventByID(ctx context.Context, eventID string) (EventByIDRow, 
 	return i, err
 }
 
+const observeEvent = `-- name: ObserveEvent :exec
+INSERT INTO event_observations (event_id, received_at)
+VALUES ($1, $2)
+ON CONFLICT (event_id) DO UPDATE
+SET received_at = LEAST(event_observations.received_at, EXCLUDED.received_at)
+`
+
+type ObserveEventParams struct {
+	EventID    string
+	ReceivedAt time.Time
+}
+
+// Records when a node had the event, keeping the earliest any node reported.
+func (q *Queries) ObserveEvent(ctx context.Context, arg ObserveEventParams) error {
+	_, err := q.db.Exec(ctx, observeEvent, arg.EventID, arg.ReceivedAt)
+	return err
+}
+
 const saveEvent = `-- name: SaveEvent :execrows
 INSERT INTO events (event_id, event_type, author, created_at, envelope)
 VALUES ($1, $2, $3, $4, $5)
