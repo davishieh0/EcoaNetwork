@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/stream"
@@ -32,6 +33,8 @@ const applyTimeout = 10 * time.Second
 var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) error{
 	"moderation.label_created": label.ApplyCreated,
 	"moderation.label_revoked": label.ApplyRevoked,
+
+	"entity.updated": entity.ApplyUpdated,
 }
 
 
@@ -39,6 +42,7 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 // projection: trying it again would fail the same way.
 var skippable = []error{
 	label.ErrMalformed,
+	entity.ErrMalformed,
 }
 
 
