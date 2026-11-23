@@ -15,11 +15,14 @@ import (
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
 )
 
 
@@ -41,6 +44,12 @@ const (
 
 // dialTimeout bounds each connection attempt at startup.
 var dialTimeout = 5 * time.Second
+
+
+// redialEvery is how often a node with few peers dials the ones it knows, so
+// one that came back while its peers were away, or the other way round,
+// finds them again on its own.
+var redialEvery = 30 * time.Second
 
 
 // --- CODE ---
@@ -65,8 +74,13 @@ type Config struct {
 	// KnownAddrs are the peers of the last session.
 	KnownAddrs []string
 
-	// OnDialed is called with the multiaddr of each peer this node reaches.
-	OnDialed func(addr string)
+	// OnSeen is called with each multiaddr a peer listens on, whichever side
+	// opened the connection, as the peer reports it through identify.
+	OnSeen func(addr string)
+
+	// Redial returns the peers to try while this node has fewer than ConnLow
+	// connected; nil tries none after startup.
+	Redial func() []string
 
 	// KeyPath is the file holding the peer's private key, empty for none.
 	KeyPath string
@@ -107,11 +121,18 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 		return nil, err
 	}
 
-	if cfg.OnDialed != nil {
-		h.Network().Notify(remember(cfg.OnDialed))
+	if cfg.OnSeen != nil {
+		if err := rememberIdentified(ctx, h, cfg.OnSeen); err != nil {
+			h.Close()
+			return nil, err
+		}
 	}
 
 	connectBootstrap(ctx, h, dialOrder(cfg))
+
+	if cfg.Redial != nil {
+		go keepConnected(ctx, h, max(cfg.ConnLow, 1), cfg.Redial)
+	}
 
 	topic, sub, err := joinTopic(ctx, h, cfg.Network, cfg.Validator)
 	if err != nil {
@@ -217,17 +238,101 @@ func dialOrder(cfg Config) []string {
 }
 
 
-// remember reports each peer this node dialed.
-func remember(onConnected func(addr string)) *network.NotifyBundle {
-	return &network.NotifyBundle{
-		ConnectedF: func(_ network.Network, c network.Conn) {
-			if c.Stat().Direction != network.DirOutbound {
+// rememberIdentified reports the addresses each peer listens on, once
+// identify has told them, until ctx ends.
+//
+// Not the address of the connection: for a peer that dialed this node, that
+// is the port its system picked for the call, which nothing listens on once
+// the connection closes.
+func rememberIdentified(ctx context.Context,
+                        h host.Host,
+                        onSeen func(addr string)) error {
+	sub, err := h.EventBus().Subscribe(new(event.EvtPeerIdentificationCompleted))
+	if err != nil {
+		return fmt.Errorf("subscribe to identify: %w", err)
+	}
+
+	go func() {
+		defer sub.Close()
+
+		for {
+			select {
+			case e, ok := <-sub.Out():
+				if !ok {
+					return
+				}
+
+				identified := e.(event.EvtPeerIdentificationCompleted)
+
+				for _, a := range identified.ListenAddrs {
+					if dialable(a) {
+						onSeen(a.String() + "/p2p/" + identified.Peer.String())
+					}
+				}
+			case <-ctx.Done():
 				return
 			}
+		}
+	}()
 
-			onConnected(c.RemoteMultiaddr().String() +
-			            "/p2p/" + c.RemotePeer().String())
-		},
+	return nil
+}
+
+
+// dialable reports whether another node can dial a: not an unspecified
+// address such as 0.0.0.0, and not a relay.
+func dialable(a multiaddr.Multiaddr) bool {
+	if manet.IsIPUnspecified(a) {
+		return false
+	}
+
+	_, err := a.ValueForProtocol(multiaddr.P_CIRCUIT)
+
+	return err != nil
+}
+
+
+// keepConnected dials the peers addrs returns that are not connected, every
+// redialEvery while this node has fewer than below, until ctx ends.
+func keepConnected(ctx context.Context,
+                   h host.Host,
+                   below int,
+                   addrs func() []string) {
+	ticker := time.NewTicker(redialEvery)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return
+		}
+
+		if len(h.Network().Peers()) >= below {
+			continue
+		}
+
+		redial(ctx, h, addrs())
+	}
+}
+
+
+// redial dials each of addrs whose peer is not connected, each under its
+// own timeout, and logs the peers it reached.
+func redial(ctx context.Context, h host.Host, addrs []string) {
+	for _, addr := range addrs {
+		info, err := peer.AddrInfoFromString(addr)
+		if err != nil || h.Network().Connectedness(info.ID) == network.Connected {
+			continue
+		}
+
+		dialCtx, cancel := context.WithTimeout(ctx, dialTimeout)
+		err = h.Connect(dialCtx, *info)
+		cancel()
+
+		if err == nil {
+			slog.Info("redialed", "peer", info.ID.String())
+		}
 	}
 }
 

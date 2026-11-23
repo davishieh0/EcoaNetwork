@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p/core/network"
+	"github.com/libp2p/go-libp2p/core/crypto"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -299,7 +301,7 @@ func TestDialOrderPutsTheKnownPeersFirst(t *testing.T) {
 }
 
 
-func TestNewReportsThePeerItDialed(t *testing.T) {
+func TestNewRemembersThePeerItDialed(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -319,7 +321,7 @@ func TestNewReportsThePeerItDialed(t *testing.T) {
 		Listen:         loopback,
 		BootstrapAddrs: []string{want},
 		Validator:      acceptAll,
-		OnDialed:       func(addr string) { reported <- addr },
+		OnSeen:         func(addr string) { reported <- addr },
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -330,10 +332,109 @@ func TestNewReportsThePeerItDialed(t *testing.T) {
 	select {
 	case got := <-reported:
 		if got != want {
-			t.Fatalf("OnDialed addr = %q, want %q", got, want)
+			t.Fatalf("OnSeen addr = %q, want %q", got, want)
 		}
 	case <-ctx.Done():
-		t.Fatal("OnDialed was never called")
+		t.Fatal("OnSeen was never called")
+	}
+}
+
+
+func TestNewRemembersAPeerThatDialedItWhereItListens(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Arrange
+	reported := make(chan string, 4)
+
+	p, err := New(ctx, Config{
+		Network:   "ecoa-test",
+		Listen:    loopback,
+		Validator: acceptAll,
+		OnSeen:    func(addr string) { reported <- addr },
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+
+	caller, err := libp2p.New(libp2p.ListenAddrStrings(loopback))
+	if err != nil {
+		t.Fatalf("host: %v", err)
+	}
+	defer caller.Close()
+
+	want := caller.Addrs()[0].String() + "/p2p/" + caller.ID().String()
+
+	// Act: the other peer opens the connection
+	err = caller.Connect(ctx, peer.AddrInfo{ID: p.host.ID(), Addrs: p.host.Addrs()})
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+
+	// Assert: where it listens, not the port it called from
+	select {
+	case got := <-reported:
+		if got != want {
+			t.Fatalf("OnSeen addr = %q, want %q", got, want)
+		}
+	case <-ctx.Done():
+		t.Fatal("a peer that dialed in was never remembered")
+	}
+}
+
+
+func TestNewRedialsAKnownPeerThatComesBackLater(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Arrange: a peer that is down when this node starts
+	key, _, err := crypto.GenerateEd25519Key(nil)
+	if err != nil {
+		t.Fatalf("key: %v", err)
+	}
+
+	first, err := libp2p.New(libp2p.Identity(key), libp2p.ListenAddrStrings(loopback))
+	if err != nil {
+		t.Fatalf("host: %v", err)
+	}
+
+	listen := first.Addrs()[0]
+	addr := listen.String() + "/p2p/" + first.ID().String()
+	first.Close()
+
+	previous := redialEvery
+	redialEvery = 100 * time.Millisecond
+	t.Cleanup(func() { redialEvery = previous })
+
+	p, err := New(ctx, Config{
+		Network:   "ecoa-test",
+		Listen:    loopback,
+		Validator: acceptAll,
+		ConnLow:   1,
+		ConnHigh:  4,
+		Redial:    func() []string { return []string{addr} },
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer p.Close()
+
+	// Act: the peer comes back, same key, same address
+	back, err := libp2p.New(libp2p.Identity(key),
+		libp2p.ListenAddrs(listen))
+	if err != nil {
+		t.Fatalf("host back: %v", err)
+	}
+	defer back.Close()
+
+	// Assert: this node finds it on its own
+	for p.host.Network().Connectedness(back.ID()) != network.Connected {
+		select {
+		case <-ctx.Done():
+			t.Fatal("the node never redialed the peer that came back")
+		case <-time.After(50 * time.Millisecond):
+		}
 	}
 }
 

@@ -6,6 +6,7 @@ require (
 	github.com/eduardokairalla1/EcoaNetwork/protocol/go v0.0.0
 	github.com/libp2p/go-libp2p v0.50.0
 	github.com/libp2p/go-libp2p-pubsub v0.17.0
+	github.com/multiformats/go-multiaddr v0.16.1
 	go.etcd.io/bbolt v1.5.0
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
@@ -48,7 +49,6 @@ require (
 	github.com/mr-tron/base58 v1.3.0 // indirect
 	github.com/multiformats/go-base32 v0.1.0 // indirect
 	github.com/multiformats/go-base36 v0.2.0 // indirect
-	github.com/multiformats/go-multiaddr v0.16.1 // indirect
 	github.com/multiformats/go-multiaddr-dns v0.6.0 // indirect
 	github.com/multiformats/go-multiaddr-fmt v0.1.0 // indirect
 	github.com/multiformats/go-multibase v0.3.0 // indirect

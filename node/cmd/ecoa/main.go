@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/node"
@@ -98,7 +99,7 @@ func run(args []string) error {
 
 // peerConfig builds the network settings, with the peers of the last session.
 func peerConfig(cfg config.Config, db *store.Store) (p2p.Config, error) {
-	known, err := db.KnownPeers()
+	known, err := db.KnownPeers(time.Now())
 	if err != nil {
 		return p2p.Config{}, fmt.Errorf("read known peers: %w", err)
 	}
@@ -116,10 +117,18 @@ func peerConfig(cfg config.Config, db *store.Store) (p2p.Config, error) {
 		KeyPath:        cfg.PeerKeyPath,
 		ConnLow:        cfg.ConnLow,
 		ConnHigh:       cfg.ConnHigh,
-		OnDialed: func(addr string) {
-			if err := db.AddPeer(addr); err != nil {
+		OnSeen: func(addr string) {
+			if err := db.AddPeer(addr, time.Now()); err != nil {
 				slog.Warn("remember peer", "addr", addr, "err", err)
 			}
+		},
+		Redial: func() []string {
+			known, err := db.KnownPeers(time.Now())
+			if err != nil {
+				slog.Warn("read known peers", "err", err)
+			}
+
+			return append(known, cfg.BootstrapAddrs...)
 		},
 	}, nil
 }

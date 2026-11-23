@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
@@ -61,7 +62,7 @@ func TestPeerConfigDialsTheLastSessionAndRemembersThisOne(t *testing.T) {
 	}
 	defer db.Close()
 
-	if err := db.AddPeer("/ip4/1.1.1.1/tcp/1"); err != nil {
+	if err := db.AddPeer("/ip4/1.1.1.1/tcp/1", time.Now().Add(-time.Hour)); err != nil {
 		t.Fatalf("AddPeer: %v", err)
 	}
 
@@ -71,16 +72,20 @@ func TestPeerConfigDialsTheLastSessionAndRemembersThisOne(t *testing.T) {
 		t.Fatalf("peerConfig: %v", err)
 	}
 
-	peers.OnDialed("/ip4/2.2.2.2/tcp/2")
+	peers.OnSeen("/ip4/2.2.2.2/tcp/2")
 
-	// Assert
-	known, err := db.KnownPeers()
-	want := []string{"/ip4/1.1.1.1/tcp/1", "/ip4/2.2.2.2/tcp/2"}
+	// Assert: the one just seen comes first
+	known, err := db.KnownPeers(time.Now())
+	want := []string{"/ip4/2.2.2.2/tcp/2", "/ip4/1.1.1.1/tcp/1"}
 	if err != nil || !reflect.DeepEqual(known, want) {
 		t.Fatalf("KnownPeers = %v, %v, want %v", known, err, want)
 	}
 
-	if !reflect.DeepEqual(peers.KnownAddrs, want[:1]) {
-		t.Fatalf("KnownAddrs = %v, want %v", peers.KnownAddrs, want[:1])
+	if !reflect.DeepEqual(peers.KnownAddrs, want[1:]) {
+		t.Fatalf("KnownAddrs = %v, want %v", peers.KnownAddrs, want[1:])
+	}
+
+	if got := peers.Redial(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Redial = %v, want %v", got, want)
 	}
 }
