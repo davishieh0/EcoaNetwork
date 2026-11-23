@@ -44,10 +44,12 @@ blocks the indexer any more. One thing may be added:
    configuration from the environment, `slog`, a Makefile.~~ Done: `serve`
    answers `/health`, and the other subcommands say they are not built yet.
    Each setting is added with the step that uses it.
-2. **Database:** in `internal/platform/database/`. The `indexer` role and
+2. ~~**Database:** in `internal/platform/database/`: the `indexer` role and
    the `ecoa_indexer` databases in `infra/local`, `DATABASE_URL`, `goose`
-   migrations for the deterministic tables, the observed
-   ones and `projector_cursors`; `sqlc` set up. *Waits on nothing.*
+   migrations embedded in the binary, `indexer migrate`.~~ Done, with only
+   the base tables (`events`, `event_observations`, `projector_cursors`).
+   The tables of each subject come with the step that uses them, and `sqlc`
+   with step 3.
 3. **HTTP API over rows inserted by hand:** the endpoints, the envelope as a
    raw string, `derived` apart from `observed`, `/health`. This unblocks the
    backend and the frontend before the projector exists. *Waits on nothing.*
