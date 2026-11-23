@@ -110,12 +110,13 @@ blocks the indexer any more. One thing may be added:
 
 ## Backend (gateway)
 
-1. **Indexer client:** `INDEXER_URL`, and an `indexer_unavailable_error` for
-   when it does not answer.
-2. **Read routes** under `/api`: entity search, an entity, its reviews, one
+1. ~~**Indexer client:** `INDEXER_URL`, and an `indexer_unavailable_error` for
+   when it does not answer.~~ Done.
+2. ~~**Read routes** under `/api`: entity search, an entity, its reviews, one
    review with its chain, one raw event. The envelope passes through
-   untouched. *Waits on the indexer, step 3.2.*
-3. **Route tests**, with the indexer stubbed.
+   untouched.~~ Done, with responses, profiles and identities too; the
+   indexer's error slugs now end in `_error`, as the backend's do.
+3. ~~**Route tests**, with the indexer stubbed.~~ Done.
 
 ## Frontend
 
