@@ -13,6 +13,7 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/stream"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/vote"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -35,6 +36,8 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 	"review.created":   review.ApplyCreated,
 	"review.replaced":  review.ApplyReplaced,
 	"review.withdrawn": review.ApplyWithdrawn,
+	"review.endorsed":  vote.Apply,
+	"review.disputed":  vote.Apply,
 
 	"moderation.label_created": label.ApplyCreated,
 	"moderation.label_revoked": label.ApplyRevoked,
@@ -48,6 +51,7 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 var skippable = []error{
 	review.ErrUnplaced,
 	review.ErrMalformed,
+	vote.ErrMalformed,
 	label.ErrMalformed,
 	entity.ErrMalformed,
 }
