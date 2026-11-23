@@ -122,5 +122,13 @@ func peerConfig(cfg config.Config, db *store.Store) (p2p.Config, error) {
 				slog.Warn("remember peer", "addr", addr, "err", err)
 			}
 		},
+		Redial: func() []string {
+			known, err := db.KnownPeers(time.Now())
+			if err != nil {
+				slog.Warn("read known peers", "err", err)
+			}
+
+			return append(known, cfg.BootstrapAddrs...)
+		},
 	}, nil
 }

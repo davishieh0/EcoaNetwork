@@ -46,6 +46,12 @@ const (
 var dialTimeout = 5 * time.Second
 
 
+// redialEvery is how often a node with few peers dials the ones it knows, so
+// one that came back while its peers were away, or the other way round,
+// finds them again on its own.
+var redialEvery = 30 * time.Second
+
+
 // --- CODE ---
 
 // Config is what the node needs to join the network.
@@ -71,6 +77,10 @@ type Config struct {
 	// OnSeen is called with each multiaddr a peer listens on, whichever side
 	// opened the connection, as the peer reports it through identify.
 	OnSeen func(addr string)
+
+	// Redial returns the peers to try while this node has fewer than ConnLow
+	// connected; nil tries none after startup.
+	Redial func() []string
 
 	// KeyPath is the file holding the peer's private key, empty for none.
 	KeyPath string
@@ -119,6 +129,10 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 	}
 
 	connectBootstrap(ctx, h, dialOrder(cfg))
+
+	if cfg.Redial != nil {
+		go keepConnected(ctx, h, max(cfg.ConnLow, 1), cfg.Redial)
+	}
 
 	topic, sub, err := joinTopic(ctx, h, cfg.Network, cfg.Validator)
 	if err != nil {
@@ -275,6 +289,31 @@ func dialable(a multiaddr.Multiaddr) bool {
 	_, err := a.ValueForProtocol(multiaddr.P_CIRCUIT)
 
 	return err != nil
+}
+
+
+// keepConnected dials the peers addrs returns that are not connected, every
+// redialEvery while this node has fewer than below, until ctx ends.
+func keepConnected(ctx context.Context,
+                   h host.Host,
+                   below int,
+                   addrs func() []string) {
+	ticker := time.NewTicker(redialEvery)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return
+		}
+
+		if len(h.Network().Peers()) >= below {
+			continue
+		}
+
+		redial(ctx, h, addrs())
+	}
 }
 
 

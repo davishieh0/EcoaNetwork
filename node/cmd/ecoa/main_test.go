@@ -84,4 +84,8 @@ func TestPeerConfigDialsTheLastSessionAndRemembersThisOne(t *testing.T) {
 	if !reflect.DeepEqual(peers.KnownAddrs, want[1:]) {
 		t.Fatalf("KnownAddrs = %v, want %v", peers.KnownAddrs, want[1:])
 	}
+
+	if got := peers.Redial(); !reflect.DeepEqual(got, want) {
+		t.Fatalf("Redial = %v, want %v", got, want)
+	}
 }
