@@ -99,7 +99,7 @@ func run(args []string) error {
 
 // peerConfig builds the network settings, with the peers of the last session.
 func peerConfig(cfg config.Config, db *store.Store) (p2p.Config, error) {
-	known, err := db.KnownPeers()
+	known, err := db.KnownPeers(time.Now())
 	if err != nil {
 		return p2p.Config{}, fmt.Errorf("read known peers: %w", err)
 	}

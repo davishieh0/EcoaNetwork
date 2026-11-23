@@ -74,14 +74,14 @@ func TestPeerConfigDialsTheLastSessionAndRemembersThisOne(t *testing.T) {
 
 	peers.OnDialed("/ip4/2.2.2.2/tcp/2")
 
-	// Assert
-	known, err := db.KnownPeers()
-	want := []string{"/ip4/1.1.1.1/tcp/1", "/ip4/2.2.2.2/tcp/2"}
+	// Assert: the one just seen comes first
+	known, err := db.KnownPeers(time.Now())
+	want := []string{"/ip4/2.2.2.2/tcp/2", "/ip4/1.1.1.1/tcp/1"}
 	if err != nil || !reflect.DeepEqual(known, want) {
 		t.Fatalf("KnownPeers = %v, %v, want %v", known, err, want)
 	}
 
-	if !reflect.DeepEqual(peers.KnownAddrs, want[:1]) {
-		t.Fatalf("KnownAddrs = %v, want %v", peers.KnownAddrs, want[:1])
+	if !reflect.DeepEqual(peers.KnownAddrs, want[1:]) {
+		t.Fatalf("KnownAddrs = %v, want %v", peers.KnownAddrs, want[1:])
 	}
 }
