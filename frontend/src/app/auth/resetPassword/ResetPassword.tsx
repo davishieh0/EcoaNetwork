@@ -154,6 +154,7 @@ export function ResetPassword() {
             label="New password"
             name="password"
             type="password"
+            revealPassword
             value={password}
             onChange={(event) => {
               setPassword(event.target.value)
@@ -170,6 +171,7 @@ export function ResetPassword() {
           label="Confirm password"
           name="confirm"
           type="password"
+          revealPassword
           value={confirm}
           onChange={(event) => setConfirm(event.target.value)}
           autoComplete="new-password"
