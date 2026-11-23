@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database/dbtest"
 )
 
 
@@ -20,7 +22,7 @@ func TestAnUnknownPathIsNotFound(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	// Act
-	Handler().ServeHTTP(rec, req)
+	Handler(nil).ServeHTTP(rec, req)
 
 	// Assert
 	if rec.Code != http.StatusNotFound {
@@ -39,11 +41,13 @@ func TestServeAnswersAndStopsWithItsContext(t *testing.T) {
 	addr := lis.Addr().String()
 	lis.Close()
 
+	pool := dbtest.Pool(t, dbtest.URL(t))
+
 	ctx, stop := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 
 	go func() {
-		done <- Serve(ctx, addr)
+		done <- Serve(ctx, addr, pool)
 	}()
 
 	// Act

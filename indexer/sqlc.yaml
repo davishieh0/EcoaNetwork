@@ -1,0 +1,48 @@
+# sqlc turns each subject's queries.sql into typed Go, checked against the
+# migrations. `make sqlc` regenerates it; the generated code is never edited.
+version: "2"
+
+sql:
+  - engine: postgresql
+    schema: migrations
+    queries: internal/event/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/event/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+
+  - engine: postgresql
+    schema: migrations
+    queries: internal/review/queries.sql
+    gen:
+      go:
+        package: sqlc
+        out: internal/review/sqlc
+        sql_package: pgx/v5
+        overrides:
+          - db_type: timestamptz
+            go_type: time.Time
+          - db_type: timestamptz
+            nullable: true
+            go_type:
+              type: time.Time
+              pointer: true
+          - db_type: text
+            nullable: true
+            go_type:
+              type: string
+              pointer: true

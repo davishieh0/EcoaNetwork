@@ -4,51 +4,14 @@ package database
 import (
 	"bytes"
 	"context"
-	"os"
 	"testing"
-	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database/dbtest"
 	"github.com/jackc/pgx/v5"
 )
 
 
-// --- CONSTANTS ---
-
-// defaultTestURL is TEST_DATABASE_URL when unset: the empty database
-// infra/local creates for tests, never the one the service uses.
-const defaultTestURL = "postgres://indexer:goodpassword@127.0.0.1:5432/" +
-                       "ecoa_indexer_test?sslmode=disable"
-
-
 // --- CODE ---
-
-// testURL returns the test database, emptied, or skips without one.
-func testURL(t *testing.T) string {
-	t.Helper()
-
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		url = defaultTestURL
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	conn, err := pgx.Connect(ctx, url)
-	if err != nil {
-		t.Skipf("no test database (start infra/local): %v", err)
-	}
-	defer conn.Close(context.Background())
-
-	// every test starts from a database with nothing in it
-	_, err = conn.Exec(ctx, "DROP SCHEMA public CASCADE; CREATE SCHEMA public")
-	if err != nil {
-		t.Fatalf("empty the test database: %v", err)
-	}
-
-	return url
-}
-
 
 // connect opens a connection to url, closed with the test.
 func connect(t *testing.T, url string) *pgx.Conn {
@@ -67,7 +30,7 @@ func connect(t *testing.T, url string) *pgx.Conn {
 
 func TestMigrateCreatesTheBaseTables(t *testing.T) {
 	// Arrange
-	url := testURL(t)
+	url := dbtest.URL(t)
 
 	// Act
 	err := Migrate(context.Background(), url)
@@ -97,7 +60,7 @@ func TestMigrateCreatesTheBaseTables(t *testing.T) {
 
 func TestMigrateTwiceChangesNothing(t *testing.T) {
 	// Arrange
-	url := testURL(t)
+	url := dbtest.URL(t)
 
 	if err := Migrate(context.Background(), url); err != nil {
 		t.Fatalf("first Migrate: %v", err)
@@ -115,7 +78,7 @@ func TestMigrateTwiceChangesNothing(t *testing.T) {
 
 func TestAnEnvelopeComesBackByteForByte(t *testing.T) {
 	// Arrange
-	url := testURL(t)
+	url := dbtest.URL(t)
 
 	if err := Migrate(context.Background(), url); err != nil {
 		t.Fatalf("Migrate: %v", err)

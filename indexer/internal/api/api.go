@@ -8,6 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 
@@ -19,11 +23,11 @@ const shutdownTimeout = 5 * time.Second
 
 // --- CODE ---
 
-// Serve answers the API on addr until ctx ends.
-func Serve(ctx context.Context, addr string) error {
+// Serve answers the API on addr, reading from pool, until ctx ends.
+func Serve(ctx context.Context, addr string, pool *pgxpool.Pool) error {
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           Handler(),
+		Handler:           Handler(pool),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -52,9 +56,15 @@ func Serve(ctx context.Context, addr string) error {
 // Handler returns the router of every endpoint the API answers.
 //
 // Each route lives in a file of its own; this is the one list of them all.
-func Handler() http.Handler {
+func Handler(pool *pgxpool.Pool) http.Handler {
+	events := event.NewHandler(event.NewRepository(pool))
+	reviews := review.NewHandler(review.NewRepository(pool))
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", health)
+	mux.HandleFunc("GET /health", health(pool))
+	mux.HandleFunc("GET /events/{eventId}", events.Get)
+	mux.HandleFunc("GET /entities/{entity}/reviews", reviews.ListByEntity)
+	mux.HandleFunc("GET /reviews/{eventId}", reviews.Get)
 
 	return mux
 }
