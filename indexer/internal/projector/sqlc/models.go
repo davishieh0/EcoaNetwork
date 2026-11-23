@@ -21,6 +21,17 @@ type EventObservation struct {
 	ReceivedAt time.Time
 }
 
+type Label struct {
+	EventID   string
+	Target    string
+	ChainRoot *string
+	Response  *string
+	Moderator string
+	Label     string
+	Note      *string
+	Revoked   bool
+}
+
 type ProjectorCursor struct {
 	Node     string
 	LogID    string
