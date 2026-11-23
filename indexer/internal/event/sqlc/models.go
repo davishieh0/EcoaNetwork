@@ -8,6 +8,23 @@ import (
 	"time"
 )
 
+type Entity struct {
+	Entity    string
+	FirstSeen time.Time
+}
+
+type EntityProposal struct {
+	EventID     string
+	Entity      string
+	Author      string
+	CreatedAt   time.Time
+	Name        *string
+	Category    *string
+	Description *string
+	Descriptor  []byte
+	SearchName  *string
+}
+
 type Event struct {
 	EventID   string
 	EventType string
@@ -30,6 +47,7 @@ type Label struct {
 	Label     string
 	Note      *string
 	Revoked   bool
+	Proposal  *string
 }
 
 type ProjectorCursor struct {
