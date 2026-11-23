@@ -19,6 +19,9 @@ const MESSAGES: Record<string, string> = {
   not_authenticated_error: 'Your session ended. Sign in again.',
   access_token_expired_error: 'Your session ended. Sign in again.',
   profile_exists_error: 'This account already has a handle.',
+  invalid_request_error:
+    'The review could not be read by the gateway. Check it and try again.',
+  node_unavailable_error: 'No network node answered right now. Try again soon.',
 }
 
 const UNAVAILABLE = 'Something on our side is not answering. Try again soon.'

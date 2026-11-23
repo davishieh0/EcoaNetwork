@@ -77,7 +77,12 @@ export function AppLayout() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-60 border-b border-line bg-canvas">
+      <header
+        className={cn(
+          'fixed inset-x-0 top-0 z-60 border-b border-line/40',
+          'bg-canvas/80 backdrop-blur-md',
+        )}
+      >
         <Container
           className={cn(
             'grid min-h-[var(--header-h)] grid-cols-[1fr_auto] items-center',
