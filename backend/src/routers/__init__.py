@@ -9,6 +9,7 @@ from src.config import config
 from src.routers import auth
 from src.routers import entities
 from src.routers import events
+from src.routers import reviews
 from src.routers import system
 
 
@@ -29,5 +30,6 @@ def mount(app: FastAPI) -> None:
 
     # reads: passed on from the indexer, no account needed
     api.include_router(entities.router, tags=['reads'], prefix='/entities')
+    api.include_router(reviews.router, tags=['reads'], prefix='/reviews')
 
     app.include_router(api)
