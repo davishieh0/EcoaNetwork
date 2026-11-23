@@ -2,6 +2,8 @@ package node
 
 
 import (
+	"log/slog"
+
 	"github.com/eduardokairalla1/EcoaNetwork/internal/orphan"
 	"github.com/libp2p/go-libp2p/core/peer"
 )
@@ -50,6 +52,13 @@ type Arrival struct {
 // String returns the log name of the kind.
 func (k ArrivalKind) String() string {
 	return kindNames[k]
+}
+
+
+// LogValue is the kind as the log shows it: its name, never its number. A
+// JSON log writes the int underneath otherwise, String or not.
+func (k ArrivalKind) LogValue() slog.Value {
+	return slog.StringValue(k.String())
 }
 
 
