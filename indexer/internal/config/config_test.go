@@ -15,6 +15,7 @@ var names = []string{
 	"DATABASE_URL",
 	"NODE_ADDRS",
 	"HTTP_ADDR",
+	"MODERATORS_FILE",
 }
 
 
@@ -67,6 +68,10 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		{
 			"HTTP_ADDR", "0.0.0.0:9000",
 			func(c Config) any { return c.HTTPAddr },
+		},
+		{
+			"MODERATORS_FILE", "moderators.json",
+			func(c Config) any { return c.ModeratorsFile },
 		},
 	}
 

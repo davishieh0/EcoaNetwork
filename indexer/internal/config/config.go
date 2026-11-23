@@ -37,6 +37,10 @@ type Config struct {
 
 	// HTTPAddr is the host:port the API answers on.
 	HTTPAddr string
+
+	// ModeratorsFile is the JSON file listing the moderators whose labels
+	// count, "" for none.
+	ModeratorsFile string
 }
 
 
@@ -56,6 +60,8 @@ func Load() (Config, error) {
 		DatabaseURL: databaseURL,
 		NodeAddrs:   nodes,
 		HTTPAddr:    envOr("HTTP_ADDR", defaultHTTPAddr),
+
+		ModeratorsFile: os.Getenv("MODERATORS_FILE"),
 	}
 
 	return cfg, nil
