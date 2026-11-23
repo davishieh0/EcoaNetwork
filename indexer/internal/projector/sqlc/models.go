@@ -38,6 +38,27 @@ type EventObservation struct {
 	ReceivedAt time.Time
 }
 
+type Identity struct {
+	Key       string
+	Identity  string
+	Position  int32
+	Contested bool
+}
+
+type KeyRevocation struct {
+	EventID   string
+	Key       string
+	Reason    *string
+	CreatedAt time.Time
+}
+
+type KeyRotation struct {
+	EventID   string
+	Key       string
+	Successor string
+	CreatedAt string
+}
+
 type Label struct {
 	EventID   string
 	Target    string
