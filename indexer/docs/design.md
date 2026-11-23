@@ -414,7 +414,7 @@ Go, following the node's conventions where there is one to follow.
 | HTTP API | `net/http` | Its pattern routing (`GET /entities/{entity}`) is all the API needs; no framework |
 | Search | Postgres full text, the stemmer chosen by `lang` | What the MVP asks for, with no extra service |
 | Logging | `log/slog`, JSON | As the node |
-| Configuration | flags, with a Makefile that reads `.env` | As the node |
+| Configuration | environment variables only, with a Makefile that reads `.env` | As the node |
 | Tests | `go test`, Postgres from `testcontainers-go` | Each test run gets a real, empty database |
 
 One binary, with a subcommand per job:
@@ -426,21 +426,53 @@ indexer serve       answer the HTTP API
 indexer rebuild     rebuild the projections from cursor 0, then switch
 ```
 
+### Layout: one package per subject, in layers
+
+The code is organized by subject (`review/`, `entity/`), and each subject is
+layered: handler, service, repository. Platform code that no subject owns
+sits apart.
+
 ```
 indexer/
-  cmd/indexer/      main: flags and subcommands
+  cmd/indexer/          main: picks the subcommand, nothing else
   internal/
-    stream/         the SubscribeEvents client
-    projector/      one applier per event type, and the transaction
-    store/          sqlc's generated code
-    api/            HTTP handlers
-    protobuf/       generated from protobuf/node_api.proto
-  migrations/       goose SQL
-  queries/          sqlc SQL
-  sqlc.yaml
+    config/             the environment variables
+    platform/
+      database/         the Postgres pool and the migrations
+    api/                Serve, the router (the one list of routes), /health
+    stream/             the SubscribeEvents client
+    projector/          reads the stream, opens the transaction, hands each
+                        event to its subject, saves the cursor
+    review/
+      handler.go        GET /reviews/...
+      service.go        only when there is logic to put in it
+      projector.go      applies review.created, review.replaced, ...
+      repository.go     the queries
+      model.go
+    entity/             the same shape
+    protobuf/           generated from protobuf/node_api.proto
+  migrations/           goose SQL
+  Dockerfile
   Makefile
   go.mod
 ```
+
+Three things differ from the usual shape of this pattern, because the
+indexer is not a usual API:
+
+- **Each subject has two ways in.** The HTTP API only reads, so the rules
+  (which version is the head, which votes count) do not run on a request.
+  They run when an event arrives from a node, in the subject's
+  `projector.go`. The handler and the projector share the repository: CQRS
+  inside each subject.
+- **The projector owns the transaction.** One event changes several
+  subjects at once (a vote: the event, the vote, the review's score, the
+  node's cursor), in one transaction. So no repository opens its own: each
+  takes the transaction, or the pool for a read, as a parameter.
+- **`service.go` only where there is logic.** Most reads are "query and
+  answer", and a service that only forwards to the repository is a file
+  with nothing in it. One appears where a read has a rule to apply, such
+  as filtering labels by the moderators followed.
 
 **The protobuf code is generated again here, not imported.** The node's copy
 lives in `node/internal/protobuf`, and Go forbids importing an `internal`
