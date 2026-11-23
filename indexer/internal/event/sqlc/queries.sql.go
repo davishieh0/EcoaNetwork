@@ -33,3 +33,33 @@ func (q *Queries) EventByID(ctx context.Context, eventID string) (EventByIDRow, 
 	err := row.Scan(&i.EventID, &i.Envelope, &i.ReceivedAt)
 	return i, err
 }
+
+const saveEvent = `-- name: SaveEvent :execrows
+INSERT INTO events (event_id, event_type, author, created_at, envelope)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (event_id) DO NOTHING
+`
+
+type SaveEventParams struct {
+	EventID   string
+	EventType string
+	Author    string
+	CreatedAt time.Time
+	Envelope  []byte
+}
+
+// Stores an event once: a copy from another node, or the same one read again,
+// changes nothing. The count of rows tells the two apart.
+func (q *Queries) SaveEvent(ctx context.Context, arg SaveEventParams) (int64, error) {
+	result, err := q.db.Exec(ctx, saveEvent,
+		arg.EventID,
+		arg.EventType,
+		arg.Author,
+		arg.CreatedAt,
+		arg.Envelope,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}

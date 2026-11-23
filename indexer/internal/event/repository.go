@@ -48,3 +48,18 @@ func (r *Repository) ByID(ctx context.Context, id string) (Event, error) {
 		ReceivedAt: row.ReceivedAt,
 	}, nil
 }
+
+
+// Save stores e unless an event with its eventId is already stored, and
+// reports whether it was new.
+func (r *Repository) Save(ctx context.Context, e Signed) (bool, error) {
+	stored, err := r.queries.SaveEvent(ctx, sqlc.SaveEventParams{
+		EventID:   e.ID,
+		EventType: e.Type,
+		Author:    e.Author,
+		CreatedAt: e.CreatedAt,
+		Envelope:  e.Envelope,
+	})
+
+	return stored == 1, err
+}
