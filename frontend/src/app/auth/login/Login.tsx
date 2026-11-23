@@ -104,6 +104,7 @@ export function Login() {
           label="Password"
           name="password"
           type="password"
+          revealPassword
           value={password}
           onChange={(event) => {
             setPassword(event.target.value)

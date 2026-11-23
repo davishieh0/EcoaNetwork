@@ -130,6 +130,7 @@ export function Register() {
             label="Password"
             name="password"
             type="password"
+            revealPassword
             value={password}
             onChange={(event) => edit(setPassword)(event.target.value)}
             autoComplete="new-password"
@@ -143,6 +144,7 @@ export function Register() {
           label="Confirm password"
           name="confirm"
           type="password"
+          revealPassword
           value={confirm}
           onChange={(event) => edit(setConfirm)(event.target.value)}
           autoComplete="new-password"

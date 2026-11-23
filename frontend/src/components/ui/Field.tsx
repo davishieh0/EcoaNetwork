@@ -3,7 +3,7 @@
  */
 
 // --- IMPORTS ---
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 
 import type { FieldProps } from '@/components/ui/Field.t'
@@ -22,9 +22,12 @@ export function Field({
   error,
   className,
   children,
+  revealPassword = false,
   ...props
 }: FieldProps) {
   const generated = useId()
+  const [visible, setVisible] = useState(false)
+  const canReveal = revealPassword && props.type === 'password'
   const reduceMotion = useReducedMotion()
   const id = props.id ?? generated
   const note = error ?? hint
@@ -36,18 +39,54 @@ export function Field({
         {label}
       </label>
 
-      <input
-        {...props}
-        id={id}
-        aria-describedby={noteId}
-        aria-invalid={error ? true : undefined}
-        className={cn(
-          'min-h-11 rounded-none border bg-surface px-4',
-          'text-body-m text-primary placeholder:text-muted',
-          'transition-colors duration-interface ease-standard',
-          error ? 'border-danger' : 'border-structural focus:border-signal',
-        )}
-      />
+      <div className="relative flex flex-col">
+        <input
+          {...props}
+          id={id}
+          type={canReveal && visible ? 'text' : props.type}
+          aria-describedby={noteId}
+          aria-invalid={error ? true : undefined}
+          className={cn(
+            'min-h-11 rounded-none border bg-surface px-4',
+            'text-body-m text-primary placeholder:text-muted',
+            'transition-colors duration-interface ease-standard',
+            error ? 'border-danger' : 'border-structural focus:border-signal',
+            canReveal && 'pr-14',
+          )}
+        />
+        {canReveal ? (
+          <button
+            type="button"
+            aria-label={`${visible ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+            aria-controls={id}
+            disabled={props.disabled}
+            onClick={() => setVisible((current) => !current)}
+            className={cn(
+              'absolute inset-y-0 right-0 flex w-11 items-center',
+              'justify-center text-secondary hover:text-primary',
+              'cursor-pointer disabled:cursor-default disabled:opacity-40',
+              'focus-visible:outline-2 focus-visible:outline-signal',
+              'focus-visible:-outline-offset-2',
+            )}
+          >
+            <svg
+              aria-hidden="true"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+              <circle cx="12" cy="12" r="3" />
+              {visible ? <path d="m3 3 18 18" /> : null}
+            </svg>
+          </button>
+        ) : null}
+      </div>
 
       {children}
 
