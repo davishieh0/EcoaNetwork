@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,11 +24,15 @@ const shutdownTimeout = 5 * time.Second
 
 // --- CODE ---
 
-// Serve answers the API on addr, reading from pool, until ctx ends.
-func Serve(ctx context.Context, addr string, pool *pgxpool.Pool) error {
+// Serve answers the API on addr, reading from pool and acting on the labels
+// of the moderators policy follows, until ctx ends.
+func Serve(ctx context.Context,
+           addr string,
+           pool *pgxpool.Pool,
+           policy label.Policy) error {
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           Handler(pool),
+		Handler:           Handler(pool, policy),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -56,7 +61,7 @@ func Serve(ctx context.Context, addr string, pool *pgxpool.Pool) error {
 // Handler returns the router of every endpoint the API answers.
 //
 // Each route lives in a file of its own; this is the one list of them all.
-func Handler(pool *pgxpool.Pool) http.Handler {
+func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
 	events := event.NewHandler(event.NewRepository(pool))
 	reviews := review.NewHandler(review.NewRepository(pool))
 

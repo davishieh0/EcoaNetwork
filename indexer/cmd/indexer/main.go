@@ -13,6 +13,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/api"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/config"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/projector"
 )
@@ -91,13 +92,21 @@ func project(ctx context.Context, cfg config.Config) error {
 
 // serve answers the HTTP API.
 func serve(ctx context.Context, cfg config.Config) error {
+	// a bad moderators file stops the API rather than follow the wrong list
+	policy, err := label.LoadPolicy(cfg.ModeratorsFile)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("moderation", "following", len(policy.Moderators()))
+
 	pool, err := database.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
 
-	return api.Serve(ctx, cfg.HTTPAddr, pool)
+	return api.Serve(ctx, cfg.HTTPAddr, pool, policy)
 }
 
 
