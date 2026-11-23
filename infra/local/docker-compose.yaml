@@ -156,3 +156,14 @@ services:
         condition: service_started
     ports:
       - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+
+  # --- the frontend ---
+  frontend:
+    build: ../../frontend
+    image: ecoa-frontend:local
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:8080"
