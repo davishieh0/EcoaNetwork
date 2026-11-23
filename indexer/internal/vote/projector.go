@@ -72,6 +72,26 @@ func Apply(ctx context.Context, tx pgx.Tx, env *envelope.Envelope) error {
 }
 
 
+// Retally works out again the tally of every version keys voted on: after a
+// rotation, two of them may now be one voter.
+func Retally(ctx context.Context, tx pgx.Tx, keys []string) error {
+	q := sqlc.New(tx)
+
+	versions, err := q.VotedBy(ctx, keys)
+	if err != nil {
+		return err
+	}
+
+	for _, version := range versions {
+		if err := tally(ctx, q, version); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+
 // tally works out again which votes count on version, one per voter under
 // the protocol's rule, and records how many endorse and dispute it. A voter
 // is an identity, not a key: votes cast before and after a rotation are one
