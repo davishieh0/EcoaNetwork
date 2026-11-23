@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review/sqlc"
 	"github.com/jackc/pgx/v5"
 )
@@ -35,17 +36,17 @@ func NewRepository(db sqlc.DBTX) *Repository {
 // the next page, nil when this one is the last.
 func (r *Repository) HeadsByEntity(ctx context.Context,
                                    entity string,
-                                   page Page) ([]Listed, *Cursor, error) {
+                                   p page.Page) ([]Listed, *page.Cursor, error) {
 	params := sqlc.HeadsByEntityParams{
 		Entity: entity,
 
 		// one more than asked for tells whether a next page exists
-		RowLimit: int32(page.Limit + 1),
+		RowLimit: int32(p.Limit + 1),
 	}
 
-	if page.After != nil {
-		params.AfterCreatedAt = &page.After.CreatedAt
-		params.AfterRoot = &page.After.ChainRoot
+	if p.After != nil {
+		params.AfterCreatedAt = &p.After.At
+		params.AfterRoot = &p.After.ID
 	}
 
 	rows, err := r.queries.HeadsByEntity(ctx, params)
@@ -53,13 +54,13 @@ func (r *Repository) HeadsByEntity(ctx context.Context,
 		return nil, nil, err
 	}
 
-	var next *Cursor
+	var next *page.Cursor
 
-	if len(rows) > page.Limit {
-		rows = rows[:page.Limit]
+	if len(rows) > p.Limit {
+		rows = rows[:p.Limit]
 
 		last := rows[len(rows)-1]
-		next = &Cursor{CreatedAt: last.ChainCreatedAt, ChainRoot: last.ChainRoot}
+		next = &page.Cursor{At: last.ChainCreatedAt, ID: last.ChainRoot}
 	}
 
 	listed := make([]Listed, 0, len(rows))

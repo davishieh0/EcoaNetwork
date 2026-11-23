@@ -52,12 +52,3 @@ type Review struct {
 	Truncated bool
 }
 
-
-// Page is where a listing starts and how much of it to return.
-type Page struct {
-	// After is the cursor the previous page ended on, nil for the first.
-	After *Cursor
-
-	// Limit is the most items to return.
-	Limit int
-}

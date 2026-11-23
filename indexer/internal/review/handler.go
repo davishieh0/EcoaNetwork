@@ -4,22 +4,11 @@ package review
 import (
 	"errors"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/ids"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/respond"
-)
-
-
-// --- CONSTANTS ---
-
-const (
-	// defaultLimit is a page's size when ?limit= is absent.
-	defaultLimit = 20
-
-	// maxLimit is the largest ?limit= accepted.
-	maxLimit = 100
 )
 
 
@@ -81,12 +70,12 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, ok := pageOf(w, r)
+	p, ok := page.FromRequest(w, r)
 	if !ok {
 		return
 	}
 
-	listed, next, err := h.repo.HeadsByEntity(r.Context(), entity, page)
+	listed, next, err := h.repo.HeadsByEntity(r.Context(), entity, p)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -104,10 +93,7 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		}))
 	}
 
-	if next != nil {
-		cursor := next.Encode()
-		answer.Next = &cursor
-	}
+	answer.Next = page.Next(next)
 
 	respond.JSON(w, http.StatusOK, answer)
 }
@@ -160,36 +146,6 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.JSON(w, http.StatusOK, answer)
-}
-
-
-// pageOf reads ?after= and ?limit=, or answers 400 and reports false.
-func pageOf(w http.ResponseWriter, r *http.Request) (Page, bool) {
-	page := Page{Limit: defaultLimit}
-
-	if raw := r.URL.Query().Get("limit"); raw != "" {
-		limit, err := strconv.Atoi(raw)
-		if err != nil || limit < 1 || limit > maxLimit {
-			respond.Error(w, http.StatusBadRequest, "invalid_limit",
-			              "limit is a whole number from 1 to 100.")
-			return Page{}, false
-		}
-
-		page.Limit = limit
-	}
-
-	if raw := r.URL.Query().Get("after"); raw != "" {
-		cursor, err := DecodeCursor(raw)
-		if err != nil {
-			respond.Error(w, http.StatusBadRequest, "invalid_cursor",
-			              "after is the next of a previous page.")
-			return Page{}, false
-		}
-
-		page.After = &cursor
-	}
-
-	return page, true
 }
 
 
