@@ -66,7 +66,7 @@ func Serve(ctx context.Context,
 func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
 	moderation := label.NewModeration(policy, pool)
 
-	events := event.NewHandler(event.NewRepository(pool))
+	events := event.NewHandler(event.NewRepository(pool), moderation)
 	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
 	reviews := review.NewHandler(review.NewRepository(pool), moderation)
 	responses := response.NewHandler(response.NewRepository(pool),

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/ids"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/respond"
 )
@@ -15,7 +16,8 @@ import (
 
 // Handler answers the routes of the events table.
 type Handler struct {
-	repo *Repository
+	repo       *Repository
+	moderation *label.Moderation
 }
 
 
@@ -25,9 +27,10 @@ type observed struct {
 }
 
 
-// NewHandler returns the handler of the events routes, reading from repo.
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+// NewHandler returns the handler of the events routes, reading from repo
+// and leaving out what a followed moderator removed.
+func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
+	return &Handler{repo: repo, moderation: moderation}
 }
 
 
@@ -50,6 +53,19 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		respond.Failed(w, err)
+		return
+	}
+
+	// the envelope too: the indexer is where removed content leaves the
+	// reading path, so it must not leave by this route either
+	removed, err := h.moderation.Removed(r.Context(), id)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	if removed {
+		respond.Removed(w)
 		return
 	}
 

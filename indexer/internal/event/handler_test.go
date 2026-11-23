@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -18,8 +19,11 @@ import (
 func get(t *testing.T, pool *pgxpool.Pool, eventID string) *httptest.ResponseRecorder {
 	t.Helper()
 
+	moderation := label.NewModeration(label.Policy{}, pool)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /events/{eventId}", NewHandler(NewRepository(pool)).Get)
+	mux.HandleFunc("GET /events/{eventId}",
+	               NewHandler(NewRepository(pool), moderation).Get)
 
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet,
