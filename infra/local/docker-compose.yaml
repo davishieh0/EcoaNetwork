@@ -25,6 +25,19 @@ x-indexer: &indexer
   volumes:
     - ./configs/indexer/moderators.json:/config/moderators.json:ro
 
+x-backend: &backend
+  build: ../../backend
+  image: ecoa-backend:local
+  env_file:
+    - path: ../../backend/.env
+      required: false
+  environment:
+    DATABASE_URL: postgresql+asyncpg://backend:${BACKEND_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_backend
+    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    BIND: 0.0.0.0
+    PORT: "8000"
+    COOKIE_SECURE: "false"
+
 
 # --- the services ---
 services:
@@ -116,3 +129,30 @@ services:
         condition: service_completed_successfully
     ports:
       - "127.0.0.1:8081:8081"
+
+  # --- the backend ---
+  backend-migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    <<: *backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/api/system/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+      start_interval: 1s
+    depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
+      node-1:
+        condition: service_started
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
