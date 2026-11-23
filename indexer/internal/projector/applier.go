@@ -11,6 +11,7 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/profile"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/stream"
@@ -45,7 +46,8 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 	"moderation.label_created": label.ApplyCreated,
 	"moderation.label_revoked": label.ApplyRevoked,
 
-	"entity.updated": entity.ApplyUpdated,
+	"entity.updated":  entity.ApplyUpdated,
+	"profile.updated": profile.ApplyUpdated,
 }
 
 
@@ -58,6 +60,7 @@ var skippable = []error{
 	response.ErrMalformed,
 	label.ErrMalformed,
 	entity.ErrMalformed,
+	profile.ErrMalformed,
 }
 
 
