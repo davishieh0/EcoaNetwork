@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
@@ -62,12 +63,17 @@ func Serve(ctx context.Context,
 //
 // Each route lives in a file of its own; this is the one list of them all.
 func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
+	moderation := label.NewModeration(policy, pool)
+
 	events := event.NewHandler(event.NewRepository(pool))
+	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
 	reviews := review.NewHandler(review.NewRepository(pool))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))
 	mux.HandleFunc("GET /events/{eventId}", events.Get)
+	mux.HandleFunc("GET /entities", entities.Search)
+	mux.HandleFunc("GET /entities/{entity}", entities.Get)
 	mux.HandleFunc("GET /entities/{entity}/reviews", reviews.ListByEntity)
 	mux.HandleFunc("GET /reviews/{eventId}", reviews.Get)
 
