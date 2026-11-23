@@ -27,6 +27,19 @@ type ProjectorCursor struct {
 	Sequence int64
 }
 
+type Response struct {
+	EventID          string
+	ChainRoot        string
+	Target           string
+	RespondedVersion string
+	Depth            int32
+	Author           string
+	Body             string
+	Lang             *string
+	CreatedAt        time.Time
+	SortAt           time.Time
+}
+
 type Review struct {
 	EventID   string
 	ChainRoot string
