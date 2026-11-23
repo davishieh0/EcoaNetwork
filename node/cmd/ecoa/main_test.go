@@ -72,7 +72,7 @@ func TestPeerConfigDialsTheLastSessionAndRemembersThisOne(t *testing.T) {
 		t.Fatalf("peerConfig: %v", err)
 	}
 
-	peers.OnDialed("/ip4/2.2.2.2/tcp/2")
+	peers.OnSeen("/ip4/2.2.2.2/tcp/2")
 
 	// Assert: the one just seen comes first
 	known, err := db.KnownPeers(time.Now())

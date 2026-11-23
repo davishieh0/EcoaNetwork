@@ -117,7 +117,7 @@ func peerConfig(cfg config.Config, db *store.Store) (p2p.Config, error) {
 		KeyPath:        cfg.PeerKeyPath,
 		ConnLow:        cfg.ConnLow,
 		ConnHigh:       cfg.ConnHigh,
-		OnDialed: func(addr string) {
+		OnSeen: func(addr string) {
 			if err := db.AddPeer(addr, time.Now()); err != nil {
 				slog.Warn("remember peer", "addr", addr, "err", err)
 			}

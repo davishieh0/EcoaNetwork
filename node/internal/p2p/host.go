@@ -15,8 +15,8 @@ import (
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/crypto"
+	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
@@ -67,8 +67,9 @@ type Config struct {
 	// KnownAddrs are the peers of the last session.
 	KnownAddrs []string
 
-	// OnDialed is called with the multiaddr of each peer this node reaches.
-	OnDialed func(addr string)
+	// OnSeen is called with each multiaddr a peer listens on, whichever side
+	// opened the connection, as the peer reports it through identify.
+	OnSeen func(addr string)
 
 	// KeyPath is the file holding the peer's private key, empty for none.
 	KeyPath string
@@ -109,8 +110,11 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 		return nil, err
 	}
 
-	if cfg.OnDialed != nil {
-		h.Network().Notify(remember(cfg.OnDialed))
+	if cfg.OnSeen != nil {
+		if err := rememberIdentified(ctx, h, cfg.OnSeen); err != nil {
+			h.Close()
+			return nil, err
+		}
 	}
 
 	connectBootstrap(ctx, h, dialOrder(cfg))
@@ -219,18 +223,44 @@ func dialOrder(cfg Config) []string {
 }
 
 
-// remember reports each peer this node dialed.
-func remember(onConnected func(addr string)) *network.NotifyBundle {
-	return &network.NotifyBundle{
-		ConnectedF: func(_ network.Network, c network.Conn) {
-			if c.Stat().Direction != network.DirOutbound {
+// rememberIdentified reports the addresses each peer listens on, once
+// identify has told them, until ctx ends.
+//
+// Not the address of the connection: for a peer that dialed this node, that
+// is the port its system picked for the call, which nothing listens on once
+// the connection closes.
+func rememberIdentified(ctx context.Context,
+                        h host.Host,
+                        onSeen func(addr string)) error {
+	sub, err := h.EventBus().Subscribe(new(event.EvtPeerIdentificationCompleted))
+	if err != nil {
+		return fmt.Errorf("subscribe to identify: %w", err)
+	}
+
+	go func() {
+		defer sub.Close()
+
+		for {
+			select {
+			case e, ok := <-sub.Out():
+				if !ok {
+					return
+				}
+
+				identified := e.(event.EvtPeerIdentificationCompleted)
+
+				for _, a := range identified.ListenAddrs {
+					if dialable(a) {
+						onSeen(a.String() + "/p2p/" + identified.Peer.String())
+					}
+				}
+			case <-ctx.Done():
 				return
 			}
+		}
+	}()
 
-			onConnected(c.RemoteMultiaddr().String() +
-			            "/p2p/" + c.RemotePeer().String())
-		},
-	}
+	return nil
 }
 
 
