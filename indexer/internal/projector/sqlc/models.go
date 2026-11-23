@@ -54,3 +54,17 @@ type ReviewWithdrawal struct {
 	ChainRoot string
 	Target    string
 }
+
+type VersionVote struct {
+	Version      string
+	Endorsements int32
+	Disputes     int32
+}
+
+type Vote struct {
+	EventID   string
+	Target    string
+	Voter     string
+	Kind      string
+	CreatedAt time.Time
+}
