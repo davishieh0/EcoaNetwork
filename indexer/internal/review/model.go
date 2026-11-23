@@ -23,6 +23,14 @@ type Version struct {
 }
 
 
+// Hide is what leaves a chain out of a listing: a label among Labels, by a
+// moderator among Moderators.
+type Hide struct {
+	Moderators []string
+	Labels     []string
+}
+
+
 // Listed is the head of a chain, as an entity's listing shows it.
 type Listed struct {
 	Version

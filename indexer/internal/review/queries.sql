@@ -3,7 +3,8 @@
 
 -- name: HeadsByEntity :many
 -- The head of each visible chain of an entity, newest original first, after
--- the cursor when there is one.
+-- the cursor when there is one. A chain a followed moderator labeled with one
+-- of the hiding labels is not visible.
 SELECT c.chain_root,
        c.created_at AS chain_created_at,
        c.head::text AS head,
@@ -17,6 +18,12 @@ LEFT JOIN event_observations o ON o.event_id = c.head
 WHERE c.entity = sqlc.arg(entity)
   AND NOT c.withdrawn
   AND NOT c.truncated
+  AND NOT EXISTS (
+      SELECT 1 FROM labels l
+      WHERE l.chain_root = c.chain_root
+        AND NOT l.revoked
+        AND l.moderator = ANY (sqlc.arg(moderators)::text[])
+        AND l.label = ANY (sqlc.arg(hiding)::text[]))
   AND (sqlc.narg(after_created_at)::timestamptz IS NULL
        OR (c.created_at, c.chain_root)
           < (sqlc.narg(after_created_at)::timestamptz,

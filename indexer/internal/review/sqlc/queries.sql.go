@@ -94,16 +94,24 @@ LEFT JOIN event_observations o ON o.event_id = c.head
 WHERE c.entity = $1
   AND NOT c.withdrawn
   AND NOT c.truncated
-  AND ($2::timestamptz IS NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM labels l
+      WHERE l.chain_root = c.chain_root
+        AND NOT l.revoked
+        AND l.moderator = ANY ($2::text[])
+        AND l.label = ANY ($3::text[]))
+  AND ($4::timestamptz IS NULL
        OR (c.created_at, c.chain_root)
-          < ($2::timestamptz,
-             $3::text))
+          < ($4::timestamptz,
+             $5::text))
 ORDER BY c.created_at DESC, c.chain_root DESC
-LIMIT $4
+LIMIT $6
 `
 
 type HeadsByEntityParams struct {
 	Entity         string
+	Moderators     []string
+	Hiding         []string
 	AfterCreatedAt *time.Time
 	AfterRoot      *string
 	RowLimit       int32
@@ -121,10 +129,13 @@ type HeadsByEntityRow struct {
 // The queries of the reviews. `make sqlc` turns each into a function of the
 // generated package, which repository.go wraps.
 // The head of each visible chain of an entity, newest original first, after
-// the cursor when there is one.
+// the cursor when there is one. A chain a followed moderator labeled with one
+// of the hiding labels is not visible.
 func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([]HeadsByEntityRow, error) {
 	rows, err := q.db.Query(ctx, headsByEntity,
 		arg.Entity,
+		arg.Moderators,
+		arg.Hiding,
 		arg.AfterCreatedAt,
 		arg.AfterRoot,
 		arg.RowLimit,

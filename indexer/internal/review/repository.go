@@ -36,9 +36,12 @@ func NewRepository(db sqlc.DBTX) *Repository {
 // the next page, nil when this one is the last.
 func (r *Repository) HeadsByEntity(ctx context.Context,
                                    entity string,
-                                   p page.Page) ([]Listed, *page.Cursor, error) {
+                                   p page.Page,
+                                   hide Hide) ([]Listed, *page.Cursor, error) {
 	params := sqlc.HeadsByEntityParams{
-		Entity: entity,
+		Entity:     entity,
+		Moderators: hide.Moderators,
+		Hiding:     hide.Labels,
 
 		// one more than asked for tells whether a next page exists
 		RowLimit: int32(p.Limit + 1),

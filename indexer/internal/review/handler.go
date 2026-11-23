@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/ids"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/respond"
@@ -16,7 +17,8 @@ import (
 
 // Handler answers the routes of the reviews.
 type Handler struct {
-	repo *Repository
+	repo       *Repository
+	moderation *label.Moderation
 }
 
 
@@ -34,6 +36,10 @@ type derived struct {
 // observed is what the indexer observed of a version.
 type observed struct {
 	ReceivedAt *time.Time `json:"receivedAt,omitempty"`
+
+	// the labels that count, by the moderators this indexer follows: another
+	// indexer, following others, shows others
+	Labels []label.Applied `json:"labels,omitempty"`
 }
 
 
@@ -53,9 +59,10 @@ type detail struct {
 }
 
 
-// NewHandler returns the handler of the review routes, reading from repo.
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+// NewHandler returns the handler of the review routes, reading from repo and
+// acting on labels by moderation.
+func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
+	return &Handler{repo: repo, moderation: moderation}
 }
 
 
@@ -75,7 +82,34 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	listed, next, err := h.repo.HeadsByEntity(r.Context(), entity, p)
+	show, ok := label.ShowLabeled(w, r)
+	if !ok {
+		return
+	}
+
+	moderators, err := h.moderation.Moderators(r.Context())
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	hide := Hide{
+		Moderators: moderators,
+		Labels:     label.Hiding(show),
+	}
+
+	listed, next, err := h.repo.HeadsByEntity(r.Context(), entity, p, hide)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	roots := make([]string, 0, len(listed))
+	for _, l := range listed {
+		roots = append(roots, l.ChainRoot)
+	}
+
+	labels, err := h.moderation.OnChains(r.Context(), roots)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -90,7 +124,7 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 			ChainRoot: l.ChainRoot,
 			Head:      true,
 			Edited:    &edited,
-		}))
+		}, labels[l.ChainRoot]))
 	}
 
 	answer.Next = page.Next(next)
@@ -129,6 +163,20 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	labels, err := h.moderation.OnChains(r.Context(),
+	                                     []string{review.ChainRoot})
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	// a followed moderator removed it: nothing of it comes back
+	applied := labels[review.ChainRoot]
+	if label.AnyRemoves(applied) {
+		respond.Removed(w)
+		return
+	}
+
 	versions, err := h.repo.Versions(r.Context(), review.ChainRoot)
 	if err != nil {
 		respond.Failed(w, err)
@@ -136,13 +184,14 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	answer := detail{
-		Review:   item(review.Version, derivedOf(review, review.EventID)),
+		Review: item(review.Version, derivedOf(review, review.EventID),
+		             applied),
 		Versions: make([]respond.Item, 0, len(versions)),
 	}
 
 	for _, v := range versions {
 		answer.Versions = append(answer.Versions,
-		                         item(v, derivedOf(review, v.EventID)))
+		                         item(v, derivedOf(review, v.EventID), applied))
 	}
 
 	respond.JSON(w, http.StatusOK, answer)
@@ -160,12 +209,12 @@ func derivedOf(review Review, id string) derived {
 }
 
 
-// item is v as the API returns it.
-func item(v Version, d derived) respond.Item {
+// item is v as the API returns it, with the labels that count on its chain.
+func item(v Version, d derived, labels []label.Applied) respond.Item {
 	return respond.Item{
 		Envelope: string(v.Envelope),
 		Derived:  d,
-		Observed: observed{ReceivedAt: utc(v.ReceivedAt)},
+		Observed: observed{ReceivedAt: utc(v.ReceivedAt), Labels: labels},
 	}
 }
 

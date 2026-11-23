@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database/dbtest"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -142,7 +143,8 @@ func review(t *testing.T, pool *pgxpool.Pool, name, entity string, day int) {
 func call(t *testing.T, pool *pgxpool.Pool, path string) *httptest.ResponseRecorder {
 	t.Helper()
 
-	h := NewHandler(NewRepository(pool))
+	moderation := label.NewModeration(label.Policy{}, pool)
+	h := NewHandler(NewRepository(pool), moderation)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /entities/{entity}/reviews", h.ListByEntity)

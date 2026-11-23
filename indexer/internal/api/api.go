@@ -67,7 +67,7 @@ func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
 
 	events := event.NewHandler(event.NewRepository(pool))
 	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
-	reviews := review.NewHandler(review.NewRepository(pool))
+	reviews := review.NewHandler(review.NewRepository(pool), moderation)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))
