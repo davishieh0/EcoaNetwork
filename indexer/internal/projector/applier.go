@@ -10,6 +10,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/identities"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/profile"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
@@ -48,6 +49,9 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 
 	"entity.updated":  entity.ApplyUpdated,
 	"profile.updated": profile.ApplyUpdated,
+
+	"identity.key_rotated": applyRotation,
+	"identity.key_revoked": identities.ApplyRevoked,
 }
 
 
@@ -61,6 +65,7 @@ var skippable = []error{
 	label.ErrMalformed,
 	entity.ErrMalformed,
 	profile.ErrMalformed,
+	identities.ErrMalformed,
 }
 
 
@@ -150,6 +155,26 @@ func projectOne(ctx context.Context,
 	}
 
 	return err
+}
+
+
+// applyRotation projects an identity.key_rotated, then what it moved: the
+// votes of keys that may now be one voter, counted again, and the profiles
+// of the identities it changed, worked out again. All in the event's
+// transaction.
+func applyRotation(ctx context.Context,
+                   tx pgx.Tx,
+                   env *envelope.Envelope) error {
+	changed, err := identities.ApplyRotated(ctx, tx, env)
+	if err != nil {
+		return err
+	}
+
+	if err := vote.Retally(ctx, tx, changed.Keys); err != nil {
+		return err
+	}
+
+	return profile.Reresolve(ctx, tx, changed.Identities)
 }
 
 
