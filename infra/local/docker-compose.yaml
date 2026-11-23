@@ -1,6 +1,20 @@
 # --- Ecoa local services ---
 name: ecoa
 
+
+# --- settings ---
+x-node: &node
+  build:
+    context: ../..
+    dockerfile: node/Dockerfile
+  image: ecoa-node:local
+  restart: unless-stopped
+  environment: &node-env
+    NETWORK: ecoa-dev
+    PEER_KEY_PATH: /keys/peer.key
+
+
+# --- the services ---
 services:
 
   # --- data services ---
@@ -25,3 +39,41 @@ services:
       - ./data/postgres:/var/lib/postgresql
     ports:
       - "127.0.0.1:5432:5432"
+
+
+  # --- cluster of nodes ---
+  node-1:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs
+    volumes:
+      - ./configs/nodes/node-1.key:/keys/peer.key:ro
+      - ./data/node-1:/data
+    ports:
+      - "127.0.0.1:4001:4001"
+      - "127.0.0.1:50051:50051"
+
+  node-2:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs
+    volumes:
+      - ./configs/nodes/node-2.key:/keys/peer.key:ro
+      - ./data/node-2:/data
+    ports:
+      - "127.0.0.1:4002:4001"
+      - "127.0.0.1:50052:50051"
+
+  node-3:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7
+    volumes:
+      - ./configs/nodes/node-3.key:/keys/peer.key:ro
+      - ./data/node-3:/data
+    ports:
+      - "127.0.0.1:4003:4001"
+      - "127.0.0.1:50053:50051"
