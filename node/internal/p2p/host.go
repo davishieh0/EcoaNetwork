@@ -20,6 +20,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
+	"github.com/multiformats/go-multiaddr"
+	manet "github.com/multiformats/go-multiaddr/net"
 )
 
 
@@ -229,6 +231,19 @@ func remember(onConnected func(addr string)) *network.NotifyBundle {
 			            "/p2p/" + c.RemotePeer().String())
 		},
 	}
+}
+
+
+// dialable reports whether another node can dial a: not an unspecified
+// address such as 0.0.0.0, and not a relay.
+func dialable(a multiaddr.Multiaddr) bool {
+	if manet.IsIPUnspecified(a) {
+		return false
+	}
+
+	_, err := a.ValueForProtocol(multiaddr.P_CIRCUIT)
+
+	return err != nil
 }
 
 
