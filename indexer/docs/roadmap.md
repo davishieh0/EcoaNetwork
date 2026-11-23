@@ -59,37 +59,46 @@ blocks the indexer any more. One thing may be added:
      `GET /entities/{entity}/reviews` (paged by cursor) and
      `GET /reviews/{eventId}`.~~ Done. Until the projector fills
      `review_chains`, rows are inserted by hand.
-   - **3.3 Entities:** the `entities` table, `GET /entities/{entity}` and
+   - ~~**3.3 Entities:** the `entities` table, `GET /entities/{entity}` and
      search. Needs full text and metadata resolution; may come after the
-     projector.
+     projector.~~ Done, with `entity.updated` in step 5. Filtering the
+     search by category comes with step 6.
 
-   `GET /reviews/{eventId}/responses` comes with responses, in step 5.
    *Waits on nothing.*
-4. **Stream client:** `NODE_ADDRS`, a list of nodes, one cursor each, back to 0 when a
-   `log_id` changes, reconnecting on its own, everything into one applier.
-   *Waits on the node, steps 3 and 4.*
+4. ~~**Stream client:** `NODE_ADDRS`, a list of nodes, one cursor each,
+   reconnecting on its own, everything into one applier.~~ Done:
+   `indexer project` stores every event, its observation and the node's
+   cursor; the tables of each type come in step 5.
 5. **Projector, one event type at a time**, calling the `projection`
    functions of `protocol/go` and tested against `protocol/fixtures/`:
-   - `review.created`, `review.replaced` and `review.withdrawn`, with
-     `ResolveHead` (`chain-head.json`)
-   - `review.endorsed` and `review.disputed`, with `CurrentVote` and
-     `HeadScore` (`vote-and-label-binding.json`)
-   - `review.response_created`, with `ResponsesOnChain`
-   - `moderation.label_created` and `moderation.label_revoked`, with
-     `LabelsOnChain`
-   - `entity.updated`, checking the identifier with `DeriveEntityID`
-     (`entity-metadata.json`)
-   - `profile.updated`
-   - key rotations and revocations, and contested identities
-     (`identity-succession.json`)
+   - ~~`review.created`, `review.replaced` and `review.withdrawn`, with
+     `ResolveHead` (`chain-head.json`)~~ Done: a review published on a node
+     is listed, an edit moves the head, a withdrawal hides it.
+   - ~~`review.endorsed` and `review.disputed`, with `CurrentVote` and
+     `HeadScore` (`vote-and-label-binding.json`)~~ Done: each version's
+     `endorsements` and `disputes` in the API.
+   - ~~`review.response_created`, with `ResponsesOnChain`~~ Done, with
+     `GET /reviews/{eventId}/responses` (it was step 5's from the start).
+   - ~~`moderation.label_created` and `moderation.label_revoked`, with
+     `LabelsOnChain`~~ Done, with the moderators file and what each label
+     does in the API (it was step 6's).
+   - ~~`entity.updated`, checking the identifier with `DeriveEntityID`
+     (`entity-metadata.json`)~~ Done: proposals stored, resolved per field
+     with `ResolveFields` when the API answers.
+   - ~~`profile.updated`~~ Done, with `GET /profiles/{did}`,
+     `GET /profiles?ids=` and labels on profiles.
+   - ~~key rotations and revocations, and contested identities
+     (`identity-succession.json`)~~ Done: votes, profiles, label
+     revocation and the moderators file follow the identity, and
+     `GET /identities/{did}`.
    - unknown types: skipped, counted, the cursor still advances
 
    *Can be built and tested now, on events from the generator (step 8);
    only reading them from a real node waits on step 4.*
 6. **Observed data:** `received_at` (the earliest any node reports), the
    entity summary (distribution and mean, over the reviews that count), the
-   metadata shown for each entity (`ResolveFields`, with no weights or claims
-   in v1), and the moderator configuration file with each label's effect.
+   metadata that holds for each entity kept in a table so the search can
+   filter by category.
 7. **Rebuild:** into new tables from cursor 0, switching once they have
    caught up with the nodes.
 8. **Test event generator:** signed synthetic reviews with
