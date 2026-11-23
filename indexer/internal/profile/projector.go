@@ -48,6 +48,55 @@ func ApplyUpdated(ctx context.Context, tx pgx.Tx, env *envelope.Envelope) error 
 }
 
 
+// Reresolve works out again the profile of each of identities, from every
+// profile any of its keys signed: after a rotation, a key's profiles may now
+// be another identity's.
+func Reresolve(ctx context.Context, tx pgx.Tx, identities []string) error {
+	q := sqlc.New(tx)
+
+	for _, identity := range identities {
+		if err := reresolve(ctx, q, identity); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+
+// reresolve works out one identity's profile again.
+func reresolve(ctx context.Context, q *sqlc.Queries, identity string) error {
+	keys, err := q.KeysOf(ctx, identity)
+	if err != nil {
+		return err
+	}
+
+	raws, err := q.ProfileEnvelopesBy(ctx, keys)
+	if err != nil {
+		return err
+	}
+
+	var best *envelope.Envelope
+
+	for _, raw := range raws {
+		env, err := envelope.Decode(raw)
+		if err != nil {
+			return fmt.Errorf("stored envelope: %w", err)
+		}
+
+		if best == nil || eventOf(env).Outranks(eventOf(best)) {
+			best = env
+		}
+	}
+
+	if best == nil {
+		return q.DeleteProfile(ctx, identity)
+	}
+
+	return save(ctx, q, identity, best)
+}
+
+
 // save makes env identity's profile, replacing every field.
 func save(ctx context.Context,
           q *sqlc.Queries,
