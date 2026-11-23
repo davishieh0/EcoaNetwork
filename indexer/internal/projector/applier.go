@@ -11,6 +11,7 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/stream"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/jackc/pgx/v5"
@@ -31,6 +32,10 @@ const applyTimeout = 10 * time.Second
 // list of the types the indexer understands. A type missing here is stored
 // in events and nothing more; a rebuild picks it up once it is added.
 var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) error{
+	"review.created":   review.ApplyCreated,
+	"review.replaced":  review.ApplyReplaced,
+	"review.withdrawn": review.ApplyWithdrawn,
+
 	"moderation.label_created": label.ApplyCreated,
 	"moderation.label_revoked": label.ApplyRevoked,
 
@@ -41,6 +46,8 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 // skippable are the subjects' errors that mean the event has no place in the
 // projection: trying it again would fail the same way.
 var skippable = []error{
+	review.ErrUnplaced,
+	review.ErrMalformed,
 	label.ErrMalformed,
 	entity.ErrMalformed,
 }

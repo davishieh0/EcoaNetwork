@@ -48,7 +48,7 @@ func evt(name string) string {
 
 // envelope is the stored bytes of the version named name, with what a JSON
 // parser on the way would change: spacing and an escape.
-func envelope(name string) []byte {
+func envelopeOf(name string) []byte {
 	return []byte(`{"name":"` + name + `",  "body":"café"}`)
 }
 
@@ -81,7 +81,7 @@ func version(t *testing.T,
 	_, err := pool.Exec(ctx,
 		`INSERT INTO events (event_id, event_type, author, created_at, envelope)
 		 VALUES ($1, 'review.created', 'did:key:z6Mk', $2, $3)`,
-		evt(name), at, envelope(name))
+		evt(name), at, envelopeOf(name))
 	if err != nil {
 		t.Fatalf("insert event %s: %v", name, err)
 	}
