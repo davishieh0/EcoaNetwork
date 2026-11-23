@@ -17,6 +17,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/crypto"
 	"github.com/libp2p/go-libp2p/core/event"
 	"github.com/libp2p/go-libp2p/core/host"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	rcmgr "github.com/libp2p/go-libp2p/p2p/host/resource-manager"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
@@ -274,6 +275,26 @@ func dialable(a multiaddr.Multiaddr) bool {
 	_, err := a.ValueForProtocol(multiaddr.P_CIRCUIT)
 
 	return err != nil
+}
+
+
+// redial dials each of addrs whose peer is not connected, each under its
+// own timeout, and logs the peers it reached.
+func redial(ctx context.Context, h host.Host, addrs []string) {
+	for _, addr := range addrs {
+		info, err := peer.AddrInfoFromString(addr)
+		if err != nil || h.Network().Connectedness(info.ID) == network.Connected {
+			continue
+		}
+
+		dialCtx, cancel := context.WithTimeout(ctx, dialTimeout)
+		err = h.Connect(dialCtx, *info)
+		cancel()
+
+		if err == nil {
+			slog.Info("redialed", "peer", info.ID.String())
+		}
+	}
 }
 
 
