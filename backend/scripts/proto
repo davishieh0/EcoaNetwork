@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+# regenerate src/grpc/proto from ../protobuf/node_api.proto; grpcio-tools
+# brings its own protoc, pinned to the grpcio version the backend runs
+uv run --with grpcio-tools==1.84.0 python -m grpc_tools.protoc \
+    -I ../protobuf \
+    --python_out=src/grpc/proto \
+    --pyi_out=src/grpc/proto \
+    --grpc_python_out=src/grpc/proto \
+    ../protobuf/node_api.proto

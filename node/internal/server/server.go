@@ -1,4 +1,5 @@
-// Package server is the gRPC entry a gateway uses to submit events.
+// Package server is the gRPC entry of the node: gateways submit events through
+// it, and indexers follow the log.
 package server
 
 
@@ -7,6 +8,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/node"
 	pb "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf"
+	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,18 +23,38 @@ const MaxMessage = 16<<10 + 8
 
 // --- CODE ---
 
-// server answers Publish by handing the envelope to the node.
+// server answers Publish through the node and SubscribeEvents from the store.
 type server struct {
 	pb.UnimplementedNodeServiceServer
 
 	node *node.Node
+
+	// store is the log SubscribeEvents reads
+	store *store.Store
+
+	// ctx ends every open stream when the node stops
+	ctx context.Context
+
+	// slots holds one token per open stream, at most its capacity
+	slots chan struct{}
 }
 
 
 // New returns a gRPC server with the node service registered on it.
-func New(n *node.Node) *grpc.Server {
+//
+// Streams end when ctx does, so a graceful stop does not wait on them, and at
+// most maxStreams are open at once.
+func New(ctx context.Context,
+         n *node.Node,
+         s *store.Store,
+         maxStreams int) *grpc.Server {
 	g := grpc.NewServer(grpc.MaxRecvMsgSize(MaxMessage))
-	pb.RegisterNodeServiceServer(g, &server{node: n})
+	pb.RegisterNodeServiceServer(g, &server{
+		node:  n,
+		store: s,
+		ctx:   ctx,
+		slots: make(chan struct{}, maxStreams),
+	})
 
 	return g
 }

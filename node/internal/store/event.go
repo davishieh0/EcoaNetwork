@@ -20,6 +20,12 @@ type StoredEvent struct {
 	// Sequence is the local receive sequence number of the event.
 	Sequence uint64
 
+	// ID is the eventId the event is stored under.
+	ID string
+
+	// ReceivedAt is when this node stored the event.
+	ReceivedAt time.Time
+
 	// Raw is the event, byte for byte as it was received.
 	Raw []byte
 }
@@ -29,9 +35,16 @@ type StoredEvent struct {
 func (s *Store) AddEvent(id string,
                          raw []byte,
                          receivedAt time.Time) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
+	err := s.db.Update(func(tx *bolt.Tx) error {
 		return addEvent(tx, id, raw, receivedAt)
 	})
+
+	// rung only after the commit, so whoever wakes can read the event
+	if err == nil {
+		s.changed.ring()
+	}
+
+	return err
 }
 
 
@@ -94,6 +107,7 @@ func (s *Store) EventsSince(cursor uint64, limit int) ([]StoredEvent, error) {
 
 	err := s.db.View(func(tx *bolt.Tx) error {
 		events := tx.Bucket(eventsBucket)
+		meta := tx.Bucket(metaBucket)
 		log := tx.Bucket(logBucket).Cursor()
 
 		key, id := log.Seek(sequenceKey(cursor))
@@ -107,8 +121,10 @@ func (s *Store) EventsSince(cursor uint64, limit int) ([]StoredEvent, error) {
 			}
 
 			found = append(found, StoredEvent{
-				Sequence: sequence,
-				Raw:      bytes.Clone(events.Get(id)),
+				Sequence:   sequence,
+				ID:         string(id),
+				ReceivedAt: receivedAtOf(meta.Get(id)),
+				Raw:        bytes.Clone(events.Get(id)),
 			})
 		}
 
@@ -116,4 +132,32 @@ func (s *Store) EventsSince(cursor uint64, limit int) ([]StoredEvent, error) {
 	})
 
 	return found, err
+}
+
+
+// receivedAtOf reads the time of receipt from a meta value.
+func receivedAtOf(meta []byte) time.Time {
+	// the sequence comes first, then the time of receipt in Unix nanoseconds
+	if len(meta) < 16 {
+		return time.Time{}
+	}
+
+	return time.Unix(0, int64(binary.BigEndian.Uint64(meta[8:16]))).UTC()
+}
+
+
+// Head returns the sequence of the last event stored, 0 for an empty log.
+func (s *Store) Head() (uint64, error) {
+	var head uint64
+
+	err := s.db.View(func(tx *bolt.Tx) error {
+		key, _ := tx.Bucket(logBucket).Cursor().Last()
+		if key != nil {
+			head = binary.BigEndian.Uint64(key)
+		}
+
+		return nil
+	})
+
+	return head, err
 }

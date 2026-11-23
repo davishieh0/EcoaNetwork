@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enode_api.proto\x12\x08node_api\"\x19\n\x05\x45vent\x12\x10\n\x08\x65nvelope\x18\x01 \x01(\x0c\"E\n\x0fPublishResponse\x12\"\n\x07outcome\x18\x01 \x01(\x0e\x32\x11.node_api.Outcome\x12\x0e\n\x06reason\x18\x02 \x01(\t*^\n\x07Outcome\x12\x17\n\x13OUTCOME_UNSPECIFIED\x10\x00\x12\x0c\n\x08\x41\x43\x43\x45PTED\x10\x01\x12\x12\n\x0e\x41LREADY_EXISTS\x10\x02\x12\n\n\x06ORPHAN\x10\x03\x12\x0c\n\x08REJECTED\x10\x04\x32\x44\n\x0bNodeService\x12\x35\n\x07Publish\x12\x0f.node_api.Event\x1a\x19.node_api.PublishResponseB;Z9github.com/eduardokairalla1/EcoaNetwork/internal/protobufb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0enode_api.proto\x12\x08node_api\"\x19\n\x05\x45vent\x12\x10\n\x08\x65nvelope\x18\x01 \x01(\x0c\"E\n\x0fPublishResponse\x12\"\n\x07outcome\x18\x01 \x01(\x0e\x32\x11.node_api.Outcome\x12\x0e\n\x06reason\x18\x02 \x01(\t\"\'\n\x06\x43ursor\x12\r\n\x05\x61\x66ter\x18\x01 \x01(\x04\x12\x0e\n\x06log_id\x18\x02 \x01(\t\"\x8a\x01\n\x0bStoredEvent\x12\x10\n\x08\x65nvelope\x18\x01 \x01(\x0c\x12\x10\n\x08sequence\x18\x02 \x01(\x04\x12\x13\n\x0breceived_at\x18\x03 \x01(\x03\x12\x0e\n\x06log_id\x18\x04 \x01(\t\x12\x10\n\x08\x65vent_id\x18\x05 \x01(\t\x12\x12\n\nevent_type\x18\x06 \x01(\t\x12\x0c\n\x04head\x18\x07 \x01(\x04*^\n\x07Outcome\x12\x17\n\x13OUTCOME_UNSPECIFIED\x10\x00\x12\x0c\n\x08\x41\x43\x43\x45PTED\x10\x01\x12\x12\n\x0e\x41LREADY_EXISTS\x10\x02\x12\n\n\x06ORPHAN\x10\x03\x12\x0c\n\x08REJECTED\x10\x04\x32\x82\x01\n\x0bNodeService\x12\x35\n\x07Publish\x12\x0f.node_api.Event\x1a\x19.node_api.PublishResponse\x12<\n\x0fSubscribeEvents\x12\x10.node_api.Cursor\x1a\x15.node_api.StoredEvent0\x01\x42;Z9github.com/eduardokairalla1/EcoaNetwork/internal/protobufb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,12 +32,16 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'node_api_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z9github.com/eduardokairalla1/EcoaNetwork/internal/protobuf'
-  _globals['_OUTCOME']._serialized_start=126
-  _globals['_OUTCOME']._serialized_end=220
+  _globals['_OUTCOME']._serialized_start=308
+  _globals['_OUTCOME']._serialized_end=402
   _globals['_EVENT']._serialized_start=28
   _globals['_EVENT']._serialized_end=53
   _globals['_PUBLISHRESPONSE']._serialized_start=55
   _globals['_PUBLISHRESPONSE']._serialized_end=124
-  _globals['_NODESERVICE']._serialized_start=222
-  _globals['_NODESERVICE']._serialized_end=290
+  _globals['_CURSOR']._serialized_start=126
+  _globals['_CURSOR']._serialized_end=165
+  _globals['_STOREDEVENT']._serialized_start=168
+  _globals['_STOREDEVENT']._serialized_end=306
+  _globals['_NODESERVICE']._serialized_start=405
+  _globals['_NODESERVICE']._serialized_end=535
 # @@protoc_insertion_point(module_scope)

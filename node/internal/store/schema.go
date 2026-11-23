@@ -27,6 +27,14 @@ var cursorsBucket = []byte("cursors")
 var peersBucket = []byte("peers")
 
 
+// infoBucket holds facts about the store itself, such as its log id.
+var infoBucket = []byte("info")
+
+
+// logIDKey is the key of the log id in infoBucket.
+var logIDKey = []byte("logId")
+
+
 // buckets is every bucket New creates.
 var buckets = [][]byte{
 	eventsBucket,
@@ -35,4 +43,5 @@ var buckets = [][]byte{
 	tombstonesBucket,
 	cursorsBucket,
 	peersBucket,
+	infoBucket,
 }

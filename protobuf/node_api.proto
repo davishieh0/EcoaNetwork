@@ -1,6 +1,7 @@
 syntax = "proto3";
 
-// Contract between a gateway and a node; node-to-node sync is a separate file.
+// Contract between a node and the services that reach it over gRPC, gateways
+// and indexers; node-to-node sync is a separate file.
 package node_api;
 
 option go_package = "github.com/eduardokairalla1/EcoaNetwork/internal/protobuf";
@@ -29,7 +30,51 @@ message PublishResponse {
 }
 
 
-// The interface the gateway uses to submit events to a node.
+// Where a reader of the log stands: the last sequence it has, and in which log.
+message Cursor {
+    // The last sequence the reader holds; 0 for the whole log.
+    uint64 after = 1;
+
+    // The log `after` counts in, as the reader last received it; empty the
+    // first time. A node whose log is another one ignores `after` and sends
+    // its log from the start, since that position means nothing in it.
+    string log_id = 2;
+}
+
+
+// One event of the log, with what this node observed about it.
+message StoredEvent {
+    // The envelope byte for byte as it was signed and stored.
+    bytes envelope = 1;
+
+    // This node's position for the event; the next Cursor's `after`.
+    uint64 sequence = 2;
+
+    // When this node accepted the event, in Unix nanoseconds.
+    int64 received_at = 3;
+
+    // The log `sequence` counts in, created at random with the node's store.
+    // It changes only when the node starts over with an empty store.
+    string log_id = 4;
+
+    // The envelope's eventId and eventType, already read by the node.
+    string event_id = 5;
+    string event_type = 6;
+
+    // The last sequence of this node's log when the event was sent; how far
+    // behind the reader is, as head minus sequence.
+    uint64 head = 7;
+}
+
+
+// The interface gateways and indexers use to reach a node.
 service NodeService {
+    // Submits one event, as the gateway does.
     rpc Publish(Event) returns (PublishResponse);
+
+    // Every event after the cursor, in sequence order, then each new one as
+    // it is stored. The stream does not end on its own. A node caps how many
+    // are open at once and refuses one over the cap with RESOURCE_EXHAUSTED;
+    // the reader tries again later.
+    rpc SubscribeEvents(Cursor) returns (stream StoredEvent);
 }

@@ -272,3 +272,54 @@ func TestEventsSinceStopsAtTheLimit(t *testing.T) {
 		t.Fatalf("last = %q, want evt_b", found[1].Raw)
 	}
 }
+
+
+func TestEventsSinceReturnsTheIDAndTheTimeOfReceipt(t *testing.T) {
+	// Arrange
+	s, _ := open(t)
+	add(t, s, "evt_a")
+
+	// Act
+	found, err := s.EventsSince(0, 10)
+
+	// Assert
+	if err != nil || len(found) != 1 {
+		t.Fatalf("EventsSince = %v, %v, want 1 event", found, err)
+	}
+
+	if found[0].ID != "evt_a" || !found[0].ReceivedAt.Equal(receivedAt) {
+		t.Fatalf("event = %s at %v, want evt_a at %v",
+		         found[0].ID, found[0].ReceivedAt, receivedAt)
+	}
+}
+
+
+func TestHeadIsZeroForAnEmptyLog(t *testing.T) {
+	// Arrange
+	s, _ := open(t)
+
+	// Act
+	head, err := s.Head()
+
+	// Assert
+	if err != nil || head != 0 {
+		t.Fatalf("Head = %d, %v, want 0", head, err)
+	}
+}
+
+
+func TestHeadIsTheSequenceOfTheLastEventStored(t *testing.T) {
+	// Arrange
+	s, _ := open(t)
+	add(t, s, "evt_a")
+	add(t, s, "evt_b")
+	add(t, s, "evt_c")
+
+	// Act
+	head, err := s.Head()
+
+	// Assert
+	if err != nil || head != sequenceOf(t, s, "evt_c") {
+		t.Fatalf("Head = %d, %v, want the sequence of evt_c", head, err)
+	}
+}
