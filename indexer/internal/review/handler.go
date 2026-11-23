@@ -30,6 +30,10 @@ type derived struct {
 	Withdrawn bool   `json:"withdrawn"`
 	Edited    *bool  `json:"edited,omitempty"`
 	Truncated bool   `json:"truncated,omitempty"`
+
+	// the votes that count on this very version
+	Endorsements int32 `json:"endorsements"`
+	Disputes     int32 `json:"disputes"`
 }
 
 
@@ -211,6 +215,8 @@ func derivedOf(review Review, id string) derived {
 
 // item is v as the API returns it, with the labels that count on its chain.
 func item(v Version, d derived, labels []label.Applied) respond.Item {
+	d.Endorsements, d.Disputes = v.Endorsements, v.Disputes
+
 	return respond.Item{
 		Envelope: string(v.Envelope),
 		Derived:  d,

@@ -71,9 +71,11 @@ func (r *Repository) HeadsByEntity(ctx context.Context,
 	for _, row := range rows {
 		listed = append(listed, Listed{
 			Version: Version{
-				EventID:    row.Head,
-				Envelope:   row.Envelope,
-				ReceivedAt: row.ReceivedAt,
+				EventID:      row.Head,
+				Envelope:     row.Envelope,
+				ReceivedAt:   row.ReceivedAt,
+				Endorsements: row.Endorsements,
+				Disputes:     row.Disputes,
 			},
 			ChainRoot: row.ChainRoot,
 			Edited:    row.Versions > 1,
@@ -98,9 +100,11 @@ func (r *Repository) ByID(ctx context.Context, id string) (Review, error) {
 
 	review := Review{
 		Version: Version{
-			EventID:    row.EventID,
-			Envelope:   row.Envelope,
-			ReceivedAt: row.ReceivedAt,
+			EventID:      row.EventID,
+			Envelope:     row.Envelope,
+			ReceivedAt:   row.ReceivedAt,
+			Endorsements: row.Endorsements,
+			Disputes:     row.Disputes,
 		},
 		ChainRoot: row.ChainRoot,
 		Withdrawn: row.Withdrawn,
@@ -128,9 +132,11 @@ func (r *Repository) Versions(ctx context.Context,
 
 	for _, row := range rows {
 		versions = append(versions, Version{
-			EventID:    row.EventID,
-			Envelope:   row.Envelope,
-			ReceivedAt: row.ReceivedAt,
+			EventID:      row.EventID,
+			Envelope:     row.Envelope,
+			ReceivedAt:   row.ReceivedAt,
+			Endorsements: row.Endorsements,
+			Disputes:     row.Disputes,
 		})
 	}
 

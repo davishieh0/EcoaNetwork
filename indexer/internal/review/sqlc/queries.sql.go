@@ -44,18 +44,23 @@ func (q *Queries) ChainEnvelopes(ctx context.Context, chainRoot string) ([][]byt
 const chainVersions = `-- name: ChainVersions :many
 SELECT r.event_id,
        e.envelope,
-       o.received_at
+       o.received_at,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM reviews r
 JOIN events e ON e.event_id = r.event_id
 LEFT JOIN event_observations o ON o.event_id = r.event_id
+LEFT JOIN version_votes t ON t.version = r.event_id
 WHERE r.chain_root = $1
 ORDER BY r.created_at, r.event_id
 `
 
 type ChainVersionsRow struct {
-	EventID    string
-	Envelope   []byte
-	ReceivedAt *time.Time
+	EventID      string
+	Envelope     []byte
+	ReceivedAt   *time.Time
+	Endorsements int32
+	Disputes     int32
 }
 
 // Every version of a chain, forks included, oldest first.
@@ -68,7 +73,13 @@ func (q *Queries) ChainVersions(ctx context.Context, chainRoot string) ([]ChainV
 	var items []ChainVersionsRow
 	for rows.Next() {
 		var i ChainVersionsRow
-		if err := rows.Scan(&i.EventID, &i.Envelope, &i.ReceivedAt); err != nil {
+		if err := rows.Scan(
+			&i.EventID,
+			&i.Envelope,
+			&i.ReceivedAt,
+			&i.Endorsements,
+			&i.Disputes,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -87,10 +98,13 @@ SELECT c.chain_root,
        e.envelope,
        o.received_at,
        (SELECT count(*) FROM reviews v WHERE v.chain_root = c.chain_root)
-           AS versions
+           AS versions,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM review_chains c
 JOIN events e ON e.event_id = c.head
 LEFT JOIN event_observations o ON o.event_id = c.head
+LEFT JOIN version_votes t ON t.version = c.head
 WHERE c.entity = $1
   AND NOT c.withdrawn
   AND NOT c.truncated
@@ -124,6 +138,8 @@ type HeadsByEntityRow struct {
 	Envelope       []byte
 	ReceivedAt     *time.Time
 	Versions       int64
+	Endorsements   int32
+	Disputes       int32
 }
 
 // The queries of the reviews. `make sqlc` turns each into a function of the
@@ -154,6 +170,8 @@ func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([
 			&i.Envelope,
 			&i.ReceivedAt,
 			&i.Versions,
+			&i.Endorsements,
+			&i.Disputes,
 		); err != nil {
 			return nil, err
 		}
@@ -189,22 +207,27 @@ SELECT r.event_id,
        c.withdrawn,
        c.truncated,
        e.envelope,
-       o.received_at
+       o.received_at,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM reviews r
 JOIN review_chains c ON c.chain_root = r.chain_root
 JOIN events e ON e.event_id = r.event_id
 LEFT JOIN event_observations o ON o.event_id = r.event_id
+LEFT JOIN version_votes t ON t.version = r.event_id
 WHERE r.event_id = $1
 `
 
 type ReviewByIDRow struct {
-	EventID    string
-	ChainRoot  string
-	Head       *string
-	Withdrawn  bool
-	Truncated  bool
-	Envelope   []byte
-	ReceivedAt *time.Time
+	EventID      string
+	ChainRoot    string
+	Head         *string
+	Withdrawn    bool
+	Truncated    bool
+	Envelope     []byte
+	ReceivedAt   *time.Time
+	Endorsements int32
+	Disputes     int32
 }
 
 // One version, with the state of its chain.
@@ -219,6 +242,8 @@ func (q *Queries) ReviewByID(ctx context.Context, eventID string) (ReviewByIDRow
 		&i.Truncated,
 		&i.Envelope,
 		&i.ReceivedAt,
+		&i.Endorsements,
+		&i.Disputes,
 	)
 	return i, err
 }

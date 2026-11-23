@@ -11,10 +11,13 @@ SELECT c.chain_root,
        e.envelope,
        o.received_at,
        (SELECT count(*) FROM reviews v WHERE v.chain_root = c.chain_root)
-           AS versions
+           AS versions,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM review_chains c
 JOIN events e ON e.event_id = c.head
 LEFT JOIN event_observations o ON o.event_id = c.head
+LEFT JOIN version_votes t ON t.version = c.head
 WHERE c.entity = sqlc.arg(entity)
   AND NOT c.withdrawn
   AND NOT c.truncated
@@ -39,21 +42,27 @@ SELECT r.event_id,
        c.withdrawn,
        c.truncated,
        e.envelope,
-       o.received_at
+       o.received_at,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM reviews r
 JOIN review_chains c ON c.chain_root = r.chain_root
 JOIN events e ON e.event_id = r.event_id
 LEFT JOIN event_observations o ON o.event_id = r.event_id
+LEFT JOIN version_votes t ON t.version = r.event_id
 WHERE r.event_id = $1;
 
 -- name: ChainVersions :many
 -- Every version of a chain, forks included, oldest first.
 SELECT r.event_id,
        e.envelope,
-       o.received_at
+       o.received_at,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes
 FROM reviews r
 JOIN events e ON e.event_id = r.event_id
 LEFT JOIN event_observations o ON o.event_id = r.event_id
+LEFT JOIN version_votes t ON t.version = r.event_id
 WHERE r.chain_root = $1
 ORDER BY r.created_at, r.event_id;
 

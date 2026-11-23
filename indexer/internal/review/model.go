@@ -20,6 +20,10 @@ type Version struct {
 
 	// ReceivedAt is when the network had it, nil when no node reported it.
 	ReceivedAt *time.Time
+
+	// Endorsements and Disputes are the votes that count on this version:
+	// one per voter, the latest, and never a vote on another version.
+	Endorsements, Disputes int32
 }
 
 
