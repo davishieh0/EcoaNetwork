@@ -48,6 +48,16 @@ type Label struct {
 	Note      *string
 	Revoked   bool
 	Proposal  *string
+	Profile   *string
+}
+
+type Profile struct {
+	Identity    string
+	EventID     string
+	DisplayName *string
+	Bio         *string
+	Lang        *string
+	CreatedAt   time.Time
 }
 
 type ProjectorCursor struct {
