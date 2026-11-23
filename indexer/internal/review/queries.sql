@@ -49,3 +49,42 @@ JOIN events e ON e.event_id = r.event_id
 LEFT JOIN event_observations o ON o.event_id = r.event_id
 WHERE r.chain_root = $1
 ORDER BY r.created_at, r.event_id;
+
+-- name: SaveVersion :exec
+-- Stores one version of a review.
+INSERT INTO reviews (event_id, chain_root, replaces, author, entity, rating,
+                     title, body, lang, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);
+
+-- name: SaveChain :exec
+-- Opens the chain a review.created starts, with the review as its head.
+INSERT INTO review_chains (chain_root, entity, head, created_at)
+VALUES (sqlc.arg(chain_root), sqlc.arg(entity), sqlc.arg(chain_root),
+        sqlc.arg(created_at));
+
+-- name: PlaceOf :one
+-- The chain a version belongs to, and the entity its root reviews.
+SELECT chain_root, entity FROM reviews WHERE event_id = $1;
+
+-- name: SaveWithdrawal :exec
+-- Stores one review.withdrawn.
+INSERT INTO review_withdrawals (event_id, chain_root, target)
+VALUES ($1, $2, $3);
+
+-- name: ChainEnvelopes :many
+-- Every event that decides a chain: its versions and its withdrawals.
+SELECT e.envelope
+FROM reviews r JOIN events e ON e.event_id = r.event_id
+WHERE r.chain_root = $1
+UNION ALL
+SELECT e.envelope
+FROM review_withdrawals w JOIN events e ON e.event_id = w.event_id
+WHERE w.chain_root = $1;
+
+-- name: UpdateChain :exec
+-- Records what the rules resolved for a chain.
+UPDATE review_chains
+SET head = sqlc.narg(head),
+    withdrawn = sqlc.arg(withdrawn),
+    truncated = sqlc.arg(truncated)
+WHERE chain_root = sqlc.arg(chain_root);

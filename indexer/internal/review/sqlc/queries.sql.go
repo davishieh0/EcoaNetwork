@@ -10,6 +10,37 @@ import (
 	"time"
 )
 
+const chainEnvelopes = `-- name: ChainEnvelopes :many
+SELECT e.envelope
+FROM reviews r JOIN events e ON e.event_id = r.event_id
+WHERE r.chain_root = $1
+UNION ALL
+SELECT e.envelope
+FROM review_withdrawals w JOIN events e ON e.event_id = w.event_id
+WHERE w.chain_root = $1
+`
+
+// Every event that decides a chain: its versions and its withdrawals.
+func (q *Queries) ChainEnvelopes(ctx context.Context, chainRoot string) ([][]byte, error) {
+	rows, err := q.db.Query(ctx, chainEnvelopes, chainRoot)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items [][]byte
+	for rows.Next() {
+		var envelope []byte
+		if err := rows.Scan(&envelope); err != nil {
+			return nil, err
+		}
+		items = append(items, envelope)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const chainVersions = `-- name: ChainVersions :many
 SELECT r.event_id,
        e.envelope,
@@ -123,6 +154,23 @@ func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([
 	return items, nil
 }
 
+const placeOf = `-- name: PlaceOf :one
+SELECT chain_root, entity FROM reviews WHERE event_id = $1
+`
+
+type PlaceOfRow struct {
+	ChainRoot string
+	Entity    string
+}
+
+// The chain a version belongs to, and the entity its root reviews.
+func (q *Queries) PlaceOf(ctx context.Context, eventID string) (PlaceOfRow, error) {
+	row := q.db.QueryRow(ctx, placeOf, eventID)
+	var i PlaceOfRow
+	err := row.Scan(&i.ChainRoot, &i.Entity)
+	return i, err
+}
+
 const reviewByID = `-- name: ReviewByID :one
 SELECT r.event_id,
        r.chain_root,
@@ -162,4 +210,101 @@ func (q *Queries) ReviewByID(ctx context.Context, eventID string) (ReviewByIDRow
 		&i.ReceivedAt,
 	)
 	return i, err
+}
+
+const saveChain = `-- name: SaveChain :exec
+INSERT INTO review_chains (chain_root, entity, head, created_at)
+VALUES ($1, $2, $1,
+        $3)
+`
+
+type SaveChainParams struct {
+	ChainRoot string
+	Entity    string
+	CreatedAt time.Time
+}
+
+// Opens the chain a review.created starts, with the review as its head.
+func (q *Queries) SaveChain(ctx context.Context, arg SaveChainParams) error {
+	_, err := q.db.Exec(ctx, saveChain, arg.ChainRoot, arg.Entity, arg.CreatedAt)
+	return err
+}
+
+const saveVersion = `-- name: SaveVersion :exec
+INSERT INTO reviews (event_id, chain_root, replaces, author, entity, rating,
+                     title, body, lang, created_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+`
+
+type SaveVersionParams struct {
+	EventID   string
+	ChainRoot string
+	Replaces  *string
+	Author    string
+	Entity    string
+	Rating    int16
+	Title     *string
+	Body      string
+	Lang      *string
+	CreatedAt time.Time
+}
+
+// Stores one version of a review.
+func (q *Queries) SaveVersion(ctx context.Context, arg SaveVersionParams) error {
+	_, err := q.db.Exec(ctx, saveVersion,
+		arg.EventID,
+		arg.ChainRoot,
+		arg.Replaces,
+		arg.Author,
+		arg.Entity,
+		arg.Rating,
+		arg.Title,
+		arg.Body,
+		arg.Lang,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const saveWithdrawal = `-- name: SaveWithdrawal :exec
+INSERT INTO review_withdrawals (event_id, chain_root, target)
+VALUES ($1, $2, $3)
+`
+
+type SaveWithdrawalParams struct {
+	EventID   string
+	ChainRoot string
+	Target    string
+}
+
+// Stores one review.withdrawn.
+func (q *Queries) SaveWithdrawal(ctx context.Context, arg SaveWithdrawalParams) error {
+	_, err := q.db.Exec(ctx, saveWithdrawal, arg.EventID, arg.ChainRoot, arg.Target)
+	return err
+}
+
+const updateChain = `-- name: UpdateChain :exec
+UPDATE review_chains
+SET head = $1,
+    withdrawn = $2,
+    truncated = $3
+WHERE chain_root = $4
+`
+
+type UpdateChainParams struct {
+	Head      *string
+	Withdrawn bool
+	Truncated bool
+	ChainRoot string
+}
+
+// Records what the rules resolved for a chain.
+func (q *Queries) UpdateChain(ctx context.Context, arg UpdateChainParams) error {
+	_, err := q.db.Exec(ctx, updateChain,
+		arg.Head,
+		arg.Withdrawn,
+		arg.Truncated,
+		arg.ChainRoot,
+	)
+	return err
 }
