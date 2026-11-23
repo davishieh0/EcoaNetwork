@@ -533,24 +533,24 @@ the same shape. Field names are camelCase, as in the protocol.
 message, so the gateway can pass it on or translate it without converting:
 
 ```json
-{ "error": "event_not_found", "message": "No event with this id." }
+{ "error": "event_not_found_error", "message": "No event with this id." }
 ```
 
 | Case | Status | `error` |
 |---|---|---|
-| malformed id | 400 | `invalid_event_id`, `invalid_entity_id` |
-| malformed page | 400 | `invalid_limit`, `invalid_cursor` |
-| nothing with that id | 404 | `event_not_found`, `review_not_found`, `entity_not_found`, `profile_not_found` |
-| not a did:key, or `?ids=` empty or over 100 | 400 | `invalid_identity`, `invalid_ids` |
-| `q` longer than 120 characters | 400 | `invalid_query` |
-| a review its author withdrew | 410 | `review_withdrawn` |
-| removed by a followed moderator | 451 | `removed_by_moderation` |
-| `?labeled=` other than `show` | 400 | `invalid_labeled` |
-| the database does not answer | 503 | `database_unavailable` |
+| malformed id | 400 | `invalid_event_id_error`, `invalid_entity_id_error` |
+| malformed page | 400 | `invalid_limit_error`, `invalid_cursor_error` |
+| nothing with that id | 404 | `event_not_found_error`, `review_not_found_error`, `entity_not_found_error`, `profile_not_found_error` |
+| not a did:key, or `?ids=` empty or over 100 | 400 | `invalid_identity_error`, `invalid_ids_error` |
+| `q` longer than 120 characters | 400 | `invalid_query_error` |
+| a review its author withdrew | 410 | `review_withdrawn_error` |
+| removed by a followed moderator | 451 | `removed_by_moderation_error` |
+| `?labeled=` other than `show` | 400 | `invalid_labeled_error` |
+| the database does not answer | 503 | `database_unavailable_error` |
 | anything else | 500 | `internal_error` |
 
 `/health` answers 200 when the database answers, and 503
-`database_unavailable` when it does not. The API starts even with the
+`database_unavailable_error` when it does not. The API starts even with the
 database down, and recovers when it comes back.
 
 **Every version carries its votes** in `derived`: `endorsements` and
@@ -589,7 +589,7 @@ indexer, following others, shows others.
 
 | Label (by a followed moderator) | Lists | The item's own route, `/events/{eventId}` |
 |---|---|---|
-| `illegal`, `personal-data` | left out, even with `?labeled=show` | `451 removed_by_moderation`, nothing of it; its responses too |
+| `illegal`, `personal-data` | left out, even with `?labeled=show` | `451 removed_by_moderation_error`, nothing of it; its responses too |
 | `spam`, `harassment`, `impersonation` | left out, unless `?labeled=show`, then marked | shown, marked: asking for it by id is asking to see it |
 | `off-topic`, `other` | shown, marked | shown, marked |
 

@@ -91,7 +91,7 @@ func FromRequest(w http.ResponseWriter, r *http.Request) (Page, bool) {
 	if raw := r.URL.Query().Get("limit"); raw != "" {
 		limit, err := strconv.Atoi(raw)
 		if err != nil || limit < 1 || limit > maxLimit {
-			respond.Error(w, http.StatusBadRequest, "invalid_limit",
+			respond.Error(w, http.StatusBadRequest, "invalid_limit_error",
 			              "limit is a whole number from 1 to 100.")
 			return Page{}, false
 		}
@@ -102,7 +102,7 @@ func FromRequest(w http.ResponseWriter, r *http.Request) (Page, bool) {
 	if raw := r.URL.Query().Get("after"); raw != "" {
 		cursor, err := Decode(raw)
 		if err != nil {
-			respond.Error(w, http.StatusBadRequest, "invalid_cursor",
+			respond.Error(w, http.StatusBadRequest, "invalid_cursor_error",
 			              "after is the next of a previous page.")
 			return Page{}, false
 		}

@@ -59,7 +59,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	did := r.PathValue("did")
 
 	if _, err := identity.Parse(did); err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid_identity",
+		respond.Error(w, http.StatusBadRequest, "invalid_identity_error",
 		              "Not a did:key for an Ed25519 key.")
 		return
 	}
@@ -76,7 +76,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(items) == 0 {
-		respond.Error(w, http.StatusNotFound, "profile_not_found",
+		respond.Error(w, http.StatusNotFound, "profile_not_found_error",
 		              "This identity published no profile.")
 		return
 	}
@@ -98,14 +98,14 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(dids) == 0 || len(dids) > maxIDs {
-		respond.Error(w, http.StatusBadRequest, "invalid_ids",
+		respond.Error(w, http.StatusBadRequest, "invalid_ids_error",
 		              "ids is from 1 to 100 did:key, comma-separated.")
 		return
 	}
 
 	for _, did := range dids {
 		if _, err := identity.Parse(did); err != nil {
-			respond.Error(w, http.StatusBadRequest, "invalid_identity",
+			respond.Error(w, http.StatusBadRequest, "invalid_identity_error",
 			              "Not a did:key for an Ed25519 key: "+did)
 			return
 		}

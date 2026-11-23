@@ -90,7 +90,7 @@ func TestGetAnswers404ForAnUnknownEvent(t *testing.T) {
 
 	// Assert
 	if rec.Code != http.StatusNotFound ||
-	   !bytes.Contains(rec.Body.Bytes(), []byte(`"error":"event_not_found"`)) {
+	   !bytes.Contains(rec.Body.Bytes(), []byte(`"error":"event_not_found_error"`)) {
 		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
 	}
 }
@@ -105,7 +105,7 @@ func TestGetAnswers400ForAMalformedID(t *testing.T) {
 			// Assert
 			if rec.Code != http.StatusBadRequest ||
 			   !bytes.Contains(rec.Body.Bytes(),
-			                   []byte(`"error":"invalid_event_id"`)) {
+			                   []byte(`"error":"invalid_event_id_error"`)) {
 				t.Fatalf("GET %s = %d %q", bad, rec.Code, rec.Body.String())
 			}
 		})
@@ -127,7 +127,7 @@ func TestGetAnswers503WhenTheDatabaseIsUnreachable(t *testing.T) {
 
 	// Assert
 	if rec.Code != http.StatusServiceUnavailable ||
-	   !bytes.Contains(rec.Body.Bytes(), []byte(`"error":"database_unavailable"`)) {
+	   !bytes.Contains(rec.Body.Bytes(), []byte(`"error":"database_unavailable_error"`)) {
 		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
 	}
 }

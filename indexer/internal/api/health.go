@@ -34,7 +34,7 @@ func health(db pinger) http.HandlerFunc {
 		if err := db.Ping(ctx); err != nil {
 			slog.Warn("health: database unavailable", "err", err)
 			respond.Error(w, http.StatusServiceUnavailable,
-			              "database_unavailable",
+			              "database_unavailable_error",
 			              "The database does not answer.")
 			return
 		}

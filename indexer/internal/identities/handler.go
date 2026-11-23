@@ -29,7 +29,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	did := r.PathValue("did")
 
 	if _, err := identity.Parse(did); err != nil {
-		respond.Error(w, http.StatusBadRequest, "invalid_identity",
+		respond.Error(w, http.StatusBadRequest, "invalid_identity_error",
 		              "Not a did:key for an Ed25519 key.")
 		return
 	}

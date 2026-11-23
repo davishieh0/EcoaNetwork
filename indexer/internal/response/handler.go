@@ -81,7 +81,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
-		respond.Error(w, http.StatusBadRequest, "invalid_event_id",
+		respond.Error(w, http.StatusBadRequest, "invalid_event_id_error",
 		              "An eventId is evt_ and 52 base32 characters.")
 		return
 	}
@@ -98,7 +98,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 
 	rev, err := h.reviews.ByID(r.Context(), id)
 	if errors.Is(err, review.ErrNotFound) {
-		respond.Error(w, http.StatusNotFound, "review_not_found",
+		respond.Error(w, http.StatusNotFound, "review_not_found_error",
 		              "No review with this id.")
 		return
 	}
@@ -110,7 +110,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 
 	// the review left the reading path, and its conversation with it
 	if rev.Withdrawn {
-		respond.Error(w, http.StatusGone, "review_withdrawn",
+		respond.Error(w, http.StatusGone, "review_withdrawn_error",
 		              "This review was withdrawn by its author.")
 		return
 	}

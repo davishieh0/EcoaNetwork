@@ -39,14 +39,14 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
-		respond.Error(w, http.StatusBadRequest, "invalid_event_id",
+		respond.Error(w, http.StatusBadRequest, "invalid_event_id_error",
 		              "An eventId is evt_ and 52 base32 characters.")
 		return
 	}
 
 	e, err := h.repo.ByID(r.Context(), id)
 	if errors.Is(err, ErrNotFound) {
-		respond.Error(w, http.StatusNotFound, "event_not_found",
+		respond.Error(w, http.StatusNotFound, "event_not_found_error",
 		              "No event with this id.")
 		return
 	}
