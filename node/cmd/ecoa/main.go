@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/node"
@@ -117,7 +118,7 @@ func peerConfig(cfg config.Config, db *store.Store) (p2p.Config, error) {
 		ConnLow:        cfg.ConnLow,
 		ConnHigh:       cfg.ConnHigh,
 		OnDialed: func(addr string) {
-			if err := db.AddPeer(addr); err != nil {
+			if err := db.AddPeer(addr, time.Now()); err != nil {
 				slog.Warn("remember peer", "addr", addr, "err", err)
 			}
 		},

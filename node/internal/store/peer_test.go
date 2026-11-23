@@ -2,13 +2,27 @@ package store
 
 
 import (
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
 
 
+// --- GLOBALS ---
+
+// now is the time the tests read the known peers at.
+var now = time.Date(2026, 11, 23, 12, 0, 0, 0, time.UTC)
+
+
 // --- CODE ---
+
+// addr is a multiaddr of the peer named id.
+func addr(port int, id string) string {
+	return fmt.Sprintf("/ip4/1.1.1.1/tcp/%d/p2p/%s", port, id)
+}
+
 
 func TestKnownPeersSurvivesAReopen(t *testing.T) {
 	// Arrange
@@ -19,8 +33,8 @@ func TestKnownPeersSurvivesAReopen(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	for _, addr := range []string{"/ip4/1.1.1.1/tcp/1", "/ip4/1.1.1.1/tcp/1"} {
-		if err := s.AddPeer(addr); err != nil {
+	for range 2 {
+		if err := s.AddPeer(addr(1, "a"), now); err != nil {
 			t.Fatalf("AddPeer: %v", err)
 		}
 	}
@@ -37,7 +51,7 @@ func TestKnownPeersSurvivesAReopen(t *testing.T) {
 	got, err := reopened.KnownPeers()
 
 	// Assert
-	want := []string{"/ip4/1.1.1.1/tcp/1"}
+	want := []string{addr(1, "a")}
 	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("KnownPeers = %v, %v, want %v", got, err, want)
 	}

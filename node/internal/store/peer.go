@@ -2,16 +2,21 @@ package store
 
 
 import (
+	"encoding/binary"
+	"time"
+
 	bolt "go.etcd.io/bbolt"
 )
 
 
 // --- CODE ---
 
-// AddPeer remembers the multiaddr of a peer this node connected to.
-func (s *Store) AddPeer(addr string) error {
+// AddPeer remembers the multiaddr of a peer, seen at the given time.
+func (s *Store) AddPeer(addr string, seen time.Time) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket(peersBucket).Put([]byte(addr), []byte{})
+		value := binary.BigEndian.AppendUint64(nil, uint64(seen.Unix()))
+
+		return tx.Bucket(peersBucket).Put([]byte(addr), value)
 	})
 }
 

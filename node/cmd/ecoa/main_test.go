@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/internal/store"
@@ -61,7 +62,7 @@ func TestPeerConfigDialsTheLastSessionAndRemembersThisOne(t *testing.T) {
 	}
 	defer db.Close()
 
-	if err := db.AddPeer("/ip4/1.1.1.1/tcp/1"); err != nil {
+	if err := db.AddPeer("/ip4/1.1.1.1/tcp/1", time.Now().Add(-time.Hour)); err != nil {
 		t.Fatalf("AddPeer: %v", err)
 	}
 
