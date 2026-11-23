@@ -38,6 +38,8 @@ build/
 !.env.example
 *.pem
 *.key
+# the local network's fixed node keys, for this machine only (infra/local)
+!infra/local/configs/nodes/*.key
 *_privatekey*
 
 # --- Logs ---
