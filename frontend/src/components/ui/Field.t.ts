@@ -11,6 +11,8 @@ export type FieldProps = {
   /** Guidance shown under the control, replaced by `error` when set. */
   hint?: string
   error?: string
+  /** Offers a visibility toggle when the input type is password. */
+  revealPassword?: boolean
   /** Classes for the wrapper; the control keeps its own. */
   className?: string
   /** Overlays the control, for a suggestion list. */
