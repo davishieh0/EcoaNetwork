@@ -599,7 +599,7 @@ The buckets:
 - `meta`: `eventId` → sequence and local receive time (step 11).
 - `cursors`: peer ID → the last cursor received from that peer.
 - `tombstones`: `eventId` → the author and the time of pruning. It is created empty, because nodes do not prune, but the format exists.
-- `peers`: the multiaddr of every peer the node reached, dialed first on the next start (§15.6).
+- `peers`: where every peer the node connected to listens, either way, and when it was last seen; dialed first on the next start, and again while the node has few peers (§15.6).
 - `info`: facts about the store itself. Today only the `logId`, 16 random bytes in hex, created with the store and never changed. Sequences are local and restart at 1 when a node loses its data, so a reader holding a cursor needs to know which log it counts in; when the `logId` changes, its cursor means nothing and it reads again from 0. Added for the indexer's stream (`indexer/docs/design.md`).
 
 The identity state of the node (rotations and revocations) has no bucket. It is rebuilt on every start by replaying `log` in sequence order, which is also the order the node observed them in (§2.3), so the state cannot disagree with the log.
@@ -637,7 +637,10 @@ The host had a new key on every run and no explicit limits.
 
 `protocol.md` asks a node that has run before to try its last peers before the bootstrap list.
 
-- **Peers are remembered in the `peers` bucket** as multiaddrs, when the node reaches them, and are dialed first on the next start.
+- **Peers are remembered in the `peers` bucket**, whichever side opened the connection, and are dialed first on the next start, the most recently seen first. Remembering only the peers a node dialed left a bootstrap node alone after a restart: it had dialed nobody, so it knew nobody.
+- **What is remembered is where a peer listens, as it reports through identify**, never the address of the connection. For a peer that dialed in, that address is the port its system picked for the call, which nothing listens on once the connection closes. Unspecified addresses (`0.0.0.0`) and relays are not remembered.
+- **At most 64 peers, each forgotten after 30 days unseen.** Anyone can connect to a public node and leave addresses behind; the cap and the expiry keep the list from filling with them, and each dial still has its own timeout. Each address keeps when its peer was last seen; one remembered before times were kept ages from its first read.
+- **A node with fewer peers than `CONN_LOW` dials the ones it knows every 30 seconds**, and the bootstrap list with them. Dialing only at start left a node that came up while its peers were away alone for good; now either side finds the other again when it comes back, in whatever order they went down and came up.
 - **`BOOTSTRAP_ADDRS` replaces the embedded list; `BOOTSTRAP_EXTRA_ADDRS` adds to it.** The embedded list is empty until a public node exists.
 - **Each dial has its own timeout.** A dead peer in any list delays the start by that timeout and no more.
 - **Rejected: a DNS seed and a DHT.** Both are out of v1 (`protocol.md` → Bootstrap & peer discovery).
