@@ -9,6 +9,7 @@ from fastapi import Query
 from fastapi import Response
 from src.clients.indexer import IndexerClient
 from src.dependencies.indexer import get_indexer
+from src.schemas.reads import MODERATORS_HELP
 from src.schemas.reads import Entity
 from src.schemas.reads import EntityPage
 from src.schemas.reads import ItemPage
@@ -30,12 +31,14 @@ async def search(
                                             'with or without accents.'),
     limit: str | None = Query(None, description='1 to 100; 20 by default.'),
     after: str | None = Query(None, description='The next of a page.'),
+    moderators: str | None = Query(None, description=MODERATORS_HELP),
     indexer: IndexerClient = Depends(get_indexer),
 ) -> Response:
     """
     Entities with a name that holds q, newest first; every entity without q.
     """
-    return relay(await indexer.search_entities(q=q, limit=limit, after=after))
+    return relay(await indexer.search_entities(q=q, limit=limit, after=after,
+                       moderators=moderators))
 
 
 @router.get('/{entity}',
@@ -44,12 +47,14 @@ async def search(
             responses=read_responses(400, 404))
 async def get_entity(
     entity: str,
+    moderators: str | None = Query(None, description=MODERATORS_HELP),
     indexer: IndexerClient = Depends(get_indexer),
 ) -> Response:
     """
     The entity and the value of each of its fields.
     """
-    return relay(await indexer.get_entity(entity=entity))
+    return relay(await indexer.get_entity(entity=entity,
+                       moderators=moderators))
 
 
 @router.get('/{entity}/reviews',
@@ -62,6 +67,7 @@ async def list_reviews(
     after: str | None = Query(None, description='The next of a page.'),
     labeled: str | None = Query(None, description='show, to see what '
                                                   'moderation hides, marked.'),
+    moderators: str | None = Query(None, description=MODERATORS_HELP),
     indexer: IndexerClient = Depends(get_indexer),
 ) -> Response:
     """
@@ -69,4 +75,5 @@ async def list_reviews(
     """
     return relay(await indexer.list_entity_reviews(
         entity=entity, limit=limit, after=after, labeled=labeled,
+        moderators=moderators,
     ))

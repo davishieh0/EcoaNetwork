@@ -18,6 +18,11 @@ from typing import Any
 
 # --- GLOBALS ---
 # what each failure the indexer explains means, by status
+# what ?moderators= means on every read route that has it
+MODERATORS_HELP = ('The moderators this client follows, comma-separated '
+                   'did:key, up to 20; empty follows nobody; absent follows '
+                   'the list the indexer follows.')
+
 PASSED_ON = {
     400: 'A malformed id or parameter: `invalid_event_id_error`, '
          '`invalid_entity_id_error`, `invalid_identity_error`, '
