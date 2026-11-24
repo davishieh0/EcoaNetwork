@@ -78,7 +78,7 @@ func Handler(pool *pgxpool.Pool,
 	events := event.NewHandler(event.NewRepository(pool), moderation)
 	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
 	profiles := profile.NewHandler(profile.NewRepository(pool), moderation)
-	keys := identities.NewHandler(identities.NewRepository(pool))
+	keys := identities.NewHandler(identities.NewRepository(pool), recognition)
 	reviews := review.NewHandler(review.NewRepository(pool), moderation,
 	                             recognition, ranking)
 	responses := response.NewHandler(response.NewRepository(pool),
