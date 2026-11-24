@@ -17,3 +17,42 @@ WHERE event_id = sqlc.arg(claim)
     = COALESCE((SELECT i.identity FROM identities i
                 WHERE i.key = sqlc.arg(issuer)),
                sqlc.arg(issuer)::text);
+
+-- name: DueChecks :many
+-- The domain claims whose lookup is due: never checked, verified longer ago
+-- than recheck, or failed longer ago than retry. Only the ones that could
+-- count: self-signed, live, about a domain.
+SELECT c.event_id, c.subject, c.entity::text AS entity
+FROM claims c
+LEFT JOIN claim_checks k USING (event_id)
+WHERE c.claim_type = 'domain'
+  AND c.issuer = c.subject
+  AND NOT c.revoked
+  AND c.expires_at > sqlc.arg(now)
+  AND c.entity LIKE 'domain:%'
+  AND (k.event_id IS NULL
+       OR (k.verified AND k.checked_at < sqlc.arg(recheck_before))
+       OR (NOT k.verified AND k.checked_at < sqlc.arg(retry_before)))
+ORDER BY k.checked_at NULLS FIRST, c.event_id
+LIMIT sqlc.arg(most);
+
+-- name: SaveCheck :exec
+-- Records a lookup. A pass keeps the time it first passed without a gap; a
+-- failure forgets it, so a representative who lapsed starts over.
+INSERT INTO claim_checks (event_id, verified, dnssec, checked_at,
+                          verified_since, detail)
+VALUES (sqlc.arg(event_id), sqlc.arg(verified)::boolean, sqlc.arg(dnssec),
+        sqlc.arg(checked_at)::timestamptz,
+        CASE WHEN sqlc.arg(verified)::boolean
+             THEN sqlc.arg(checked_at)::timestamptz END,
+        sqlc.arg(detail))
+ON CONFLICT (event_id) DO UPDATE
+SET verified       = EXCLUDED.verified,
+    dnssec         = EXCLUDED.dnssec,
+    checked_at     = EXCLUDED.checked_at,
+    verified_since = CASE
+        WHEN NOT EXCLUDED.verified THEN NULL
+        WHEN claim_checks.verified THEN claim_checks.verified_since
+        ELSE EXCLUDED.checked_at
+    END,
+    detail         = EXCLUDED.detail;

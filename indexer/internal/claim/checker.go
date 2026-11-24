@@ -6,17 +6,38 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
+	"time"
+
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim/sqlc"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 
 // --- CONSTANTS ---
 
 const (
+	// Recheck is how long a passing lookup holds before it is done again: a
+	// domain changes hands, and the claim is live state, not a fact.
+	Recheck = 30 * 24 * time.Hour
+
+	// retry is how long a failing lookup waits before it is tried again.
+	retry = 30 * time.Second
+
+	// every is how often the checker looks for lookups due.
+	every = 10 * time.Second
+
+	// batch is the most lookups one round does.
+	batch = 50
+
+	// lookupTimeout bounds one lookup.
+	lookupTimeout = 5 * time.Second
+
 	// recordPrefix names the TXT record a domain vouches through, and what
 	// its value starts with.
 	recordPrefix = "_ecoa-verify."
@@ -189,4 +210,81 @@ func Verify(ctx context.Context,
 	}
 
 	return false, answer.DNSSEC, "no record at " + name + " names this identity"
+}
+
+
+// Checker looks up the domain claims due, and records what it found.
+type Checker struct {
+	queries *sqlc.Queries
+	lookup  Lookup
+	now     func() time.Time
+}
+
+
+// NewChecker returns a checker writing to pool, resolving through lookup.
+func NewChecker(pool *pgxpool.Pool, lookup Lookup) *Checker {
+	return &Checker{queries: sqlc.New(pool), lookup: lookup, now: time.Now}
+}
+
+
+// Run checks the claims due, round after round, until ctx ends. A round
+// that fails is logged and the next one tries again.
+func (c *Checker) Run(ctx context.Context) {
+	ticker := time.NewTicker(every)
+	defer ticker.Stop()
+
+	for {
+		if err := c.Round(ctx); err != nil && ctx.Err() == nil {
+			slog.Warn("claim checks", "err", err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+
+// Round looks up every claim due now, at most a batch of them.
+func (c *Checker) Round(ctx context.Context) error {
+	now := c.now()
+
+	due, err := c.queries.DueChecks(ctx, sqlc.DueChecksParams{
+		Now:           now,
+		RecheckBefore: now.Add(-Recheck),
+		RetryBefore:   now.Add(-retry),
+		Most:          batch,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, d := range due {
+		domain := strings.TrimPrefix(d.Entity, "domain:")
+
+		call, cancel := context.WithTimeout(ctx, lookupTimeout)
+		verified, dnssec, detail := Verify(call, c.lookup, domain, d.Subject)
+		cancel()
+
+		err := c.queries.SaveCheck(ctx, sqlc.SaveCheckParams{
+			EventID:   d.EventID,
+			Verified:  verified,
+			Dnssec:    dnssec,
+			CheckedAt: c.now(),
+			Detail:    detail,
+		})
+		if err != nil {
+			return err
+		}
+
+		slog.Info("claim checked",
+		          "eventId", d.EventID,
+		          "domain", domain,
+		          "verified", verified,
+		          "detail", detail)
+	}
+
+	return nil
 }

@@ -10,6 +10,63 @@ import (
 	"time"
 )
 
+const dueChecks = `-- name: DueChecks :many
+SELECT c.event_id, c.subject, c.entity::text AS entity
+FROM claims c
+LEFT JOIN claim_checks k USING (event_id)
+WHERE c.claim_type = 'domain'
+  AND c.issuer = c.subject
+  AND NOT c.revoked
+  AND c.expires_at > $1
+  AND c.entity LIKE 'domain:%'
+  AND (k.event_id IS NULL
+       OR (k.verified AND k.checked_at < $2)
+       OR (NOT k.verified AND k.checked_at < $3))
+ORDER BY k.checked_at NULLS FIRST, c.event_id
+LIMIT $4
+`
+
+type DueChecksParams struct {
+	Now           time.Time
+	RecheckBefore time.Time
+	RetryBefore   time.Time
+	Most          int32
+}
+
+type DueChecksRow struct {
+	EventID string
+	Subject string
+	Entity  string
+}
+
+// The domain claims whose lookup is due: never checked, verified longer ago
+// than recheck, or failed longer ago than retry. Only the ones that could
+// count: self-signed, live, about a domain.
+func (q *Queries) DueChecks(ctx context.Context, arg DueChecksParams) ([]DueChecksRow, error) {
+	rows, err := q.db.Query(ctx, dueChecks,
+		arg.Now,
+		arg.RecheckBefore,
+		arg.RetryBefore,
+		arg.Most,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DueChecksRow
+	for rows.Next() {
+		var i DueChecksRow
+		if err := rows.Scan(&i.EventID, &i.Subject, &i.Entity); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const revokeClaim = `-- name: RevokeClaim :exec
 UPDATE claims SET revoked = true
 WHERE event_id = $1
@@ -29,6 +86,47 @@ type RevokeClaimParams struct {
 // its keys signed each.
 func (q *Queries) RevokeClaim(ctx context.Context, arg RevokeClaimParams) error {
 	_, err := q.db.Exec(ctx, revokeClaim, arg.Claim, arg.Issuer)
+	return err
+}
+
+const saveCheck = `-- name: SaveCheck :exec
+INSERT INTO claim_checks (event_id, verified, dnssec, checked_at,
+                          verified_since, detail)
+VALUES ($1, $2::boolean, $3,
+        $4::timestamptz,
+        CASE WHEN $2::boolean
+             THEN $4::timestamptz END,
+        $5)
+ON CONFLICT (event_id) DO UPDATE
+SET verified       = EXCLUDED.verified,
+    dnssec         = EXCLUDED.dnssec,
+    checked_at     = EXCLUDED.checked_at,
+    verified_since = CASE
+        WHEN NOT EXCLUDED.verified THEN NULL
+        WHEN claim_checks.verified THEN claim_checks.verified_since
+        ELSE EXCLUDED.checked_at
+    END,
+    detail         = EXCLUDED.detail
+`
+
+type SaveCheckParams struct {
+	EventID   string
+	Verified  bool
+	Dnssec    bool
+	CheckedAt time.Time
+	Detail    string
+}
+
+// Records a lookup. A pass keeps the time it first passed without a gap; a
+// failure forgets it, so a representative who lapsed starts over.
+func (q *Queries) SaveCheck(ctx context.Context, arg SaveCheckParams) error {
+	_, err := q.db.Exec(ctx, saveCheck,
+		arg.EventID,
+		arg.Verified,
+		arg.Dnssec,
+		arg.CheckedAt,
+		arg.Detail,
+	)
 	return err
 }
 

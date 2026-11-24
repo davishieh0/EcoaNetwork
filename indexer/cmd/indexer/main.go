@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/api"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database"
@@ -87,7 +88,25 @@ func project(ctx context.Context, cfg config.Config) error {
 	}
 	defer pool.Close()
 
+	// domain claims are looked up beside the projection, writing what this
+	// indexer observed of each
+	go claim.NewChecker(pool, lookupOf(cfg)).Run(ctx)
+
 	return projector.Run(ctx, pool, cfg.NodeAddrs)
+}
+
+
+// lookupOf is how domain claims are resolved: the DNS server when one is
+// set, DNS-over-HTTPS otherwise.
+func lookupOf(cfg config.Config) claim.Lookup {
+	if cfg.DNSServer != "" {
+		slog.Info("claims", "dns", cfg.DNSServer)
+		return claim.Plain{Server: cfg.DNSServer}
+	}
+
+	slog.Info("claims", "doh", cfg.DoHURL)
+
+	return claim.DoH{URL: cfg.DoHURL}
 }
 
 
