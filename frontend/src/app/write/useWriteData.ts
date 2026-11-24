@@ -3,7 +3,7 @@
  */
 
 // --- IMPORTS ---
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { messageOf } from '@/app/forms/messages'
 import { useRouteState } from '@/app/navigation/navigation'
@@ -11,7 +11,7 @@ import type { WritePhase, WriteState } from '@/app/write/Write.t'
 import { publishEvent } from '@/logic/datasource/events'
 import { HttpError } from '@/logic/errors/httpError'
 import { MAX_ENVELOPE, signEnvelope, sizeOf } from '@/logic/protocol/envelope'
-import { loadIdentity } from '@/logic/protocol/identity'
+import { loadIdentity, peekIdentity } from '@/logic/protocol/identity'
 import { normalizeEntity } from '@/logic/protocol/entity'
 import { checkReview } from '@/logic/protocol/review'
 import type { EntityKind } from '@/logic/protocol/entity.t'
@@ -91,6 +91,15 @@ function now(): string {
 export function useWriteData() {
   const session = useSession()
   const handed = useRouteState<'write'>()
+
+  // whether this browser has an identity to sign with; undefined until read
+  const [hasIdentity, setHasIdentity] = useState<boolean | undefined>()
+  useEffect(() => {
+    peekIdentity().then(
+      (did) => setHasIdentity(did !== null),
+      () => setHasIdentity(false),
+    )
+  }, [])
   const [draft, setDraft] = useState<ReviewDraft>(() => draftFor(handed))
   const [phase, setPhase] = useState<WritePhase>({
     name: 'editing',
@@ -207,6 +216,8 @@ export function useWriteData() {
   }
 
   return {
+    hasIdentity,
+    identityReady: () => setHasIdentity(true),
     account: session.status === 'signed-in' ? session.account : null,
     draft,
     entity: normalizeEntity(draft.kind, draft.identifier),
