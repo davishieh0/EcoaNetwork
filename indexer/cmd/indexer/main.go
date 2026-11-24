@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -28,12 +27,8 @@ var commands = map[string]func(context.Context, config.Config) error{
 	"migrate": migrate,
 	"project": project,
 	"serve":   serve,
-	"rebuild": notBuilt,
+	"rebuild": rebuild,
 }
-
-
-// errNotBuilt is what a subcommand that does not exist yet returns.
-var errNotBuilt = errors.New("not built yet")
 
 
 // --- CODE ---
@@ -140,7 +135,21 @@ func serve(ctx context.Context, cfg config.Config) error {
 }
 
 
-// notBuilt stands in for a subcommand that does not exist yet.
-func notBuilt(context.Context, config.Config) error {
-	return errNotBuilt
+// rebuild empties the projection and projects every node's log again from
+// the start, then stops once caught up. Run it with the API and the
+// projector stopped; `project` carries on from where it left off.
+func rebuild(ctx context.Context, cfg config.Config) error {
+	pool, err := database.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	if err := projector.Empty(ctx, pool); err != nil {
+		return err
+	}
+
+	slog.Info("rebuild", "emptied", true, "nodes", len(cfg.NodeAddrs))
+
+	return projector.RunUntilCaughtUp(ctx, pool, cfg.NodeAddrs)
 }
