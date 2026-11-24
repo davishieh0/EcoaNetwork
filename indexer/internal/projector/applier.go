@@ -127,11 +127,23 @@ func projectOne(ctx context.Context,
 		return err
 	}
 
+	holder := event.Holder{
+		Node:     r.Node,
+		Sequence: int64(r.Event.GetSequence()),
+	}
+
 	if received := r.Event.GetReceivedAt(); received != 0 {
-		err := events.Observe(ctx, signed.ID, time.Unix(0, received))
-		if err != nil {
+		at := time.Unix(0, received)
+		holder.ReceivedAt = &at
+
+		if err := events.Observe(ctx, signed.ID, at); err != nil {
 			return err
 		}
+	}
+
+	// every node that has it, for the inspection view
+	if err := events.Hold(ctx, signed.ID, holder); err != nil {
+		return err
 	}
 
 	// a copy from another node, or the same event read again
