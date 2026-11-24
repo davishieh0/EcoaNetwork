@@ -13,11 +13,13 @@ from src.clients.tokens import TokenVerifier
 from src.config import config
 from src.services.auth import AuthService
 from src.services.events import EventService
+from src.services.verifier import HumanVerifier
 from src.storage.users import UserStorage
 from src.system import Health
 from src.system import Info
 
 import logging
+import secrets
 
 
 # --- GLOBALS ---
@@ -80,6 +82,16 @@ async def on_startup(app: FastAPI) -> None:
 
     # set up the indexer connection, which the read routes pass on
     app.state.indexer = IndexerClient(config.INDEXER_URL)
+
+    # the human verifier: issues claims only when it has a key
+    seed = config.HUMAN_VERIFIER_SEED.get_secret_value()
+    app.state.verifier = HumanVerifier(
+        bytes.fromhex(seed) if seed else None,
+        config.ALTCHA_HMAC_SECRET.get_secret_value() or secrets.token_hex(32),
+        config.ECOA_NETWORK,
+        app.state.events,
+    )
+    logger.info('Human verifier: %s', app.state.verifier.did or 'off')
 
     # set app health as OK
     app.state.health.status = 'OK'
