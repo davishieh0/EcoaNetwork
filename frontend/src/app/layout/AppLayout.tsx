@@ -78,10 +78,8 @@ export function AppLayout() {
   return (
     <>
       <header
-        className={cn(
-          'fixed inset-x-0 top-0 z-60 border-b border-line/40',
-          'bg-canvas/80 backdrop-blur-md',
-        )}
+        // solid, as the site's nav: nothing shows through it
+        className="fixed inset-x-0 top-0 z-60 bg-canvas"
       >
         <Container
           className={cn(
