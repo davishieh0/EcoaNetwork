@@ -138,6 +138,36 @@ func (m *Moderation) OnProfiles(ctx context.Context,
 }
 
 
+// OnEvent returns the labels that count on event id: on itself, on the chain
+// it is a version of, or on it as a response or a profile.
+func (m *Moderation) OnEvent(ctx context.Context,
+                             id string) ([]Applied, error) {
+	moderators, err := m.Moderators(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := m.queries.EventLabels(ctx, sqlc.EventLabelsParams{
+		Moderators: moderators,
+		EventID:    id,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	applied := make([]Applied, len(rows))
+	for i, row := range rows {
+		applied[i] = Applied{
+			EventID:   row.EventID,
+			Label:     row.Label,
+			Moderator: row.Moderator,
+		}
+	}
+
+	return applied, nil
+}
+
+
 // Removed reports whether event id is removed by a followed moderator.
 func (m *Moderation) Removed(ctx context.Context, id string) (bool, error) {
 	moderators, err := m.Moderators(ctx)

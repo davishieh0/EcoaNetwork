@@ -28,6 +28,9 @@ type observed struct {
 	// the nodes this indexer saw holding it; another, following other
 	// nodes, sees others
 	Nodes []holder `json:"nodes,omitempty"`
+
+	// the labels that count, by the moderators this indexer follows
+	Labels []label.Applied `json:"labels,omitempty"`
 }
 
 
@@ -87,6 +90,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	labels, err := h.moderation.OnEvent(r.Context(), id)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
 	nodes := make([]holder, len(holders))
 	for i, held := range holders {
 		nodes[i] = holder{
@@ -102,6 +111,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		Observed: observed{
 			ReceivedAt: utc(e.ReceivedAt),
 			Nodes:      nodes,
+			Labels:     labels,
 		},
 	})
 }
