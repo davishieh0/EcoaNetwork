@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/identities"
@@ -52,6 +53,9 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 
 	"identity.key_rotated": applyRotation,
 	"identity.key_revoked": identities.ApplyRevoked,
+
+	"verification.claim_created": claim.ApplyCreated,
+	"verification.claim_revoked": claim.ApplyRevoked,
 }
 
 
@@ -66,6 +70,7 @@ var skippable = []error{
 	entity.ErrMalformed,
 	profile.ErrMalformed,
 	identities.ErrMalformed,
+	claim.ErrMalformed,
 }
 
 
