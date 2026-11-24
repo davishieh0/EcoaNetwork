@@ -4,6 +4,8 @@
  */
 
 // --- IMPORTS ---
+import { Link } from 'react-router'
+import type { ReviewState } from '@/app/reads/review/ReviewPage.t'
 import { KINDS, LANGUAGES, RATINGS } from '@/app/write/options'
 import { SignedPreview } from '@/app/write/SignedPreview'
 import type { ComposerProps, WritePhase } from '@/app/write/Write.t'
@@ -12,6 +14,7 @@ import { cn } from '@/components/ui/cn'
 import { Select } from '@/components/ui/Select'
 import { Tooltip } from '@/components/ui/Tooltip'
 import { BODY_MAX, characters, TITLE_MAX } from '@/logic/protocol/review'
+import { ROUTES } from '@/routes'
 
 // --- GLOBALS ---
 const CONTROL = cn(
@@ -234,9 +237,19 @@ export function Composer({ data }: ComposerProps) {
             </p>
           ) : null}
           {phase.name === 'published' ? (
-            <Button variant="secondary" type="button" onClick={reset}>
-              Write another
-            </Button>
+            <>
+              <Button variant="secondary" type="button" onClick={reset}>
+                Write another
+              </Button>
+              {/* what was signed travels along, until the index has it */}
+              <Button
+                as={Link}
+                to={ROUTES.review(phase.envelope.eventId)}
+                state={{ published: phase.envelope } satisfies ReviewState}
+              >
+                Read it on the network
+              </Button>
+            </>
           ) : phase.name === 'editing' ? (
             <Button type="submit">Preview</Button>
           ) : (
