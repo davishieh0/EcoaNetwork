@@ -9,6 +9,7 @@ import { motion } from 'motion/react'
 
 import { SealMotif } from '@/site/landing/motifs/SealMotif'
 import { EventInspector } from '@/components/ecoa/EventInspector'
+import type { InspectedEvent } from '@/components/ecoa/EventInspector.t'
 import type { Review } from '@/components/ecoa/ReviewCard.t'
 import { ReviewCard } from '@/components/ecoa/ReviewCard'
 import { Button } from '@/components/ui/Button'
@@ -32,6 +33,33 @@ const REVIEW: Review = {
   eventId: '8f2c…a41',
   observedBy: 6,
   edited: true,
+}
+
+/** The card's signed event, as the inspector shows it. */
+const EVENT: InspectedEvent = {
+  rows: [
+    { label: 'Event ID', value: 'evt_8f2c9e14a41b7d3f…' },
+    { label: 'Type', value: 'review.replaced' },
+    { label: 'Author', value: 'did:key:z6Mkf5rGMoatrSj1f4CyvuHBeXJELe9RPd' },
+    { label: 'Entity', value: 'domain:maresbakery.pt' },
+    { label: 'Version', value: '2 of 2 · replaces evt_4d10…8c22' },
+  ],
+  check: { state: 'valid' },
+  badges: [
+    { label: 'Domain verified', tone: 'valid', glyph: '◆' },
+    { label: 'Observed by 06 nodes', tone: 'neutral', glyph: '●' },
+  ],
+  raw: JSON.stringify({
+    author: 'did:key:z6Mkf5rGMoatrSj1f4CyvuHBeXJELe9RPd',
+    createdAt: '2026-08-14T09:12:40Z',
+    deviceKey: null,
+    eventId: 'evt_8f2c9e14a41b7d3f…',
+    eventType: 'review.replaced',
+    payload: { replaces: 'evt_4d10…8c22', rating: 4, body: '…' },
+    protocol: 'ecoa',
+    signature: 'c7f1…a9e2',
+    version: 1,
+  }),
 }
 
 /** What the card carries, as questions a reader would ask. */
@@ -133,7 +161,11 @@ export function RealReview() {
         </div>
       </Container>
 
-      <EventInspector open={inspecting} onOpenChange={setInspecting} />
+      <EventInspector
+        open={inspecting}
+        onOpenChange={setInspecting}
+        event={EVENT}
+      />
     </Section>
   )
 }
