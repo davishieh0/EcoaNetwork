@@ -187,17 +187,18 @@ deterministic tables from the logs. In the order to build it:
 
 ## Frontend
 
-1. **`logic/datasource/`:** one function per read route, with the types of
-   its answers.
+1. ~~**`logic/datasource/`:** one function per read route, with the types of
+   its answers.~~ Done: `entities`, `reviews`, `profiles` and `getEvent`.
 2. **Screens:**
-   - entity search
-   - an entity: its rating distribution and its reviews
-   - a review, with its edit history and responses
-   - the inspection view: the raw envelope beside the rendered review
-
-   *Waits on the backend, step 2.*
-3. **Verifying the signature of everything received.** *Waits on
-   `protocol/ts`.*
+   - ~~entity search~~ Done.
+   - an entity: ~~its reviews~~ done; its rating distribution waits on the
+     indexer's step 6
+   - ~~a review, with its edit history and responses~~ Done.
+   - ~~the inspection view: the raw envelope beside the rendered review~~
+     Done; which nodes hold it waits on the indexer's item 1.
+3. **Verifying the signature of everything received.** Done in the
+   inspection view, with WebCrypto (RFC 8032), until `protocol/ts` verifies
+   under ZIP-215 (`frontend/docs/reading.md`, decision 1).
 
 ## What runs in parallel
 
