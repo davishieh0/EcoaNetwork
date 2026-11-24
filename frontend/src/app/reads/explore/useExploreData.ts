@@ -19,21 +19,36 @@ import { useModeration } from '@/logic/moderation/moderation'
 export function useExploreData() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q')?.trim() ?? ''
+  const category = params.get('category') ?? ''
 
   const { param } = useModeration()
 
   const load = useCallback(
-    (after?: string) => searchEntities(query || undefined, after, param),
-    [query, param],
+    (after?: string) =>
+      searchEntities(query || undefined, after, category || undefined, param),
+    [query, category, param],
   )
 
-  const search = useCallback(
-    (text: string) => {
-      const trimmed = text.trim()
-      setParams(trimmed ? { q: trimmed } : {})
+  // the address holds the search: the text and the category, when set
+  const go = useCallback(
+    (text: string, kind: string) => {
+      const next: Record<string, string> = {}
+      if (text.trim()) next.q = text.trim()
+      if (kind) next.category = kind
+      setParams(next)
     },
     [setParams],
   )
 
-  return { query, search, ...usePaged(load) }
+  const search = useCallback(
+    (text: string) => go(text, category),
+    [go, category],
+  )
+
+  const pickCategory = useCallback(
+    (kind: string) => go(query, kind),
+    [go, query],
+  )
+
+  return { query, category, search, pickCategory, ...usePaged(load) }
 }

@@ -19,6 +19,21 @@ import { cn } from '@/components/ui/cn'
 import { useRise } from '@/components/ui/useRise'
 import { ROUTES } from '@/routes'
 
+// --- GLOBALS ---
+// the categories most entities fall in, from the protocol's fixed list
+const CATEGORIES = [
+  'food-and-drink',
+  'retail',
+  'health',
+  'education',
+  'technology',
+  'financial-services',
+  'professional-services',
+  'travel-and-lodging',
+  'transport',
+  'entertainment',
+]
+
 // --- CODE ---
 /**
  * Renders the search box and the entities it finds.
@@ -26,8 +41,18 @@ import { ROUTES } from '@/routes'
  * @returns The search screen.
  */
 export function Explore() {
-  const { query, search, loading, items, error, hasMore, more, loadMore } =
-    useExploreData()
+  const {
+    query,
+    category,
+    search,
+    pickCategory,
+    loading,
+    items,
+    error,
+    hasMore,
+    more,
+    loadMore,
+  } = useExploreData()
   const rise = useRise()
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -40,8 +65,8 @@ export function Explore() {
     : error
       ? messageOf(error)
       : items.length === 0
-        ? query
-          ? `Nothing on the network is named “${query}”.`
+        ? query || category
+          ? 'Nothing on the network matches this search.'
           : 'Nothing on the network is named yet.'
         : query
           ? `Entities named “${query}”`
@@ -90,6 +115,26 @@ export function Explore() {
         </label>
         <Button type="submit">Search</Button>
       </motion.form>
+
+      <motion.div {...rise(0.22)} className="mt-3 flex flex-wrap gap-2">
+        {['', ...CATEGORIES].map((kind) => (
+          <button
+            key={kind || 'all'}
+            type="button"
+            aria-pressed={category === kind}
+            onClick={() => pickCategory(kind)}
+            className={cn(
+              'meta cursor-pointer border px-3 py-1.5 transition-colors',
+              'duration-interface',
+              category === kind
+                ? 'border-signal bg-signal text-on-signal'
+                : 'border-structural text-secondary hover:text-primary',
+            )}
+          >
+            {kind ? categoryOf(kind) : 'All'}
+          </button>
+        ))}
+      </motion.div>
 
       <Status text={status} failed={!!error} className="my-4" />
 

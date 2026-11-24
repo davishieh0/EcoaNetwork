@@ -13,10 +13,18 @@ import type { Labeled, Page } from '@/logic/datasource/signed.t'
  *
  * @param q - Part of a name; undefined for every entity.
  * @param after - The next of a previous page.
+ * @param category - One of the protocol's categories, to keep only those.
  * @returns A page of entities.
  */
-export function searchEntities(q?: string, after?: string, moderators?: string) {
-  return request<Page<Entity>>(route(['entities'], { q, after, moderators }))
+export function searchEntities(
+  q?: string,
+  after?: string,
+  category?: string,
+  moderators?: string,
+) {
+  return request<Page<Entity>>(
+    route(['entities'], { q, after, category, moderators }),
+  )
 }
 
 /**
