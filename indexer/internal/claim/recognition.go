@@ -203,6 +203,25 @@ func (r *Recognition) Identities(
 }
 
 
+// Conflicted reports, for each of authors, whether a claim on entity counts
+// for them: their review of it is a conflict of interest.
+func (r *Recognition) Conflicted(ctx context.Context,
+                                 authors []string,
+                                 entity string) (map[string]bool, error) {
+	held, err := r.Of(ctx, authors)
+	if err != nil {
+		return nil, err
+	}
+
+	conflicted := map[string]bool{}
+	for author, claims := range held {
+		conflicted[author] = Official(claims, entity)
+	}
+
+	return conflicted, nil
+}
+
+
 // EntityOfChain returns the entity a review chain is about.
 func (r *Recognition) EntityOfChain(ctx context.Context,
                                     root string) (string, error) {

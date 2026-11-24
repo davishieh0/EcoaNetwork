@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity/sqlc"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/projection"
@@ -62,6 +64,11 @@ func (r *Repository) ByID(ctx context.Context,
 		if err != nil {
 			return Entity{}, err
 		}
+	}
+
+	metadata.Summary, err = r.summarize(ctx, id, moderators, judge)
+	if err != nil {
+		return Entity{}, err
 	}
 
 	e := Entity{
@@ -228,6 +235,62 @@ func (r *Repository) describe(ctx context.Context, e *Entity) error {
 	e.Derived.DescriptorMatches = &matches
 
 	return nil
+}
+
+
+// summarize works out id's summary of ratings, leaving out what a moderator
+// among moderators hid and what an author with a claim on id wrote.
+func (r *Repository) summarize(ctx context.Context,
+                               id string,
+                               moderators []string,
+                               judge Judge) (*Summary, error) {
+	rows, err := r.queries.HeadRatings(ctx, sqlc.HeadRatingsParams{
+		Entity:     id,
+		Moderators: moderators,
+		Hiding:     label.Hiding(false),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	conflicted := map[string]bool{}
+	if judge != nil {
+		authors := make([]string, 0, len(rows))
+		for _, row := range rows {
+			authors = append(authors, row.Author)
+		}
+
+		conflicted, err = judge.Conflicted(ctx, authors, id)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	s := Summary{}
+	total := 0
+
+	for _, row := range rows {
+		if conflicted[row.Author] {
+			s.Conflicted++
+			continue
+		}
+
+		if row.Rating < 1 || row.Rating > 5 {
+			continue
+		}
+
+		s.Distribution[row.Rating-1]++
+		s.Count++
+		total += int(row.Rating)
+	}
+
+	if s.Count > 0 {
+		// two decimals: a summary, not a measurement
+		mean := math.Round(float64(total)/float64(s.Count)*100) / 100
+		s.Mean = &mean
+	}
+
+	return &s, nil
 }
 
 

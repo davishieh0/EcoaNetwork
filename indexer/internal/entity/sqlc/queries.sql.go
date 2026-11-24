@@ -67,6 +67,55 @@ func (q *Queries) FirstDescriptor(ctx context.Context, entity string) (string, e
 	return descriptor, err
 }
 
+const headRatings = `-- name: HeadRatings :many
+SELECT r.author, r.rating
+FROM review_chains c
+JOIN reviews r ON r.event_id = c.head
+WHERE c.entity = $1
+  AND NOT c.withdrawn
+  AND NOT c.truncated
+  AND NOT EXISTS (
+      SELECT 1 FROM labels l
+      WHERE l.chain_root = c.chain_root
+        AND NOT l.revoked
+        AND l.moderator = ANY ($2::text[])
+        AND l.label = ANY ($3::text[]))
+`
+
+type HeadRatingsParams struct {
+	Entity     string
+	Moderators []string
+	Hiding     []string
+}
+
+type HeadRatingsRow struct {
+	Author string
+	Rating int16
+}
+
+// The rating and author of the head of each chain of an entity that can
+// count: not withdrawn, not truncated, not hidden or removed by a followed
+// moderator.
+func (q *Queries) HeadRatings(ctx context.Context, arg HeadRatingsParams) ([]HeadRatingsRow, error) {
+	rows, err := q.db.Query(ctx, headRatings, arg.Entity, arg.Moderators, arg.Hiding)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HeadRatingsRow
+	for rows.Next() {
+		var i HeadRatingsRow
+		if err := rows.Scan(&i.Author, &i.Rating); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const proposalEnvelopes = `-- name: ProposalEnvelopes :many
 SELECT p.entity, e.envelope
 FROM entity_proposals p
