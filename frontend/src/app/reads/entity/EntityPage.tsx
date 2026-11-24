@@ -15,10 +15,17 @@ import { ShowLabeled } from '@/app/reads/ShowLabeled'
 import { Status } from '@/app/reads/Status'
 import { stagger } from '@/app/reads/stagger'
 import { useInspection } from '@/app/reads/useInspection'
-import { categoryOf, identifierOf, kindOf, nameOf } from '@/app/reads/words'
+import {
+  categoryOf,
+  dateOf,
+  identifierOf,
+  kindOf,
+  nameOf,
+} from '@/app/reads/words'
 import { EventInspector } from '@/components/ecoa/EventInspector'
 import { RatingSummary } from '@/components/ecoa/RatingSummary'
 import { ReviewCard } from '@/components/ecoa/ReviewCard'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { useRise } from '@/components/ui/useRise'
@@ -114,6 +121,21 @@ export function EntityPage() {
                 ? '1 proposal for its details'
                 : `${entity.data.derived.proposals} proposals for its details`}
               {' · anyone can propose, the network weighs them'}
+            </motion.p>
+          ) : null}
+          {entity.data?.observed.representative ? (
+            <motion.p {...arrive} className="flex flex-wrap items-center gap-2">
+              <Badge tone="valid" glyph="◆">
+                Verified representative
+              </Badge>
+              <span className="font-mono text-mono-s break-all text-secondary">
+                {entity.data.observed.representative.identity}
+              </span>
+              {entity.data.observed.representative.since ? (
+                <span className="meta text-muted">
+                  since {dateOf(entity.data.observed.representative.since)}
+                </span>
+              ) : null}
             </motion.p>
           ) : null}
           {unnamed ? (
