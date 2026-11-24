@@ -10,10 +10,26 @@ export type Applied = {
   moderator: string
 }
 
+/** A claim that counts for an author, as this indexer judged it. */
+export type Recognized = {
+  eventId: string
+  claimType: 'domain' | 'human' | string
+  /** The entity a domain claim is about. */
+  entity?: string
+  expiresAt: string
+  /** Since when a domain claim has verified without a gap. */
+  since?: string
+  dnssec?: boolean
+}
+
 /** What the indexer observed about an item: not every indexer agrees. */
 export type Observed = {
   receivedAt?: string
   labels?: Applied[]
+  /** The claims that count for the item's author. */
+  claims?: Recognized[]
+  /** A response by the entity's verified representative. */
+  official?: boolean
 }
 
 /**
