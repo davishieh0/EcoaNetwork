@@ -66,9 +66,12 @@ export function EntityPage() {
       ? messageOf(reviews.error)
       : reviews.items.length === 0
       ? 'No reviews yet. Be the first to sign one.'
-      : labeled
-        ? 'Reviews, newest first, with what moderation hides marked'
-        : 'Reviews, newest first'
+      : `Reviews, ${
+          reviews.ranking === 'endorsed'
+            ? 'most endorsed first'
+            : 'newest first'
+        } — as this index ranks them` +
+        (labeled ? ', with what moderation hides marked' : '')
 
   return (
     <Container className="max-w-4xl pt-28 pb-16">

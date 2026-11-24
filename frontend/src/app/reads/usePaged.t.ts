@@ -14,6 +14,7 @@ export type PagedState<Item> = {
   source: Loader<Item> | null
   items: Item[]
   next: string | null
+  ranking?: string
   error: unknown
   more: 'idle' | 'loading' | 'failed'
 }

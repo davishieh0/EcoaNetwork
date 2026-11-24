@@ -47,6 +47,8 @@ export type Signed<Derived = Record<string, never>, Seen = Observed> = {
 export type Page<Item> = {
   items: Item[]
   next: string | null
+  /** How the index ordered the list, when it says: an opinion of its own. */
+  ranking?: 'newest' | 'endorsed' | string
 }
 
 /** Whether a list shows what moderation hides, marked. */

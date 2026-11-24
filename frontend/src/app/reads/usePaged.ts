@@ -34,6 +34,7 @@ export function usePaged<Item>(load: Loader<Item>) {
           source: load,
           items: page.items,
           next: page.next,
+          ranking: page.ranking,
           error: null,
           more: 'idle',
         })
@@ -80,6 +81,7 @@ export function usePaged<Item>(load: Loader<Item>) {
     items: current ? state.items : [],
     error: current ? state.error : null,
     hasMore: current && state.next !== null,
+    ranking: current ? state.ranking : undefined,
     more: current ? state.more : 'idle',
     loadMore,
   }
