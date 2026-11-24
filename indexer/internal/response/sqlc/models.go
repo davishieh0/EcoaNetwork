@@ -33,6 +33,13 @@ type Event struct {
 	Envelope  []byte
 }
 
+type EventHolder struct {
+	EventID    string
+	Node       string
+	Sequence   int64
+	ReceivedAt *time.Time
+}
+
 type EventObservation struct {
 	EventID    string
 	ReceivedAt time.Time
