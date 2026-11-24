@@ -286,6 +286,7 @@ would no longer be the bytes that were signed.
 | `profiles` | `profile.updated` | per identity, its current `profile.updated` and what it says; the one before is replaced entirely |
 | `key_rotations`, `key_revocations` | `identity.key_rotated`, `identity.key_revoked` | every rotation and revocation any node accepted |
 | `identities` | the rotations above | for each key that rotated or was rotated to, its identity (the first key of the chain), its place in it, and whether the identity is contested; worked out again from every rotation when one arrives |
+| `claims` | `verification.claim_created`, `verification.claim_revoked` | every claim: `claim_type`, `subject`, `issuer`, `entity` (a domain claim's), `expires_at`, `revoked`; whether it counts is decided at answer time |
 | `projector_cursors` | every event | per node: its `log_id` and the last `sequence` applied |
 
 **Observed:**
@@ -293,9 +294,15 @@ would no longer be the bytes that were signed.
 | Table | Holds |
 |---|---|
 | `event_observations` | `event_id`, `received_at` (the earliest any node reported) |
-| `identity_observations` | `identity`, first seen, age |
-| `entity_summaries` | how many reviews gave each rating from 1 to 5, the mean, and the count ([Decided](#decided)) |
-| `rankings` | the score each list is sorted by |
+| `event_holders` | which nodes sent each event: what the inspection view shows as "held by" |
+| `claim_checks` | per domain claim: the last lookup, whether it passed, `verified_since`, when to look again |
+
+The rest of the observed column is worked out when a request asks, not
+stored: an entity's summary (it depends on the moderators the request names
+and on which claims verify today), the ranking score (from `version_votes`),
+and which labels count. Identity age is not built yet: nothing weighs it.
+The full model, as built, is drawn in
+[docs/diagrams/diagrams.md §13](../../docs/diagrams/diagrams.md#13-the-indexers-data-model).
 
 ### Rules the projections follow
 
@@ -500,13 +507,21 @@ Read only, called by the gateway, which passes the answers on to the client.
 
 ```
 GET /entities?q=…&category=…        search
-GET /entities/{entity}              metadata, summary
+GET /entities/{entity}              metadata, summary, representative
 GET /entities/{entity}/reviews      the head of each chain, ranked; withdrawn hidden
 GET /reviews/{eventId}              one version, with its chain
 GET /reviews/{eventId}/responses
-GET /events/{eventId}               the envelope alone
-GET /health                         includes how far behind each node the projector is
+GET /events/{eventId}               the envelope alone, and the nodes holding it
+GET /profiles?did=…                 the profiles of several identities at once
+GET /profiles/{did}
+GET /identities/{did}               its keys, whether contested, the claims that count
+GET /health                         whether the database answers
 ```
+
+Every route that answers with reviews, responses or a summary takes
+`?moderators=did:key:…,…`: the moderators whose labels count for this
+request, the configured file when absent. How far behind each node the
+projector is, promised for `/health`, is not built: the projector logs it.
 
 **Every item carries its whole signed envelope**, so the client can verify it
 on its own. What the indexer worked out travels beside it, never mixed in:
@@ -655,7 +670,18 @@ A first-class operation of the indexer, not a script:
 The same path is how a change to a projection's rules ships: change the rule,
 rebuild, switch.
 
+**As built, the MVP's rebuild is simpler** (`internal/projector/empty.go`):
+`indexer rebuild` empties every table but the migrations' record, then
+projects every node's log from zero, and stops once each node has reached
+its head and nothing has arrived for two seconds. The API is down while it
+runs; 1712 events took about five seconds. Building beside the live tables
+is worth its complexity once a rebuild takes longer than an operator waits
+([docs/decisions.md §16.7](../../docs/decisions.md#167-the-mvps-rebuild-empties-and-projects-again--call)).
+
 ## Testing
+
+`internal/projector/guarantees_test.go` runs the first four below against a
+real database, comparing the fifteen deterministic tables.
 
 | Test | Proves |
 |---|---|
@@ -702,8 +728,13 @@ One binary, with a subcommand per job:
 indexer migrate     apply the migrations
 indexer project     follow the node and write the projections
 indexer serve       answer the HTTP API
-indexer rebuild     rebuild the projections from cursor 0, then switch
+indexer rebuild     empty the projections and project again from cursor 0
 ```
+
+Two more binaries sit beside it, for the demonstration: `cmd/seed` publishes
+entities from the Receita Federal's layout and synthetic reviews through a
+node, and `cmd/demo` sends a node a tampered event and a foreign edit to show
+both rejected.
 
 ### Layout: one package per subject, in layers
 
@@ -730,7 +761,11 @@ indexer/
     entity/             entities, their proposals, GET /entities, search
     profile/            profiles, GET /profiles
     identities/         keys to identities, contests, GET /identities
-    event/              GET /events/{eventId}, the events table
+    claim/              claims, what counts, the representative, and the
+                        domain checker that runs inside project
+    event/              GET /events/{eventId}, the events table, its holders
+    seed/               reading the Receita's layout, generating reviews,
+                        publishing through a node (cmd/seed)
     review/
       handler.go        GET /entities/{entity}/reviews, GET /reviews/{eventId}
       service.go        only when there is logic to put in it
@@ -831,11 +866,18 @@ module carrying its own `replace`, there is nothing left for it to link.
     so adding them later is a rebuild of that table and nothing else.
 - **Moderation.** Anyone can publish a label; one counts only if its signer
   is followed.
-  - **Who is followed:** a list of identities in a configuration file, read
-    at query time. Changing it rebuilds nothing: every label is stored,
-    whoever signed it, and only which ones count changes.
-  - **One list for every query.** The configured list applies to everyone;
-    a client cannot send its own yet ([Later](#later)).
+  - **Who is followed:** the moderators a request names in
+    `?moderators=`, or, when it names none, a list of identities in a
+    configuration file. Read at query time: changing either rebuilds
+    nothing, since every label is stored, whoever signed it, and only which
+    ones count changes.
+- **Ranking** is a setting, `RANKING=newest` or `endorsed` (endorsements
+  less disputes on the head, then newest), and each answer names it. The
+  demonstration's second indexer runs `endorsed`.
+- **Claims.** A `domain` claim counts once `project` has found its DNS
+  record; a delegated one (`human`) counts when its issuer is in
+  `VERIFIERS_FILE`. The sole verified holder of a domain is its
+  representative ([docs/verification.md](../../docs/verification.md)).
   - **What a label does.** The protocol says what something is, never what to
     do about it
     ([docs/protocol.md](../../docs/protocol.md#moderation-and-votes)):
@@ -855,14 +897,6 @@ module carrying its own `replace`, there is nothing left for it to link.
 
 Decided, and left out of the first version on purpose:
 
-- **Clients choose their own moderators.** A query carries the moderators to
-  follow, `?moderators=did:key:…,did:key:…`, and falls back to the configured
-  list when it carries none. Every label is already stored, so this is a
-  query change and no rebuild. **Needed before the MVP is done:** its
-  acceptance criteria ask that a label change what a client following the
-  moderator sees, and nothing for one that does not
-  ([docs/mvp.md](../../docs/mvp.md#acceptance-criteria)), which one shared
-  list cannot show.
 - **The moderator list moves to a table edited through an admin API**, so it
   is managed without a deploy.
 - **Weights in an entity's rating**, with reputation: identity age and
