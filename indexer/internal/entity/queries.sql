@@ -58,6 +58,18 @@ WHERE (sqlc.arg(query)::text = ''
                  WHERE l.proposal = p.event_id
                    AND NOT l.revoked
                    AND l.moderator = ANY (sqlc.arg(moderators)::text[]))))
+  -- a category: some proposal still in the contest says it; whether it is
+  -- the one that holds is checked when the answer is worked out
+  AND (sqlc.narg(category)::text IS NULL
+       OR EXISTS (
+           SELECT 1 FROM entity_proposals p
+           WHERE p.entity = n.entity
+             AND p.category = sqlc.narg(category)::text
+             AND NOT EXISTS (
+                 SELECT 1 FROM labels l
+                 WHERE l.proposal = p.event_id
+                   AND NOT l.revoked
+                   AND l.moderator = ANY (sqlc.arg(moderators)::text[]))))
   AND (sqlc.narg(after_seen)::timestamptz IS NULL
        OR (n.first_seen, n.entity)
           < (sqlc.narg(after_seen)::timestamptz, sqlc.narg(after_entity)::text))

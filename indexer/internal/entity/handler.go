@@ -19,6 +19,19 @@ import (
 const maxQuery = 120
 
 
+// --- GLOBALS ---
+
+// categories is the protocol's fixed vocabulary (docs/protocol.md).
+var categories = map[string]bool{
+	"retail": true, "food-and-drink": true, "financial-services": true,
+	"telecom": true, "utilities": true, "transport": true,
+	"travel-and-lodging": true, "health": true, "education": true,
+	"government": true, "real-estate": true, "professional-services": true,
+	"entertainment": true, "technology": true, "manufacturing": true,
+	"nonprofit": true, "other": true,
+}
+
+
 // --- CODE ---
 
 // Handler answers the routes of the entities.
@@ -107,7 +120,17 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	found, next, err := h.repo.Search(r.Context(), q, moderators, p)
+	var category *string
+	if c := r.URL.Query().Get("category"); c != "" {
+		if !categories[c] {
+			respond.Error(w, http.StatusBadRequest, "invalid_category_error",
+			              "category is one of the protocol's categories.")
+			return
+		}
+		category = &c
+	}
+
+	found, next, err := h.repo.Search(r.Context(), q, moderators, p, category)
 	if err != nil {
 		respond.Failed(w, err)
 		return

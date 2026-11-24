@@ -77,10 +77,12 @@ func (r *Repository) ByID(ctx context.Context,
 func (r *Repository) Search(ctx context.Context,
                             text string,
                             moderators []string,
-                            p page.Page) ([]Entity, *page.Cursor, error) {
+                            p page.Page,
+                            category *string) ([]Entity, *page.Cursor, error) {
 	params := sqlc.SearchEntitiesParams{
 		Query:      likePattern(fold(text)),
 		Moderators: moderators,
+		Category:   category,
 		RowLimit:   int32(p.Limit + 1),
 	}
 
@@ -115,6 +117,12 @@ func (r *Repository) Search(ctx context.Context,
 
 	found := make([]Entity, 0, len(ids))
 	for _, id := range ids {
+		// a proposal said the category, but another holds: not this one
+		held := resolved[id].Category
+		if category != nil && (held == nil || held.Value != *category) {
+			continue
+		}
+
 		found = append(found, Entity{Entity: id, Observed: resolved[id]})
 	}
 
