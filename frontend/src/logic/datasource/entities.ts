@@ -18,3 +18,13 @@ import type { Page } from '@/logic/datasource/signed.t'
 export function searchEntities(q?: string, after?: string) {
   return request<Page<Entity>>(route(['entities'], { q, after }))
 }
+
+/**
+ * Reads an entity and the value of each of its fields.
+ *
+ * @param entity - The entity id, such as `cnpj:12345678000199`.
+ * @returns The entity.
+ */
+export function getEntity(entity: string) {
+  return request<Entity>(route(['entities', entity]))
+}
