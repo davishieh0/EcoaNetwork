@@ -22,6 +22,9 @@ const (
 
 	// defaultHTTPAddr is HTTP_ADDR when unset.
 	defaultHTTPAddr = "127.0.0.1:8081"
+
+	// defaultDoHURL is DOH_URL when unset: a public DNS-over-HTTPS resolver.
+	defaultDoHURL = "https://cloudflare-dns.com/dns-query"
 )
 
 
@@ -41,6 +44,18 @@ type Config struct {
 	// ModeratorsFile is the JSON file listing the moderators whose labels
 	// count, "" for none.
 	ModeratorsFile string
+
+	// VerifiersFile is the JSON file listing the verifiers whose delegated
+	// claims count, "" for none.
+	VerifiersFile string
+
+	// DoHURL is the DNS-over-HTTPS resolver domain claims are looked up
+	// through, unless DNSServer is set.
+	DoHURL string
+
+	// DNSServer is a host:port answering plain DNS, used instead of DoHURL
+	// when set: for a network that runs its own resolver.
+	DNSServer string
 
 	// Ranking is how the API orders an entity's reviews: newest or
 	// endorsed.
@@ -66,6 +81,11 @@ func Load() (Config, error) {
 		HTTPAddr:    envOr("HTTP_ADDR", defaultHTTPAddr),
 
 		ModeratorsFile: os.Getenv("MODERATORS_FILE"),
+		VerifiersFile:  os.Getenv("VERIFIERS_FILE"),
+
+		DoHURL:    envOr("DOH_URL", defaultDoHURL),
+		DNSServer: os.Getenv("DNS_SERVER"),
+
 		Ranking: envOr("RANKING", "newest"),
 	}
 

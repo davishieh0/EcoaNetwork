@@ -16,6 +16,9 @@ var names = []string{
 	"NODE_ADDRS",
 	"HTTP_ADDR",
 	"MODERATORS_FILE",
+	"VERIFIERS_FILE",
+	"DOH_URL",
+	"DNS_SERVER",
 	"RANKING",
 }
 
@@ -44,6 +47,7 @@ func TestLoadAppliesTheDefaultsToAnEmptyEnvironment(t *testing.T) {
 		DatabaseURL: defaultDatabaseURL,
 		NodeAddrs:   []string{"127.0.0.1:50051"},
 		HTTPAddr:    "127.0.0.1:8081",
+		DoHURL:      defaultDoHURL,
 		Ranking:     "newest",
 	}
 
@@ -74,6 +78,18 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		{
 			"MODERATORS_FILE", "moderators.json",
 			func(c Config) any { return c.ModeratorsFile },
+		},
+		{
+			"VERIFIERS_FILE", "verifiers.json",
+			func(c Config) any { return c.VerifiersFile },
+		},
+		{
+			"DOH_URL", "https://dns.example/dns-query",
+			func(c Config) any { return c.DoHURL },
+		},
+		{
+			"DNS_SERVER", "dns:53",
+			func(c Config) any { return c.DNSServer },
 		},
 		{
 			"RANKING", "endorsed",
