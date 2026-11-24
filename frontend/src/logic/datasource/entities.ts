@@ -3,9 +3,9 @@
  */
 
 // --- IMPORTS ---
-import type { Entity } from '@/logic/datasource/entities.t'
+import type { Entity, ReviewItem } from '@/logic/datasource/entities.t'
 import { request, route } from '@/logic/datasource/http'
-import type { Page } from '@/logic/datasource/signed.t'
+import type { Labeled, Page } from '@/logic/datasource/signed.t'
 
 // --- CODE ---
 /**
@@ -27,4 +27,22 @@ export function searchEntities(q?: string, after?: string) {
  */
 export function getEntity(entity: string) {
   return request<Entity>(route(['entities', entity]))
+}
+
+/**
+ * Lists the current version of each of an entity's reviews, newest first.
+ *
+ * @param entity - The entity id.
+ * @param after - The next of a previous page.
+ * @param labeled - 'show', to see what moderation hides, marked.
+ * @returns A page of reviews.
+ */
+export function listEntityReviews(
+  entity: string,
+  after?: string,
+  labeled?: Labeled,
+) {
+  return request<Page<ReviewItem>>(
+    route(['entities', entity, 'reviews'], { after, labeled }),
+  )
 }
