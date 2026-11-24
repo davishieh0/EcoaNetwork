@@ -74,6 +74,20 @@ WHERE c.subject = ANY (sqlc.arg(subjects)::text[])
            AND c.issuer = ANY (sqlc.arg(verifiers)::text[])))
 ORDER BY c.subject, c.claim_type, c.event_id;
 
+-- name: RepresentativesOf :many
+-- The identities holding a domain claim that counts on some entities.
+SELECT c.entity::text AS entity, c.subject, c.event_id, k.verified_since
+FROM claims c
+JOIN claim_checks k USING (event_id)
+WHERE c.entity = ANY (sqlc.arg(entities)::text[])
+  AND c.claim_type = 'domain'
+  AND c.issuer = c.subject
+  AND NOT c.revoked
+  AND c.expires_at > sqlc.arg(now)
+  AND k.verified
+  AND k.checked_at > sqlc.arg(fresh_after)
+ORDER BY c.entity, k.verified_since, c.event_id;
+
 -- name: EntityOfChain :one
 -- The entity a review chain is about.
 SELECT entity FROM review_chains WHERE chain_root = $1;

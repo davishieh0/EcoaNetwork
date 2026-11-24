@@ -76,7 +76,8 @@ func Handler(pool *pgxpool.Pool,
 	recognition := claim.NewRecognition(verifiers, pool)
 
 	events := event.NewHandler(event.NewRepository(pool), moderation)
-	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
+	entities := entity.NewHandler(entity.NewRepository(pool), moderation,
+	                              recognition)
 	profiles := profile.NewHandler(profile.NewRepository(pool), moderation)
 	keys := identities.NewHandler(identities.NewRepository(pool), recognition)
 	reviews := review.NewHandler(review.NewRepository(pool), moderation,

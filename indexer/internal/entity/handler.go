@@ -38,6 +38,7 @@ var categories = map[string]bool{
 type Handler struct {
 	repo       *Repository
 	moderation *label.Moderation
+	judge      Judge
 }
 
 
@@ -49,8 +50,10 @@ type listing struct {
 
 
 // NewHandler returns the handler of the entity routes.
-func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
-	return &Handler{repo: repo, moderation: moderation}
+func NewHandler(repo *Repository,
+                moderation *label.Moderation,
+                judge Judge) *Handler {
+	return &Handler{repo: repo, moderation: moderation, judge: judge}
 }
 
 
@@ -76,7 +79,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	e, err := h.repo.ByID(r.Context(), id, moderators)
+	e, err := h.repo.ByID(r.Context(), id, moderators, h.judge)
 	if errors.Is(err, ErrNotFound) {
 		respond.Error(w, http.StatusNotFound, "entity_not_found_error",
 		              "No review or proposal names this entity.")

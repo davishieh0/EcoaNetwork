@@ -40,7 +40,8 @@ func NewRepository(db sqlc.DBTX) *Repository {
 // moderator among moderators labeled, or ErrNotFound.
 func (r *Repository) ByID(ctx context.Context,
                           id string,
-                          moderators []string) (Entity, error) {
+                          moderators []string,
+                          judge Judge) (Entity, error) {
 	row, err := r.queries.EntityExists(ctx, id)
 	if err != nil {
 		return Entity{}, err
@@ -55,10 +56,18 @@ func (r *Repository) ByID(ctx context.Context,
 		return Entity{}, err
 	}
 
+	metadata := resolved[id]
+	if judge != nil {
+		metadata.Representative, err = judge.RepresentativeOf(ctx, id)
+		if err != nil {
+			return Entity{}, err
+		}
+	}
+
 	e := Entity{
 		Entity:   id,
 		Derived:  derived{Proposals: row.Proposals},
-		Observed: resolved[id],
+		Observed: metadata,
 	}
 
 	if strings.HasPrefix(id, "entity:") {

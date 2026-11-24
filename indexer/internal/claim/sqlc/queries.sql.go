@@ -147,6 +147,59 @@ func (q *Queries) RecognizedOf(ctx context.Context, arg RecognizedOfParams) ([]R
 	return items, nil
 }
 
+const representativesOf = `-- name: RepresentativesOf :many
+SELECT c.entity::text AS entity, c.subject, c.event_id, k.verified_since
+FROM claims c
+JOIN claim_checks k USING (event_id)
+WHERE c.entity = ANY ($1::text[])
+  AND c.claim_type = 'domain'
+  AND c.issuer = c.subject
+  AND NOT c.revoked
+  AND c.expires_at > $2
+  AND k.verified
+  AND k.checked_at > $3
+ORDER BY c.entity, k.verified_since, c.event_id
+`
+
+type RepresentativesOfParams struct {
+	Entities   []string
+	Now        time.Time
+	FreshAfter time.Time
+}
+
+type RepresentativesOfRow struct {
+	Entity        string
+	Subject       string
+	EventID       string
+	VerifiedSince *time.Time
+}
+
+// The identities holding a domain claim that counts on some entities.
+func (q *Queries) RepresentativesOf(ctx context.Context, arg RepresentativesOfParams) ([]RepresentativesOfRow, error) {
+	rows, err := q.db.Query(ctx, representativesOf, arg.Entities, arg.Now, arg.FreshAfter)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RepresentativesOfRow
+	for rows.Next() {
+		var i RepresentativesOfRow
+		if err := rows.Scan(
+			&i.Entity,
+			&i.Subject,
+			&i.EventID,
+			&i.VerifiedSince,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const revokeClaim = `-- name: RevokeClaim :exec
 UPDATE claims SET revoked = true
 WHERE event_id = $1

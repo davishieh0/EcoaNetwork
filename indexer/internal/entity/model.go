@@ -5,7 +5,9 @@ package entity
 
 
 import (
+	"context"
 	"encoding/json"
+	"time"
 )
 
 
@@ -26,6 +28,26 @@ type Metadata struct {
 	Name        *Field `json:"name"`
 	Category    *Field `json:"category"`
 	Description *Field `json:"description"`
+
+	// Representative is the one identity with authority over the entity,
+	// by a domain claim this indexer verified; absent when none.
+	Representative *Representative `json:"representative,omitempty"`
+}
+
+
+// Representative is an entity's verified representative.
+type Representative struct {
+	Identity string     `json:"identity"`
+	EventID  string     `json:"eventId"`
+	Since    *time.Time `json:"since,omitempty"`
+}
+
+
+// Judge is what resolving an entity needs to know about the authors of its
+// proposals: the claims that count for them, and who represents an entity.
+type Judge interface {
+	RepresentativeOf(ctx context.Context,
+	                 entity string) (*Representative, error)
 }
 
 

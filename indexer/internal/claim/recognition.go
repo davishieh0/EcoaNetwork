@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim/sqlc"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 )
 
 
@@ -20,6 +21,10 @@ const freshFor = Recheck + 5*24*time.Hour
 
 // --- CODE ---
 
+// entityRepresentative is the shape the entities route answers.
+type entityRepresentative = entity.Representative
+
+
 // Recognized is a claim that counts here, as the API shows it.
 type Recognized struct {
 	EventID   string     `json:"eventId"`
@@ -32,6 +37,15 @@ type Recognized struct {
 
 	// DNSSEC reports a domain claim verified by a DNSSEC-validated answer.
 	DNSSEC bool `json:"dnssec,omitempty"`
+}
+
+
+// Representative is the one identity with authority over an entity: the
+// sole holder of a domain claim on it that counts.
+type Representative struct {
+	Identity string     `json:"identity"`
+	EventID  string     `json:"eventId"`
+	Since    *time.Time `json:"since,omitempty"`
 }
 
 
@@ -79,6 +93,77 @@ func (r *Recognition) Of(ctx context.Context,
 	}
 
 	return held, nil
+}
+
+
+// Representatives returns the representative of each of entities that has
+// one. Two identities verified for one entity is a tie nobody wins: the
+// entity then has none, as projection.ResolveFields decides.
+func (r *Recognition) Representatives(
+	ctx context.Context,
+	entities []string,
+) (map[string]Representative, error) {
+	now := r.now()
+
+	rows, err := r.queries.RepresentativesOf(ctx, sqlc.RepresentativesOfParams{
+		Entities:   entities,
+		Now:        now,
+		FreshAfter: now.Add(-freshFor),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	byEntity := map[string][]sqlc.RepresentativesOfRow{}
+	for _, row := range rows {
+		byEntity[row.Entity] = append(byEntity[row.Entity], row)
+	}
+
+	reps := map[string]Representative{}
+
+	for entity, holding := range byEntity {
+		first := holding[0]
+		sole := true
+
+		for _, other := range holding[1:] {
+			if other.Subject != first.Subject {
+				sole = false
+			}
+		}
+
+		if sole {
+			reps[entity] = Representative{
+				Identity: first.Subject,
+				EventID:  first.EventID,
+				Since:    utc(first.VerifiedSince),
+			}
+		}
+	}
+
+	return reps, nil
+}
+
+
+// RepresentativeOf returns entity's representative, nil when it has none.
+func (r *Recognition) RepresentativeOf(
+	ctx context.Context,
+	entity string,
+) (*entityRepresentative, error) {
+	reps, err := r.Representatives(ctx, []string{entity})
+	if err != nil {
+		return nil, err
+	}
+
+	rep, ok := reps[entity]
+	if !ok {
+		return nil, nil
+	}
+
+	return &entityRepresentative{
+		Identity: rep.Identity,
+		EventID:  rep.EventID,
+		Since:    rep.Since,
+	}, nil
 }
 
 

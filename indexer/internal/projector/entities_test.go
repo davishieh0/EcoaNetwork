@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
@@ -29,7 +30,8 @@ func entitiesAPI(t *testing.T,
 	t.Helper()
 
 	h := entity.NewHandler(entity.NewRepository(pool),
-	                       label.NewModeration(policy, pool))
+	                       label.NewModeration(policy, pool),
+	                       claim.NewRecognition(claim.Policy{}, pool))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /entities", h.Search)
