@@ -78,6 +78,11 @@ func NewHandler(responses *Repository,
 // the chain any version of the review belongs to, oldest first, a page at a
 // time.
 func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
@@ -115,7 +120,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chainLabels, err := h.moderation.OnChains(r.Context(),
+	chainLabels, err := moderation.OnChains(r.Context(),
 	                                          []string{rev.ChainRoot})
 	if err != nil {
 		respond.Failed(w, err)
@@ -128,7 +133,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	moderators, err := h.moderation.Moderators(r.Context())
+	moderators, err := moderation.Moderators(r.Context())
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -151,7 +156,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, res.EventID)
 	}
 
-	labels, err := h.moderation.OnResponses(r.Context(), ids)
+	labels, err := moderation.OnResponses(r.Context(), ids)
 	if err != nil {
 		respond.Failed(w, err)
 		return

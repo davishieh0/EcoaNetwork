@@ -73,6 +73,11 @@ func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
 // ListByEntity answers GET /entities/{entity}/reviews: the head of each of
 // the entity's chains, newest original first, a page at a time.
 func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	entity := r.PathValue("entity")
 
 	if !ids.IsEntityID(entity) {
@@ -91,7 +96,7 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	moderators, err := h.moderation.Moderators(r.Context())
+	moderators, err := moderation.Moderators(r.Context())
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -113,7 +118,7 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		roots = append(roots, l.ChainRoot)
 	}
 
-	labels, err := h.moderation.OnChains(r.Context(), roots)
+	labels, err := moderation.OnChains(r.Context(), roots)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -140,6 +145,11 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 // Get answers GET /reviews/{eventId}: one version, with every version of its
 // chain.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
@@ -167,7 +177,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	labels, err := h.moderation.OnChains(r.Context(),
+	labels, err := moderation.OnChains(r.Context(),
 	                                     []string{review.ChainRoot})
 	if err != nil {
 		respond.Failed(w, err)
