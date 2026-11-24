@@ -31,6 +31,9 @@ async def search(
                                             'with or without accents.'),
     limit: str | None = Query(None, description='1 to 100; 20 by default.'),
     after: str | None = Query(None, description='The next of a page.'),
+    category: str | None = Query(None, description='One of the protocol\u2019s '
+                                                   'categories, such as '
+                                                   'food-and-drink.'),
     moderators: str | None = Query(None, description=MODERATORS_HELP),
     indexer: IndexerClient = Depends(get_indexer),
 ) -> Response:
@@ -38,6 +41,7 @@ async def search(
     Entities with a name that holds q, newest first; every entity without q.
     """
     return relay(await indexer.search_entities(q=q, limit=limit, after=after,
+                                               category=category,
                        moderators=moderators))
 
 

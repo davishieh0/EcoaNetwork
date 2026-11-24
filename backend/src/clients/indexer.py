@@ -264,6 +264,7 @@ class IndexerClient:
         q: str | None,
         limit: str | None,
         after: str | None,
+        category: str | None = None,
         moderators: str | None = None,
     ) -> IndexerAnswer:
         """
@@ -273,6 +274,8 @@ class IndexerClient:
         :param q: Part of a name; None for every entity.
         :param limit: The page size, as the client sent it.
         :param after: The next of a previous page.
+        :param category: One of the protocol's categories, to keep only
+            the entities it holds for.
         :param moderators: The moderators the client follows, comma-separated
             did:key; None for the indexer's own.
 
@@ -282,6 +285,7 @@ class IndexerClient:
         """
         return await self._get('entities',
                                params={'q': q, 'limit': limit, 'after': after,
+                                       'category': category,
                                        'moderators': moderators})
 
 

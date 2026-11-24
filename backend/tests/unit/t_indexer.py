@@ -54,6 +54,9 @@ def recorder() -> tuple[IndexerClient, list[httpx.Request]]:
 @pytest.mark.parametrize(('call', 'path', 'params'), [
     (lambda c: c.search_entities(q='joao', limit='5', after=None),
      b'/entities', {'q': 'joao', 'limit': '5'}),
+    (lambda c: c.search_entities(q=None, limit=None, after=None,
+                                 category='retail'),
+     b'/entities', {'category': 'retail'}),
     (lambda c: c.search_entities(q=None, limit=None, after=None),
      b'/entities', {}),
     (lambda c: c.get_entity(ENTITY),
