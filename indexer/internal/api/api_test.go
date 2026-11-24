@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database/dbtest"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
@@ -24,7 +25,7 @@ func TestAnUnknownPathIsNotFound(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	// Act
-	Handler(nil, label.Policy{}, review.Newest).ServeHTTP(rec, req)
+	Handler(nil, label.Policy{}, claim.Policy{}, review.Newest).ServeHTTP(rec, req)
 
 	// Assert
 	if rec.Code != http.StatusNotFound {
@@ -49,7 +50,7 @@ func TestServeAnswersAndStopsWithItsContext(t *testing.T) {
 	done := make(chan error, 1)
 
 	go func() {
-		done <- Serve(ctx, addr, pool, label.Policy{},
+		done <- Serve(ctx, addr, pool, label.Policy{}, claim.Policy{},
 		              review.Newest)
 	}()
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/ids"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
@@ -17,9 +18,10 @@ import (
 
 // Handler answers the routes of the reviews.
 type Handler struct {
-	repo       *Repository
-	moderation *label.Moderation
-	ranking    Ranking
+	repo        *Repository
+	moderation  *label.Moderation
+	recognition *claim.Recognition
+	ranking     Ranking
 }
 
 
@@ -45,6 +47,10 @@ type observed struct {
 	// the labels that count, by the moderators this indexer follows: another
 	// indexer, following others, shows others
 	Labels []label.Applied `json:"labels,omitempty"`
+
+	// the claims that count for its author, by this indexer's lookups and
+	// the verifiers it recognizes
+	Claims []claim.Recognized `json:"claims,omitempty"`
 }
 
 
@@ -71,12 +77,27 @@ type detail struct {
 // acting on labels by moderation.
 func NewHandler(repo *Repository,
                 moderation *label.Moderation,
+                recognition *claim.Recognition,
                 ranking Ranking) *Handler {
 	if ranking == "" {
 		ranking = Newest
 	}
 
-	return &Handler{repo: repo, moderation: moderation, ranking: ranking}
+	return &Handler{repo: repo, moderation: moderation,
+	                recognition: recognition, ranking: ranking}
+}
+
+
+// claimsOf returns the claims that count for the authors of versions.
+func (h *Handler) claimsOf(r *http.Request,
+                           versions []Version) (map[string][]claim.Recognized,
+                                                error) {
+	authors := make([]string, 0, len(versions))
+	for _, v := range versions {
+		authors = append(authors, claim.AuthorOf(v.Envelope))
+	}
+
+	return h.recognition.Of(r.Context(), authors)
 }
 
 
@@ -139,6 +160,17 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	versions := make([]Version, 0, len(listed))
+	for _, l := range listed {
+		versions = append(versions, l.Version)
+	}
+
+	held, err := h.claimsOf(r, versions)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
 	answer := listing{Ranking: h.ranking,
 	                  Items: make([]respond.Item, 0, len(listed))}
 
@@ -149,7 +181,7 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 			ChainRoot: l.ChainRoot,
 			Head:      true,
 			Edited:    &edited,
-		}, labels[l.ChainRoot]))
+		}, labels[l.ChainRoot], held))
 	}
 
 	answer.Next = page.Next(next)
@@ -213,15 +245,22 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	held, err := h.claimsOf(r, append(versions, review.Version))
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
 	answer := detail{
 		Review: item(review.Version, derivedOf(review, review.EventID),
-		             applied),
+		             applied, held),
 		Versions: make([]respond.Item, 0, len(versions)),
 	}
 
 	for _, v := range versions {
 		answer.Versions = append(answer.Versions,
-		                         item(v, derivedOf(review, v.EventID), applied))
+		                         item(v, derivedOf(review, v.EventID), applied,
+		                              held))
 	}
 
 	respond.JSON(w, http.StatusOK, answer)
@@ -239,14 +278,22 @@ func derivedOf(review Review, id string) derived {
 }
 
 
-// item is v as the API returns it, with the labels that count on its chain.
-func item(v Version, d derived, labels []label.Applied) respond.Item {
+// item is v as the API returns it, with the labels that count on its chain
+// and the claims that count for its author, among held.
+func item(v Version,
+          d derived,
+          labels []label.Applied,
+          held map[string][]claim.Recognized) respond.Item {
 	d.Endorsements, d.Disputes = v.Endorsements, v.Disputes
 
 	return respond.Item{
 		Envelope: string(v.Envelope),
 		Derived:  d,
-		Observed: observed{ReceivedAt: utc(v.ReceivedAt), Labels: labels},
+		Observed: observed{
+			ReceivedAt: utc(v.ReceivedAt),
+			Labels:     labels,
+			Claims:     held[claim.AuthorOf(v.Envelope)],
+		},
 	}
 }
 

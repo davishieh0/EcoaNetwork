@@ -120,6 +120,13 @@ func serve(ctx context.Context, cfg config.Config) error {
 
 	slog.Info("moderation", "following", len(policy.Moderators()))
 
+	verifiers, err := claim.LoadPolicy(cfg.VerifiersFile)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("verification", "human verifiers", len(verifiers.Human()))
+
 	pool, err := database.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
@@ -128,7 +135,7 @@ func serve(ctx context.Context, cfg config.Config) error {
 
 	slog.Info("ranking", "order", cfg.Ranking)
 
-	return api.Serve(ctx, cfg.HTTPAddr, pool, policy,
+	return api.Serve(ctx, cfg.HTTPAddr, pool, policy, verifiers,
 	                 review.Ranking(cfg.Ranking))
 }
 

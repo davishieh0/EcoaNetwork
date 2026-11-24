@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
@@ -41,8 +42,9 @@ func api(t *testing.T,
 	t.Helper()
 
 	moderation := label.NewModeration(policy, pool)
+	recognition := claim.NewRecognition(claim.Policy{}, pool)
 	reviews := review.NewHandler(review.NewRepository(pool), moderation,
-	                             review.Newest)
+	                             recognition, review.Newest)
 	responses := response.NewHandler(response.NewRepository(pool),
 	                                 review.NewRepository(pool), moderation)
 	events := event.NewHandler(event.NewRepository(pool), moderation)

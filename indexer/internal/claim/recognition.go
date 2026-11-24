@@ -3,6 +3,7 @@ package claim
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim/sqlc"
@@ -78,6 +79,18 @@ func (r *Recognition) Of(ctx context.Context,
 	}
 
 	return held, nil
+}
+
+
+// AuthorOf reads the author of a signed envelope, "" when it has none.
+func AuthorOf(envelope []byte) string {
+	var head struct {
+		Author string `json:"author"`
+	}
+
+	_ = json.Unmarshal(envelope, &head)
+
+	return head.Author
 }
 
 
