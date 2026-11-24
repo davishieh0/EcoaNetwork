@@ -8,6 +8,7 @@ import { useCallback } from 'react'
 import { useSearchParams } from 'react-router'
 import { usePaged } from '@/app/reads/usePaged'
 import { searchEntities } from '@/logic/datasource/entities'
+import { useModeration } from '@/logic/moderation/moderation'
 
 // --- CODE ---
 /**
@@ -19,9 +20,11 @@ export function useExploreData() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q')?.trim() ?? ''
 
+  const { param } = useModeration()
+
   const load = useCallback(
-    (after?: string) => searchEntities(query || undefined, after),
-    [query],
+    (after?: string) => searchEntities(query || undefined, after, param),
+    [query, param],
   )
 
   const search = useCallback(

@@ -9,6 +9,7 @@ import { useAuthors } from '@/app/reads/useAuthors'
 import { usePaged } from '@/app/reads/usePaged'
 import { useRead } from '@/app/reads/useRead'
 import { getEntity, listEntityReviews } from '@/logic/datasource/entities'
+import { useModeration } from '@/logic/moderation/moderation'
 import { readEnvelope } from '@/logic/protocol/signed'
 
 // --- CODE ---
@@ -23,17 +24,23 @@ export function useEntityData() {
   const [params, setParams] = useSearchParams()
   const labeled = params.get('labeled') === 'show' ? 'show' : undefined
 
-  const readEntity = useCallback(() => getEntity(entityId), [entityId])
+  const { param } = useModeration()
+
+  const readEntity = useCallback(
+    () => getEntity(entityId, param),
+    [entityId, param],
+  )
   const entity = useRead(readEntity)
 
   const loadReviews = useCallback(
-    (after?: string) => listEntityReviews(entityId, after, labeled),
-    [entityId, labeled],
+    (after?: string) => listEntityReviews(entityId, after, labeled, param),
+    [entityId, labeled, param],
   )
   const reviews = usePaged(loadReviews)
 
   const names = useAuthors(
     reviews.items.map((item) => readEnvelope(item.envelope).author),
+    param,
   )
 
   const showLabeled = useCallback(

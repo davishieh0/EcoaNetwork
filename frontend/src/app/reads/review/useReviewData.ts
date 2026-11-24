@@ -13,6 +13,7 @@ import { useRead } from '@/app/reads/useRead'
 import type { ReviewItem } from '@/logic/datasource/entities.t'
 import { getReview, listReviewResponses } from '@/logic/datasource/reviews'
 import { HttpError } from '@/logic/errors/httpError'
+import { useModeration } from '@/logic/moderation/moderation'
 import { readEnvelope, reviewTextOf } from '@/logic/protocol/signed'
 
 // --- GLOBALS ---
@@ -38,18 +39,20 @@ export function useReviewData() {
   // the review just published, until the index has it: read it again
   const [attempt, setAttempt] = useState(0)
 
+  const { param } = useModeration()
+
   const readReview = useCallback(
-    () => getReview(eventId),
+    () => getReview(eventId, param),
     // a new attempt is a new read
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eventId, attempt],
+    [eventId, param, attempt],
   )
   const review = useRead(readReview)
 
   const loadResponses = useCallback(
-    (after?: string) => listReviewResponses(eventId, after, labeled),
+    (after?: string) => listReviewResponses(eventId, after, labeled, param),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eventId, labeled, attempt],
+    [eventId, labeled, param, attempt],
   )
   const responses = usePaged(loadResponses)
 
@@ -98,6 +101,7 @@ export function useReviewData() {
     [...versions, ...responses.items].map(
       (item) => readEnvelope(item.envelope).author,
     ),
+    param,
   )
 
   const showLabeled = useCallback(

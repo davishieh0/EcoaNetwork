@@ -20,13 +20,18 @@ const MOST = 100
  * @param ids - The did:key, in any order, repeats allowed.
  * @returns Every profile found.
  */
-async function profilesOf(ids: string[]): Promise<Profiles> {
+async function profilesOf(
+  ids: string[],
+  moderators?: string,
+): Promise<Profiles> {
   const chunks: string[][] = []
   for (let start = 0; start < ids.length; start += MOST) {
     chunks.push(ids.slice(start, start + MOST))
   }
 
-  const answers = await Promise.all(chunks.map(getProfiles))
+  const answers = await Promise.all(
+    chunks.map((chunk) => getProfiles(chunk, moderators)),
+  )
   return { items: answers.flatMap((answer) => answer.items) }
 }
 
@@ -36,16 +41,22 @@ async function profilesOf(ids: string[]): Promise<Profiles> {
  * A profile a moderator labeled gives no name.
  *
  * @param ids - The did:key of the authors on the page.
+ * @param moderators - The reader's moderators, as reads send them.
  * @returns The names found, by did:key; a failure leaves it empty.
  */
-export function useAuthors(ids: string[]): Record<string, string> {
+export function useAuthors(
+  ids: string[],
+  moderators?: string,
+): Record<string, string> {
   // the same set of authors, in any order, is the same read
   const key = [...new Set(ids)].sort().join(',')
 
   const read = useCallback(
     () =>
-      key ? profilesOf(key.split(',')) : Promise.resolve({ items: [] }),
-    [key],
+      key
+        ? profilesOf(key.split(','), moderators)
+        : Promise.resolve({ items: [] }),
+    [key, moderators],
   )
   const { data } = useRead(read)
 

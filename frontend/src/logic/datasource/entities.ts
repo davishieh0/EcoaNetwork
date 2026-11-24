@@ -15,8 +15,8 @@ import type { Labeled, Page } from '@/logic/datasource/signed.t'
  * @param after - The next of a previous page.
  * @returns A page of entities.
  */
-export function searchEntities(q?: string, after?: string) {
-  return request<Page<Entity>>(route(['entities'], { q, after }))
+export function searchEntities(q?: string, after?: string, moderators?: string) {
+  return request<Page<Entity>>(route(['entities'], { q, after, moderators }))
 }
 
 /**
@@ -25,8 +25,8 @@ export function searchEntities(q?: string, after?: string) {
  * @param entity - The entity id, such as `cnpj:12345678000199`.
  * @returns The entity.
  */
-export function getEntity(entity: string) {
-  return request<Entity>(route(['entities', entity]))
+export function getEntity(entity: string, moderators?: string) {
+  return request<Entity>(route(['entities', entity], { moderators }))
 }
 
 /**
@@ -41,8 +41,9 @@ export function listEntityReviews(
   entity: string,
   after?: string,
   labeled?: Labeled,
+  moderators?: string,
 ) {
   return request<Page<ReviewItem>>(
-    route(['entities', entity, 'reviews'], { after, labeled }),
+    route(['entities', entity, 'reviews'], { after, labeled, moderators }),
   )
 }

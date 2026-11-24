@@ -13,6 +13,8 @@ import type { Profiles } from '@/logic/datasource/profiles.t'
  * @param ids - 1 to 100 did:key.
  * @returns Their profiles, in the order asked, those with none left out.
  */
-export function getProfiles(ids: string[]) {
-  return request<Profiles>(route(['profiles'], { ids: ids.join(',') }))
+export function getProfiles(ids: string[], moderators?: string) {
+  return request<Profiles>(
+    route(['profiles'], { ids: ids.join(','), moderators }),
+  )
 }

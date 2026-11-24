@@ -14,6 +14,7 @@ import type {
 } from '@/components/ecoa/EventInspector.t'
 import { getEvent } from '@/logic/datasource/events'
 import type { EventItem } from '@/logic/datasource/events.t'
+import { useModeration } from '@/logic/moderation/moderation'
 import { readEnvelope } from '@/logic/protocol/signed'
 import { verifyEnvelope } from '@/logic/protocol/verify'
 import type { Verdict } from '@/logic/protocol/verify.t'
@@ -72,9 +73,11 @@ function inspectedOf(item: EventItem, check: Check): InspectedEvent {
 export function useInspection() {
   const [eventId, setEventId] = useState<string | null>(null)
 
+  const { param } = useModeration()
+
   const read = useCallback(
-    () => (eventId ? getEvent(eventId) : Promise.resolve(null)),
-    [eventId],
+    () => (eventId ? getEvent(eventId, param) : Promise.resolve(null)),
+    [eventId, param],
   )
   const { data, error } = useRead(read)
 
