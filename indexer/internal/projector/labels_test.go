@@ -41,7 +41,8 @@ func api(t *testing.T,
 	t.Helper()
 
 	moderation := label.NewModeration(policy, pool)
-	reviews := review.NewHandler(review.NewRepository(pool), moderation)
+	reviews := review.NewHandler(review.NewRepository(pool), moderation,
+	                             review.Newest)
 	responses := response.NewHandler(response.NewRepository(pool),
 	                                 review.NewRepository(pool), moderation)
 	events := event.NewHandler(event.NewRepository(pool), moderation)

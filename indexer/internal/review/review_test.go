@@ -144,7 +144,7 @@ func call(t *testing.T, pool *pgxpool.Pool, path string) *httptest.ResponseRecor
 	t.Helper()
 
 	moderation := label.NewModeration(label.Policy{}, pool)
-	h := NewHandler(NewRepository(pool), moderation)
+	h := NewHandler(NewRepository(pool), moderation, Newest)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /entities/{entity}/reviews", h.ListByEntity)

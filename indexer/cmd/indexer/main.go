@@ -16,6 +16,7 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/projector"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 )
 
 
@@ -106,7 +107,10 @@ func serve(ctx context.Context, cfg config.Config) error {
 	}
 	defer pool.Close()
 
-	return api.Serve(ctx, cfg.HTTPAddr, pool, policy)
+	slog.Info("ranking", "order", cfg.Ranking)
+
+	return api.Serve(ctx, cfg.HTTPAddr, pool, policy,
+	                 review.Ranking(cfg.Ranking))
 }
 
 

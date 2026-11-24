@@ -33,10 +33,11 @@ const shutdownTimeout = 5 * time.Second
 func Serve(ctx context.Context,
            addr string,
            pool *pgxpool.Pool,
-           policy label.Policy) error {
+           policy label.Policy,
+           ranking review.Ranking) error {
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           Handler(pool, policy),
+		Handler:           Handler(pool, policy, ranking),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -65,14 +66,17 @@ func Serve(ctx context.Context,
 // Handler returns the router of every endpoint the API answers.
 //
 // Each route lives in a file of its own; this is the one list of them all.
-func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
+func Handler(pool *pgxpool.Pool,
+             policy label.Policy,
+             ranking review.Ranking) http.Handler {
 	moderation := label.NewModeration(policy, pool)
 
 	events := event.NewHandler(event.NewRepository(pool), moderation)
 	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
 	profiles := profile.NewHandler(profile.NewRepository(pool), moderation)
 	keys := identities.NewHandler(identities.NewRepository(pool))
-	reviews := review.NewHandler(review.NewRepository(pool), moderation)
+	reviews := review.NewHandler(review.NewRepository(pool), moderation,
+	                             ranking)
 	responses := response.NewHandler(response.NewRepository(pool),
 	                                 review.NewRepository(pool),
 	                                 moderation)

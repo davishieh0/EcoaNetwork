@@ -19,6 +19,7 @@ import (
 type Handler struct {
 	repo       *Repository
 	moderation *label.Moderation
+	ranking    Ranking
 }
 
 
@@ -49,6 +50,9 @@ type observed struct {
 
 // listing is the answer of GET /entities/{entity}/reviews.
 type listing struct {
+	// Ranking is how this indexer ordered the list.
+	Ranking Ranking `json:"ranking"`
+
 	Items []respond.Item `json:"items"`
 
 	// Next is the ?after= of the next page, null on the last one.
@@ -65,8 +69,14 @@ type detail struct {
 
 // NewHandler returns the handler of the review routes, reading from repo and
 // acting on labels by moderation.
-func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
-	return &Handler{repo: repo, moderation: moderation}
+func NewHandler(repo *Repository,
+                moderation *label.Moderation,
+                ranking Ranking) *Handler {
+	if ranking == "" {
+		ranking = Newest
+	}
+
+	return &Handler{repo: repo, moderation: moderation, ranking: ranking}
 }
 
 
@@ -107,7 +117,12 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		Labels:     label.Hiding(show),
 	}
 
-	listed, next, err := h.repo.HeadsByEntity(r.Context(), entity, p, hide)
+	heads := h.repo.HeadsByEntity
+	if h.ranking == Endorsed {
+		heads = h.repo.HeadsByScore
+	}
+
+	listed, next, err := heads(r.Context(), entity, p, hide)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -124,7 +139,8 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	answer := listing{Items: make([]respond.Item, 0, len(listed))}
+	answer := listing{Ranking: h.ranking,
+	                  Items: make([]respond.Item, 0, len(listed))}
 
 	for _, l := range listed {
 		edited := l.Edited
