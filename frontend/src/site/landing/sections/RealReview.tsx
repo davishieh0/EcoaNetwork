@@ -32,7 +32,7 @@ const REVIEW: Review = {
   publishedAt: '2026-08-14',
   eventId: '8f2c…a41',
   observedBy: 6,
-  edited: true,
+  edited: 2,
 }
 
 /** The card's signed event, as the inspector shows it. */
