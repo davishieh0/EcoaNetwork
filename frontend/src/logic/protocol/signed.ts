@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import type { Envelope } from '@/logic/protocol/envelope.t'
+import type { ReviewText } from '@/logic/protocol/signed.t'
 
 // --- CODE ---
 /**
@@ -29,4 +30,23 @@ export function readEnvelope(raw: string): Envelope {
   }
 
   return parsed as Envelope
+}
+
+/**
+ * What a review or one of its versions says, read from its payload.
+ *
+ * @param envelope - A `review.created` or `review.replaced`.
+ * @returns Its rating, title, body and language.
+ */
+export function reviewTextOf(envelope: Envelope): ReviewText {
+  const { rating, title, body, lang, entity, replaces } = envelope.payload
+
+  return {
+    rating: typeof rating === 'number' ? rating : 0,
+    title: typeof title === 'string' ? title : undefined,
+    body: typeof body === 'string' ? body : '',
+    lang: typeof lang === 'string' ? lang : undefined,
+    entity: typeof entity === 'string' ? entity : undefined,
+    replaces: typeof replaces === 'string' ? replaces : undefined,
+  }
 }
