@@ -46,6 +46,15 @@ class Config(BaseSettings):
     # indexer (base URL of its read API)
     INDEXER_URL: str
 
+    # the network events are signed for
+    ECOA_NETWORK: str = 'ecoa-dev'
+
+    # the human verifier's key, 64 hex characters; empty issues no claim
+    HUMAN_VERIFIER_SEED: SecretStr = SecretStr('')
+
+    # signs the checks given out; empty picks a random one at each start
+    ALTCHA_HMAC_SECRET: SecretStr = SecretStr('')
+
     @property
     def cors_origins(self) -> list[str]:
         """
