@@ -13,6 +13,16 @@ export type Field = {
   tier: number
 } | null
 
+/** The ratings that count, as this index adds them up. */
+export type Summary = {
+  count: number
+  mean?: number
+  /** How many count with each rating, 1 to 5. */
+  distribution: [number, number, number, number, number]
+  /** Left out as a conflict of interest: shown, marked, not counted. */
+  conflicted: number
+}
+
 /** An entity and the value of each of its fields. */
 export type Entity = {
   entity: string
@@ -25,6 +35,8 @@ export type Entity = {
     name: Field
     category: Field
     description: Field
+    /** This index's summary of the ratings; on the entity's own route. */
+    summary?: Summary
   }
 }
 

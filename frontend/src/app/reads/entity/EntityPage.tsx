@@ -17,6 +17,7 @@ import { stagger } from '@/app/reads/stagger'
 import { useInspection } from '@/app/reads/useInspection'
 import { categoryOf, identifierOf, kindOf, nameOf } from '@/app/reads/words'
 import { EventInspector } from '@/components/ecoa/EventInspector'
+import { RatingSummary } from '@/components/ecoa/RatingSummary'
 import { ReviewCard } from '@/components/ecoa/ReviewCard'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
@@ -131,6 +132,14 @@ export function EntityPage() {
           </Button>
         </motion.div>
       </header>
+
+      {entity.data?.observed.summary &&
+      (entity.data.observed.summary.count > 0 ||
+        entity.data.observed.summary.conflicted > 0) ? (
+        <motion.div {...arrive} className="mt-8">
+          <RatingSummary {...entity.data.observed.summary} />
+        </motion.div>
+      ) : null}
 
       {failed ? (
         <motion.p {...arrive} role="alert" className="mt-6 text-danger">
