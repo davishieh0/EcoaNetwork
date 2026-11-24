@@ -22,6 +22,22 @@ const MESSAGES: Record<string, string> = {
   invalid_request_error:
     'The review could not be read by the gateway. Check it and try again.',
   node_unavailable_error: 'No network node answered right now. Try again soon.',
+  indexer_unavailable_error:
+    'The index is not answering right now. Try again soon.',
+  network_error: 'Ecoa is not answering. Check your connection and try again.',
+  entity_not_found_error: 'Nothing on the network names this entity yet.',
+  review_not_found_error: 'No review with this id is on the network.',
+  event_not_found_error: 'No event with this id is on the network.',
+  profile_not_found_error: 'This identity has no profile.',
+  review_withdrawn_error: 'Its author withdrew this review.',
+  removed_by_moderation_error:
+    'A moderator this index follows removed this, as illegal or as ' +
+    'personal data.',
+  invalid_event_id_error: 'That is not an event id.',
+  invalid_entity_id_error: 'That is not an entity id.',
+  invalid_identity_error: 'That is not an identity.',
+  invalid_query_error: 'The search is too long. Use up to 120 characters.',
+  invalid_cursor_error: 'The list changed. Load it again from the start.',
 }
 
 const UNAVAILABLE = 'Something on our side is not answering. Try again soon.'
