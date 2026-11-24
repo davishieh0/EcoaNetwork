@@ -82,6 +82,13 @@ func (r *Recognition) Of(ctx context.Context,
 }
 
 
+// EntityOfChain returns the entity a review chain is about.
+func (r *Recognition) EntityOfChain(ctx context.Context,
+                                    root string) (string, error) {
+	return r.queries.EntityOfChain(ctx, root)
+}
+
+
 // AuthorOf reads the author of a signed envelope, "" when it has none.
 func AuthorOf(envelope []byte) string {
 	var head struct {
@@ -91,6 +98,19 @@ func AuthorOf(envelope []byte) string {
 	_ = json.Unmarshal(envelope, &head)
 
 	return head.Author
+}
+
+
+// Official reports whether one of claims makes its holder the voice of
+// entity: a domain claim on that very entity.
+func Official(claims []Recognized, entity string) bool {
+	for _, c := range claims {
+		if c.ClaimType == "domain" && c.Entity != nil && *c.Entity == entity {
+			return true
+		}
+	}
+
+	return false
 }
 
 

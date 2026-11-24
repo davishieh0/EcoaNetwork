@@ -83,7 +83,8 @@ func Handler(pool *pgxpool.Pool,
 	                             recognition, ranking)
 	responses := response.NewHandler(response.NewRepository(pool),
 	                                 review.NewRepository(pool),
-	                                 moderation)
+	                                 moderation,
+	                                 recognition)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))

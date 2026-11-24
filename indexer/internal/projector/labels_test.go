@@ -46,7 +46,8 @@ func api(t *testing.T,
 	reviews := review.NewHandler(review.NewRepository(pool), moderation,
 	                             recognition, review.Newest)
 	responses := response.NewHandler(response.NewRepository(pool),
-	                                 review.NewRepository(pool), moderation)
+	                                 review.NewRepository(pool), moderation,
+	                                 recognition)
 	events := event.NewHandler(event.NewRepository(pool), moderation)
 
 	mux := http.NewServeMux()

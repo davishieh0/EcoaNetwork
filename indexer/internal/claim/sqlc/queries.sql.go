@@ -67,6 +67,18 @@ func (q *Queries) DueChecks(ctx context.Context, arg DueChecksParams) ([]DueChec
 	return items, nil
 }
 
+const entityOfChain = `-- name: EntityOfChain :one
+SELECT entity FROM review_chains WHERE chain_root = $1
+`
+
+// The entity a review chain is about.
+func (q *Queries) EntityOfChain(ctx context.Context, chainRoot string) (string, error) {
+	row := q.db.QueryRow(ctx, entityOfChain, chainRoot)
+	var entity string
+	err := row.Scan(&entity)
+	return entity, err
+}
+
 const recognizedOf = `-- name: RecognizedOf :many
 SELECT c.event_id, c.claim_type, c.subject, c.entity, c.expires_at,
        k.verified_since, COALESCE(k.dnssec, false) AS dnssec

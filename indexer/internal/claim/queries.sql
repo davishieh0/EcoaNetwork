@@ -73,3 +73,7 @@ WHERE c.subject = ANY (sqlc.arg(subjects)::text[])
        OR (c.claim_type = 'human'
            AND c.issuer = ANY (sqlc.arg(verifiers)::text[])))
 ORDER BY c.subject, c.claim_type, c.event_id;
+
+-- name: EntityOfChain :one
+-- The entity a review chain is about.
+SELECT entity FROM review_chains WHERE chain_root = $1;
