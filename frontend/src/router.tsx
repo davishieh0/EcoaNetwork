@@ -11,6 +11,7 @@ import { Dashboard } from '@/app/dashboard/Dashboard'
 import { ForgotPassword } from '@/app/auth/forgotPassword/ForgotPassword'
 import { Login } from '@/app/auth/login/Login'
 import { Moderation } from '@/app/moderation/Moderation'
+import { IdentityPage } from '@/app/identity/IdentityPage'
 import { Register } from '@/app/auth/register/Register'
 import { ResetPassword } from '@/app/auth/resetPassword/ResetPassword'
 import { VerifyEmail } from '@/app/auth/verifyEmail/VerifyEmail'
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
           { path: 'entities/:entity', element: <EntityPage /> },
           { path: 'reviews/:eventId', element: <ReviewPage /> },
           { path: 'moderation', element: <Moderation /> },
+          { path: 'identity', element: <IdentityPage /> },
         ],
       },
       // for someone not signed in yet: signing in, or recovering an account

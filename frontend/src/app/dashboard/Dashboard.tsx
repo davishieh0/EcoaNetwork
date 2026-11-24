@@ -27,6 +27,11 @@ const SHORTCUTS: Shortcut[] = [
     to: ROUTES.explore,
   },
   {
+    title: 'Identity',
+    body: 'Your signing key, its backup, verification and profile.',
+    to: ROUTES.identity,
+  },
+  {
     title: 'Account',
     body: 'Your handle and email, signing out, deleting the account.',
     to: ROUTES.account,
