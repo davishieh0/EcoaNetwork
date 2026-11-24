@@ -126,3 +126,23 @@ export function fromBase58btc(text: string): Uint8Array | null {
 
   return new Uint8Array(bytes.reverse())
 }
+
+/**
+ * Decodes base64url text, with or without padding.
+ *
+ * @param text - The text to decode.
+ * @returns The bytes, or null when it is not base64url.
+ */
+export function fromBase64url(text: string): Uint8Array | null {
+  if (!/^[A-Za-z0-9_-]*={0,2}$/.test(text)) return null
+
+  const standard = text.replace(/-/g, '+').replace(/_/g, '/')
+
+  try {
+    return Uint8Array.from(atob(standard), (character) =>
+      character.charCodeAt(0),
+    )
+  } catch {
+    return null
+  }
+}
