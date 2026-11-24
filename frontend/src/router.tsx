@@ -16,7 +16,8 @@ import { VerifyEmail } from '@/app/auth/verifyEmail/VerifyEmail'
 import { AppLayout } from '@/app/layout/AppLayout'
 import { GuestOnly } from '@/app/layout/GuestOnly'
 import { RequireAuth } from '@/app/layout/RequireAuth'
-import { Explore } from '@/app/reviews/Explore'
+import { Explore } from '@/app/reads/explore/Explore'
+import { ReadsLayout } from '@/app/reads/ReadsLayout'
 import { Write } from '@/app/write/Write'
 import { Landing } from '@/site/landing/Landing'
 import { NotFound } from '@/site/NotFound'
@@ -38,7 +39,13 @@ export const router = createBrowserRouter([
     path: 'app',
     element: <AppLayout />,
     children: [
-      { path: 'explore', element: <Explore /> },
+      // reading is public, and the read screens share one backdrop
+      {
+        element: <ReadsLayout />,
+        children: [
+          { path: 'explore', element: <Explore /> },
+        ],
+      },
       // for someone not signed in yet: signing in, or recovering an account
       {
         element: <GuestOnly />,
