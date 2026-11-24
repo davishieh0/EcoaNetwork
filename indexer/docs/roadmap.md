@@ -129,7 +129,10 @@ deterministic tables from the logs. In the order to build it:
 3. **Loose ends of step 5 and the API.** Unknown event types counted in the
    progress log (they are stored and skipped already); `/health` showing how
    far behind each node the projector is (`head - sequence`, the design's
-   promise). *Small.*
+   promise); `/events/{eventId}` marking the labels that count in
+   `observed.labels`, as the design's label table says ("shown, marked") and
+   the lists already do: today it answers them unmarked, so the inspection
+   view cannot say a moderator labeled the event. *Small.*
 4. **Step 8, the generator and the seeded dataset.** A few hundred signed
    synthetic reviews, and `cnpj:` entities from the Receita Federal's public
    data as `entity.updated` proposals signed by the operator's identity,
