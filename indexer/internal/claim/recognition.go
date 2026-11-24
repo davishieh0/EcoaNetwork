@@ -8,6 +8,7 @@ import (
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim/sqlc"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/projection"
 )
 
 
@@ -164,6 +165,41 @@ func (r *Recognition) RepresentativeOf(
 		EventID:  rep.EventID,
 		Since:    rep.Since,
 	}, nil
+}
+
+
+// Identities is what projection.ResolveFields takes about each of authors:
+// the claims that count for them. Weights wait on reputation.
+func (r *Recognition) Identities(
+	ctx context.Context,
+	authors []string,
+) (map[string]projection.Identity, error) {
+	held, err := r.Of(ctx, authors)
+	if err != nil {
+		return nil, err
+	}
+
+	identities := map[string]projection.Identity{}
+
+	for author, claims := range held {
+		var judged []projection.Claim
+
+		for _, c := range claims {
+			if c.Entity == nil {
+				continue
+			}
+
+			judged = append(judged, projection.Claim{
+				Entity:         *c.Entity,
+				Recognized:     true,
+				SelfVerifiable: c.ClaimType == "domain",
+			})
+		}
+
+		identities[author] = projection.Identity{Claims: judged}
+	}
+
+	return identities, nil
 }
 
 

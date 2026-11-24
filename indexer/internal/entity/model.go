@@ -8,6 +8,8 @@ import (
 	"context"
 	"encoding/json"
 	"time"
+
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/projection"
 )
 
 
@@ -46,6 +48,8 @@ type Representative struct {
 // Judge is what resolving an entity needs to know about the authors of its
 // proposals: the claims that count for them, and who represents an entity.
 type Judge interface {
+	Identities(ctx context.Context,
+	           authors []string) (map[string]projection.Identity, error)
 	RepresentativeOf(ctx context.Context,
 	                 entity string) (*Representative, error)
 }

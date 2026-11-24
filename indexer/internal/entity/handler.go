@@ -133,7 +133,8 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		category = &c
 	}
 
-	found, next, err := h.repo.Search(r.Context(), q, moderators, p, category)
+	found, next, err := h.repo.Search(r.Context(), q, moderators, p, category,
+	                                  h.judge)
 	if err != nil {
 		respond.Failed(w, err)
 		return

@@ -51,7 +51,7 @@ func (r *Repository) ByID(ctx context.Context,
 		return Entity{}, ErrNotFound
 	}
 
-	resolved, err := r.resolve(ctx, []string{id}, moderators)
+	resolved, err := r.resolve(ctx, []string{id}, moderators, judge)
 	if err != nil {
 		return Entity{}, err
 	}
@@ -87,7 +87,8 @@ func (r *Repository) Search(ctx context.Context,
                             text string,
                             moderators []string,
                             p page.Page,
-                            category *string) ([]Entity, *page.Cursor, error) {
+                            category *string,
+                            judge Judge) ([]Entity, *page.Cursor, error) {
 	params := sqlc.SearchEntitiesParams{
 		Query:      likePattern(fold(text)),
 		Moderators: moderators,
@@ -119,7 +120,7 @@ func (r *Repository) Search(ctx context.Context,
 		ids = append(ids, row.Entity)
 	}
 
-	resolved, err := r.resolve(ctx, ids, moderators)
+	resolved, err := r.resolve(ctx, ids, moderators, judge)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -140,11 +141,12 @@ func (r *Repository) Search(ctx context.Context,
 
 
 // resolve works out each entity's metadata with the protocol's rule, from
-// the proposals still in the contest. v1 has no weights and no recognized
-// claims, so each field holds its first proposal; when they come, the same
-// call starts using them.
+// the proposals still in the contest: a verified representative's latest
+// value first (tier 1), otherwise the first value (tier 2). Weights wait on
+// reputation, so no challenger outweighs the first yet.
 func (r *Repository) resolve(ctx context.Context,
-                             ids, moderators []string) (map[string]Metadata, error) {
+                             ids, moderators []string,
+                             judge Judge) (map[string]Metadata, error) {
 	rows, err := r.queries.ProposalEnvelopes(ctx, sqlc.ProposalEnvelopesParams{
 		Entities:   ids,
 		Moderators: moderators,
@@ -170,11 +172,26 @@ func (r *Repository) resolve(ctx context.Context,
 		})
 	}
 
+	identities := map[string]projection.Identity{}
+
+	if judge != nil {
+		var authors []string
+		for _, list := range proposals {
+			for _, p := range list {
+				authors = append(authors, p.Author)
+			}
+		}
+
+		identities, err = judge.Identities(ctx, authors)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	resolved := map[string]Metadata{}
 
 	for _, id := range ids {
-		fields := projection.ResolveFields(proposals[id],
-		                                   map[string]projection.Identity{})
+		fields := projection.ResolveFields(proposals[id], identities)
 
 		resolved[id] = Metadata{
 			Name:        fieldOf(fields, "name"),
