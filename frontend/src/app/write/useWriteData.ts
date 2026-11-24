@@ -6,13 +6,15 @@
 import { useState } from 'react'
 
 import { messageOf } from '@/app/forms/messages'
-import type { WritePhase } from '@/app/write/Write.t'
+import { useRouteState } from '@/app/navigation/navigation'
+import type { WritePhase, WriteState } from '@/app/write/Write.t'
 import { publishEvent } from '@/logic/datasource/events'
 import { HttpError } from '@/logic/errors/httpError'
 import { MAX_ENVELOPE, signEnvelope, sizeOf } from '@/logic/protocol/envelope'
 import { loadIdentity } from '@/logic/protocol/identity'
 import { normalizeEntity } from '@/logic/protocol/entity'
 import { checkReview } from '@/logic/protocol/review'
+import type { EntityKind } from '@/logic/protocol/entity.t'
 import type { ReviewDraft } from '@/logic/protocol/review.t'
 import { useSession } from '@/logic/session/session'
 
@@ -57,6 +59,22 @@ function refusalOf(reason: string | null): string {
 }
 
 /**
+ * Starts a draft, about the entity the previous screen handed over when it
+ * is one the composer offers.
+ *
+ * @param state - What the previous screen handed over.
+ * @returns The draft to start from.
+ */
+function draftFor(state: WriteState): ReviewDraft {
+  const [kind, ...rest] = (state.entity ?? '').split(':')
+  const known = ['cnpj', 'domain', 'gtin'].includes(kind)
+
+  return known
+    ? { ...EMPTY, kind: kind as EntityKind, identifier: rest.join(':') }
+    : EMPTY
+}
+
+/**
  * Formats now as createdAt: RFC 3339, UTC, whole seconds, literal Z.
  *
  * @returns The timestamp.
@@ -72,7 +90,8 @@ function now(): string {
  */
 export function useWriteData() {
   const session = useSession()
-  const [draft, setDraft] = useState<ReviewDraft>(EMPTY)
+  const handed = useRouteState<'write'>()
+  const [draft, setDraft] = useState<ReviewDraft>(() => draftFor(handed))
   const [phase, setPhase] = useState<WritePhase>({
     name: 'editing',
     attempted: false,
@@ -183,7 +202,7 @@ export function useWriteData() {
    * Clears the draft to write another review.
    */
   const reset = () => {
-    setDraft(EMPTY)
+    setDraft(draftFor(handed))
     setPhase({ name: 'editing', attempted: false })
   }
 
