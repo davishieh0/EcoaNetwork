@@ -4,9 +4,11 @@ package label
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label/sqlc"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/respond"
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
 )
 
 
@@ -31,6 +33,47 @@ type Moderation struct {
 // NewModeration returns the moderation of policy, reading labels from db.
 func NewModeration(policy Policy, db sqlc.DBTX) *Moderation {
 	return &Moderation{policy: policy, queries: sqlc.New(db)}
+}
+
+
+// maxModerators is the most moderators one request may name.
+const maxModerators = 20
+
+
+// ForRequest returns the moderation a request asks for. ?moderators= names
+// the moderators the client follows, comma-separated did:key, empty for
+// nobody: a label then counts for a client that follows its moderator and
+// for nobody else. Without it, the moderators file holds. A malformed list
+// answers 400 and reports false.
+func (m *Moderation) ForRequest(w http.ResponseWriter,
+                                r *http.Request) (*Moderation, bool) {
+	raw, asked := r.URL.Query()["moderators"]
+	if !asked {
+		return m, true
+	}
+
+	var dids []string
+	for _, did := range strings.Split(strings.Join(raw, ","), ",") {
+		if did = strings.TrimSpace(did); did != "" {
+			dids = append(dids, did)
+		}
+	}
+
+	for _, did := range dids {
+		if _, err := identity.Parse(did); err != nil {
+			respond.Error(w, http.StatusBadRequest, "invalid_moderators_error",
+			              "moderators is up to 20 did:key, comma-separated.")
+			return nil, false
+		}
+	}
+
+	if len(dids) > maxModerators {
+		respond.Error(w, http.StatusBadRequest, "invalid_moderators_error",
+		              "moderators is up to 20 did:key, comma-separated.")
+		return nil, false
+	}
+
+	return &Moderation{policy: Follow(dids...), queries: m.queries}, true
 }
 
 
