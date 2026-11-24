@@ -16,6 +16,7 @@ import { VerifyEmail } from '@/app/auth/verifyEmail/VerifyEmail'
 import { AppLayout } from '@/app/layout/AppLayout'
 import { GuestOnly } from '@/app/layout/GuestOnly'
 import { RequireAuth } from '@/app/layout/RequireAuth'
+import { EntityPage } from '@/app/reads/entity/EntityPage'
 import { Explore } from '@/app/reads/explore/Explore'
 import { ReadsLayout } from '@/app/reads/ReadsLayout'
 import { Write } from '@/app/write/Write'
@@ -44,6 +45,7 @@ export const router = createBrowserRouter([
         element: <ReadsLayout />,
         children: [
           { path: 'explore', element: <Explore /> },
+          { path: 'entities/:entity', element: <EntityPage /> },
         ],
       },
       // for someone not signed in yet: signing in, or recovering an account

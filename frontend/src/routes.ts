@@ -19,4 +19,5 @@ export const ROUTES = {
   welcome: `${APP}/welcome`,
   account: `${APP}/account`,
   entity: (entity: string) => `${APP}/entities/${encodeURIComponent(entity)}`,
+  review: (eventId: string) => `${APP}/reviews/${eventId}`,
 } as const
