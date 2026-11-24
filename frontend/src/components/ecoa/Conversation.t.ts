@@ -18,6 +18,10 @@ export type Reply = {
   /** It answered a version the author has since replaced. */
   textChanged: boolean
   labels?: string[]
+  /** By the entity's verified representative: the entity's own answer. */
+  official?: boolean
+  /** Its author holds a human claim. */
+  human?: boolean
 }
 
 export type ConversationProps = {

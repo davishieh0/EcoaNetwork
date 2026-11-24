@@ -160,7 +160,7 @@ export function EntityPage() {
 
       <ul className="mt-6 grid gap-4">
         {reviews.items.map((item, index) => {
-          const review = cardOf(item, names)
+          const review = cardOf(item, names, entityId)
 
           return (
             <motion.li key={review.eventId} {...rise(stagger(index))}>

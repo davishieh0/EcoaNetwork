@@ -9,24 +9,51 @@ import type { Review } from '@/components/ecoa/ReviewCard.t'
 import type { Version } from '@/components/ecoa/VersionHistory.t'
 import type { ReviewItem } from '@/logic/datasource/entities.t'
 import type { ResponseItem } from '@/logic/datasource/reviews.t'
+import type { Recognized } from '@/logic/datasource/signed.t'
 import { readEnvelope, reviewTextOf, textOf } from '@/logic/protocol/signed'
 
 // --- CODE ---
+/**
+ * The mark a card shows beside its author: the entity's verified
+ * representative first, a human claim otherwise.
+ *
+ * @param claims - The claims that count for the author.
+ * @param entity - The entity the review is about, when known.
+ * @returns The mark, or undefined.
+ */
+export function claimMarkOf(
+  claims: Recognized[] | undefined,
+  entity?: string,
+): Review['authorClaim'] {
+  if (claims?.some((c) => c.claimType === 'domain' && c.entity === entity)) {
+    return { label: 'Verified representative', tone: 'valid' }
+  }
+
+  if (claims?.some((c) => c.claimType === 'human')) {
+    return { label: 'Human', tone: 'info' }
+  }
+
+  return undefined
+}
+
 /**
  * Turns a signed version of a review into what the card shows.
  *
  * @param item - The version, as the index answered it.
  * @param names - The display names found, by did:key.
+ * @param entity - The entity it is about, for the representative's mark.
  * @returns The card's review.
  */
 export function cardOf(
   item: ReviewItem,
   names: Record<string, string>,
+  entity?: string,
 ): Review {
   const envelope = readEnvelope(item.envelope)
   const text = reviewTextOf(envelope)
 
   return {
+    authorClaim: claimMarkOf(item.observed.claims, entity ?? text.entity),
     rating: text.rating,
     title: text.title,
     body: text.body,
@@ -125,5 +152,8 @@ function replyOf(
         : whose(item.derived.replyTo),
     textChanged: item.derived.textChanged,
     labels: item.observed.labels?.map((applied) => applied.label),
+    official: item.observed.official ?? false,
+    human:
+      item.observed.claims?.some((c) => c.claimType === 'human') ?? false,
   }
 }

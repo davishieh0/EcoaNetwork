@@ -35,12 +35,23 @@ export function Conversation({
           {...reveal()}
           key={reply.eventId}
           className={cn(
-            'border border-structural bg-surface px-5 py-4',
+            'border bg-surface px-5 py-4',
+            reply.official ? 'border-valid' : 'border-structural',
             INDENT[Math.min(reply.depth, 2)],
           )}
         >
           <div className="flex flex-wrap items-center gap-2">
+            {reply.official ? (
+              <Badge tone="valid" glyph="◆">
+                Official response
+              </Badge>
+            ) : null}
             <span className="meta text-secondary">{reply.author}</span>
+            {reply.human && !reply.official ? (
+              <Badge tone="info" glyph="◆">
+                Human
+              </Badge>
+            ) : null}
             <span
               title={reply.authorId}
               className="font-mono text-mono-s break-all text-muted"
