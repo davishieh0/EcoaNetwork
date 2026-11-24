@@ -44,6 +44,11 @@ func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
 // Get answers GET /entities/{entity}: the entity and the value of each of its
 // fields.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	id := r.PathValue("entity")
 
 	if !ids.IsEntityID(id) {
@@ -52,7 +57,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	moderators, err := h.moderation.Moderators(r.Context())
+	moderators, err := moderation.Moderators(r.Context())
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -78,6 +83,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // ignoring case and accents, newest first, a page at a time; every entity
 // when q is absent.
 func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	q := r.URL.Query().Get("q")
 
 	if utf8.RuneCountInString(q) > maxQuery {
@@ -91,7 +101,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	moderators, err := h.moderation.Moderators(r.Context())
+	moderators, err := moderation.Moderators(r.Context())
 	if err != nil {
 		respond.Failed(w, err)
 		return

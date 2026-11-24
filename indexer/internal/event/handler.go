@@ -51,6 +51,11 @@ func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
 
 // Get answers GET /events/{eventId}: the envelope alone.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
@@ -73,7 +78,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// the envelope too: the indexer is where removed content leaves the
 	// reading path, so it must not leave by this route either
-	removed, err := h.moderation.Removed(r.Context(), id)
+	removed, err := moderation.Removed(r.Context(), id)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -90,7 +95,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	labels, err := h.moderation.OnEvent(r.Context(), id)
+	labels, err := moderation.OnEvent(r.Context(), id)
 	if err != nil {
 		respond.Failed(w, err)
 		return

@@ -56,6 +56,11 @@ func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
 // name is verified by nothing; a client shows it beside the identity, never
 // as if it were the identity.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	did := r.PathValue("did")
 
 	if _, err := identity.Parse(did); err != nil {
@@ -64,7 +69,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items, removed, err := h.profiles(r, []string{did})
+	items, removed, err := h.profiles(r, moderation, []string{did})
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -89,6 +94,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 // identities, in the order asked, those with none left out, so a client gets
 // the authors of a page in one call.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	var dids []string
 
 	for _, did := range strings.Split(r.URL.Query().Get("ids"), ",") {
@@ -111,7 +121,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	items, _, err := h.profiles(r, dids)
+	items, _, err := h.profiles(r, moderation, dids)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -124,6 +134,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 // profiles returns the current profiles of dids in their order, without
 // those a followed moderator removed, and how many it left out for that.
 func (h *Handler) profiles(r *http.Request,
+                           moderation *label.Moderation,
                            dids []string) ([]respond.Item, int, error) {
 	found, err := h.repo.Of(r.Context(), dids)
 	if err != nil {
@@ -135,7 +146,7 @@ func (h *Handler) profiles(r *http.Request,
 		events = append(events, p.EventID)
 	}
 
-	labels, err := h.moderation.OnProfiles(r.Context(), events)
+	labels, err := moderation.OnProfiles(r.Context(), events)
 	if err != nil {
 		return nil, 0, err
 	}
