@@ -50,3 +50,15 @@ export function reviewTextOf(envelope: Envelope): ReviewText {
     replaces: typeof replaces === 'string' ? replaces : undefined,
   }
 }
+
+/**
+ * A text field of a payload, when it is one.
+ *
+ * @param envelope - Any envelope.
+ * @param field - The payload field, such as `displayName`.
+ * @returns The text, or undefined.
+ */
+export function textOf(envelope: Envelope, field: string): string | undefined {
+  const value = envelope.payload[field]
+  return typeof value === 'string' ? value : undefined
+}
