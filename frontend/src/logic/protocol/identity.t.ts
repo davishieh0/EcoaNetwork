@@ -11,3 +11,17 @@ export type Identity = {
   did: Did
   keys: CryptoKeyPair
 }
+
+/** What this browser knows about its main identity. */
+export type IdentityInfo = {
+  did: Did
+  /** A backup file was made when it was created, or it was restored. */
+  backedUp: boolean
+  createdAt: string | null
+}
+
+/** An identity this browser can sign as. */
+export type KnownIdentity = {
+  did: Did
+  kind: 'main' | 'fresh'
+}
