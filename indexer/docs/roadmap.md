@@ -115,51 +115,51 @@ end through `infra/local`: three peered nodes, every write and read through
 the backend behind nginx, a node down, and a rebuild that reproduced all 14
 deterministic tables from the logs. In the order to build it:
 
-1. **Which nodes hold each event.** The MVP's inspection view shows it. The
-   projector receives an event from every node it follows but keeps only the
-   earliest time (`event_observations`). Wanted: an observed table of
-   `(event_id, node, sequence, received_at)`, and `/events/{eventId}` listing
-   the nodes in `observed`. *Small.*
-2. **`?moderators=`, moderators chosen by the client.** An MVP acceptance
-   criterion: a label changes what a client following its moderator sees and
-   nothing for one that does not, which one shared list cannot show. Every
-   label is stored already, so this is a query change on every read route,
-   falling back to `MODERATORS_FILE`, and the backend's routes pass it on.
-   *Small.*
-3. **Loose ends of step 5 and the API.** Unknown event types counted in the
-   progress log (they are stored and skipped already); `/health` showing how
-   far behind each node the projector is (`head - sequence`, the design's
-   promise); `/events/{eventId}` marking the labels that count in
-   `observed.labels`, as the design's label table says ("shown, marked") and
-   the lists already do: today it answers them unmarked, so the inspection
-   view cannot say a moderator labeled the event. *Small.*
-4. **Step 8, the generator and the seeded dataset.** A few hundred signed
-   synthetic reviews, and `cnpj:` entities from the Receita Federal's public
-   data as `entity.updated` proposals signed by the operator's identity,
-   competing under the same rules as anyone's (`docs/entities.md`),
-   published to a node through `Publish`. Gives every screen real data.
-   *Medium.*
-5. **Claims: `domain` and `human`.** The MVP asks `domain` verification end
-   to end (a DNS TXT record, self-verifiable) and `human` through a CAPTCHA
-   verifier. Recognizing a claim is the indexer's job. Wanted: projecting
-   `verification.claim_created` and `claim_revoked`; checking the DNS TXT of
-   each `domain` claim, an observation re-checked from time to time; a list
-   of recognized verifiers for `human`; and handing the recognized claims to
-   `ResolveFields` (tier-1 metadata), to responses (official answers) and to
-   the summary (conflicts of interest). *Large; unblocks 6.*
-6. **Step 6, the entity summary.** The distribution 1 to 5 and the mean,
-   over the head of each chain, leaving out withdrawn chains, those labeled
-   by a followed moderator, and those by an identity holding a claim on the
-   same entity (shown, marked, not counted). With it, the metadata that holds
-   kept in a table, so the search can filter by `category`. *Medium.*
-7. **Steps 7 and 9, rebuild and the guarantees, in the repository.**
-   `indexer rebuild` still answers "not built yet"; the end-to-end run proved
-   the rebuild by hand. Wanted: the subcommand (for the MVP, empty and
-   project again with the API down meanwhile; building beside the live
-   tables and switching can come later), and automated tests that a rebuild
-   reproduces the deterministic tables, that two instances agree, that
-   applying twice changes nothing, and that a crash mid-way loses and
-   doubles nothing. *Medium; last, once every table exists.*
+1. ~~**Which nodes hold each event.**~~ Done: `event_holders` (observed),
+   `/events/{eventId}` lists them in `observed.nodes`, and the inspection
+   view shows them.
+2. ~~**`?moderators=`, moderators chosen by the client.**~~ Done: on every
+   read route but `/identities`, falling back to `MODERATORS_FILE`; the
+   backend passes it on, and the site lets a reader choose, label and revoke.
+   Checked with two browsers: a moderator's label hid a review for a reader
+   following them and for nobody else, and its revocation brought it back.
+3. **Loose ends of step 5 and the API.** ~~`/events/{eventId}` marking the
+   labels that count~~ done, in `observed.labels`. Still open: unknown event
+   types counted in the progress log (they are stored and skipped already),
+   and `/health` showing how far behind each node the projector is
+   (`head - sequence`; the progress log has it already). *Small.*
+4. ~~**Step 8, the generator and the seeded dataset.**~~ Done: `cmd/seed`,
+   deterministic, publishing through `Publish`. It reads the Receita
+   Federal's own layout; the repository carries a synthetic sample in it,
+   and the real monthly dump is passed by path. The operator signs the
+   entities' proposals, competing under the same rules as anyone's.
+5. ~~**Claims: `domain` and `human`.**~~ Done: `claims` (deterministic) and
+   `claim_checks` (observed); the DNS lookup over DoH, or a configured
+   server; `VERIFIERS_FILE` for `human`, which the backend issues behind an
+   ALTCHA proof of work; recognized claims handed to `ResolveFields`
+   (tier 1), to responses (`official`), and to the summary. DNSSEC is
+   recorded when the resolver says so; the `.well-known` fallback is not
+   built.
+6. ~~**Step 6, the entity summary.**~~ Done, in `GET /entities/{entity}`,
+   leaving out withdrawn chains, chains a followed moderator hid or removed,
+   and reviews by the entity's own representative (counted as `conflicted`).
+   Search filters by `?category=`: a proposal saying it narrows the query,
+   and the category that holds is checked when the answer is worked out, so
+   a page can come out short when a proposal says a category that does not
+   hold. A table of the metadata that holds would avoid that; it is observed
+   state, rebuilt when claims or weights change, and waits until it matters.
+7. ~~**Steps 7 and 9, rebuild and the guarantees.**~~ Done: `indexer
+   rebuild` (empty, then project until caught up, with the API down), and
+   tests that a rebuild reproduces the deterministic tables, that two
+   indexers fed other orders agree, that applying twice changes nothing, and
+   that a crash midway loses and doubles nothing. Checked live too: a
+   rebuild of 1712 events reproduced the 15 tables, and a second indexer
+   built from the same nodes agreed on all of them. Building beside the live
+   tables and switching comes later.
+8. ~~**Ranking, for the demonstration's step 10.**~~ Done: `RANKING`
+   (`newest`, `endorsed`), the cursor carrying the score; `infra/local`'s
+   `second-index` profile runs a second indexer, backend and site over the
+   same nodes.
 
 **Raised along the way, outside the indexer:**
 
