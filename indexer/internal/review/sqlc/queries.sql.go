@@ -8,6 +8,8 @@ package sqlc
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const chainEnvelopes = `-- name: ChainEnvelopes :many
@@ -172,6 +174,104 @@ func (q *Queries) HeadsByEntity(ctx context.Context, arg HeadsByEntityParams) ([
 			&i.Versions,
 			&i.Endorsements,
 			&i.Disputes,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const headsByScore = `-- name: HeadsByScore :many
+SELECT c.chain_root,
+       c.created_at AS chain_created_at,
+       c.head::text AS head,
+       e.envelope,
+       o.received_at,
+       (SELECT count(*) FROM reviews v WHERE v.chain_root = c.chain_root)
+           AS versions,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes,
+       (COALESCE(t.endorsements, 0) - COALESCE(t.disputes, 0))::bigint
+           AS score
+FROM review_chains c
+JOIN events e ON e.event_id = c.head
+LEFT JOIN event_observations o ON o.event_id = c.head
+LEFT JOIN version_votes t ON t.version = c.head
+WHERE c.entity = $1
+  AND NOT c.withdrawn
+  AND NOT c.truncated
+  AND NOT EXISTS (
+      SELECT 1 FROM labels l
+      WHERE l.chain_root = c.chain_root
+        AND NOT l.revoked
+        AND l.moderator = ANY ($2::text[])
+        AND l.label = ANY ($3::text[]))
+  AND ($4::bigint IS NULL
+       OR ((COALESCE(t.endorsements, 0) - COALESCE(t.disputes, 0))::bigint,
+           c.created_at, c.chain_root)
+          < ($4::bigint,
+             $5::timestamptz,
+             $6::text))
+ORDER BY score DESC, c.created_at DESC, c.chain_root DESC
+LIMIT $7
+`
+
+type HeadsByScoreParams struct {
+	Entity         string
+	Moderators     []string
+	Hiding         []string
+	AfterScore     pgtype.Int8
+	AfterCreatedAt *time.Time
+	AfterRoot      *string
+	RowLimit       int32
+}
+
+type HeadsByScoreRow struct {
+	ChainRoot      string
+	ChainCreatedAt time.Time
+	Head           string
+	Envelope       []byte
+	ReceivedAt     *time.Time
+	Versions       int64
+	Endorsements   int32
+	Disputes       int32
+	Score          int64
+}
+
+// The same heads, ranked by the head's score — the endorsements that count on
+// it less its disputes — then newest original first, after the cursor when
+// there is one. A ranking is an opinion: another indexer orders otherwise.
+func (q *Queries) HeadsByScore(ctx context.Context, arg HeadsByScoreParams) ([]HeadsByScoreRow, error) {
+	rows, err := q.db.Query(ctx, headsByScore,
+		arg.Entity,
+		arg.Moderators,
+		arg.Hiding,
+		arg.AfterScore,
+		arg.AfterCreatedAt,
+		arg.AfterRoot,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HeadsByScoreRow
+	for rows.Next() {
+		var i HeadsByScoreRow
+		if err := rows.Scan(
+			&i.ChainRoot,
+			&i.ChainCreatedAt,
+			&i.Head,
+			&i.Envelope,
+			&i.ReceivedAt,
+			&i.Versions,
+			&i.Endorsements,
+			&i.Disputes,
+			&i.Score,
 		); err != nil {
 			return nil, err
 		}

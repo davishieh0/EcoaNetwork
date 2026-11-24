@@ -27,6 +27,21 @@ type Version struct {
 }
 
 
+// Ranking is how this indexer orders an entity's reviews: an opinion, which
+// another indexer may hold differently over the same events.
+type Ranking string
+
+
+const (
+	// Newest lists the newest original first: an edit never moves a review.
+	Newest Ranking = "newest"
+
+	// Endorsed lists the head with the best score first: the endorsements
+	// that count on it less its disputes.
+	Endorsed Ranking = "endorsed"
+)
+
+
 // Hide is what leaves a chain out of a listing: a label among Labels, by a
 // moderator among Moderators.
 type Hide struct {
