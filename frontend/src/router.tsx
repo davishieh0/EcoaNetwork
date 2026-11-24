@@ -19,6 +19,7 @@ import { RequireAuth } from '@/app/layout/RequireAuth'
 import { EntityPage } from '@/app/reads/entity/EntityPage'
 import { Explore } from '@/app/reads/explore/Explore'
 import { ReadsLayout } from '@/app/reads/ReadsLayout'
+import { ReviewPage } from '@/app/reads/review/ReviewPage'
 import { Write } from '@/app/write/Write'
 import { Landing } from '@/site/landing/Landing'
 import { NotFound } from '@/site/NotFound'
@@ -46,6 +47,7 @@ export const router = createBrowserRouter([
         children: [
           { path: 'explore', element: <Explore /> },
           { path: 'entities/:entity', element: <EntityPage /> },
+          { path: 'reviews/:eventId', element: <ReviewPage /> },
         ],
       },
       // for someone not signed in yet: signing in, or recovering an account
