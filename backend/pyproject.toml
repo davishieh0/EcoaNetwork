@@ -19,6 +19,7 @@ dependencies = [
     "grpcio>=1.84.0",
     "protobuf>=7.36.2",
     "httpx>=0.28.1",
+    "altcha>=2.5.0",
 ]
 
 [dependency-groups]
