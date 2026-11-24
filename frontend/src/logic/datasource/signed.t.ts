@@ -10,6 +10,15 @@ export type Applied = {
   moderator: string
 }
 
+/** A node the indexer saw holding an event. */
+export type Holder = {
+  /** The node's address, as the indexer knows it. */
+  node: string
+  /** Where the event sits in that node's log. */
+  sequence: number
+  receivedAt?: string
+}
+
 /** A claim that counts for an author, as this indexer judged it. */
 export type Recognized = {
   eventId: string
@@ -26,6 +35,8 @@ export type Recognized = {
 export type Observed = {
   receivedAt?: string
   labels?: Applied[]
+  /** The nodes it saw holding the event; on /events/{eventId} only. */
+  nodes?: Holder[]
   /** The claims that count for the item's author. */
   claims?: Recognized[]
   /** A response by the entity's verified representative. */
