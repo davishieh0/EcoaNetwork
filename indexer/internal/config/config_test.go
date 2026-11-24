@@ -16,6 +16,7 @@ var names = []string{
 	"NODE_ADDRS",
 	"HTTP_ADDR",
 	"MODERATORS_FILE",
+	"RANKING",
 }
 
 
@@ -43,6 +44,7 @@ func TestLoadAppliesTheDefaultsToAnEmptyEnvironment(t *testing.T) {
 		DatabaseURL: defaultDatabaseURL,
 		NodeAddrs:   []string{"127.0.0.1:50051"},
 		HTTPAddr:    "127.0.0.1:8081",
+		Ranking:     "newest",
 	}
 
 	// Act
@@ -72,6 +74,10 @@ func TestLoadReadsEachVariable(t *testing.T) {
 		{
 			"MODERATORS_FILE", "moderators.json",
 			func(c Config) any { return c.ModeratorsFile },
+		},
+		{
+			"RANKING", "endorsed",
+			func(c Config) any { return c.Ranking },
 		},
 	}
 

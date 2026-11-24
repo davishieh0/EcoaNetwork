@@ -41,6 +41,10 @@ type Config struct {
 	// ModeratorsFile is the JSON file listing the moderators whose labels
 	// count, "" for none.
 	ModeratorsFile string
+
+	// Ranking is how the API orders an entity's reviews: newest or
+	// endorsed.
+	Ranking string
 }
 
 
@@ -62,6 +66,12 @@ func Load() (Config, error) {
 		HTTPAddr:    envOr("HTTP_ADDR", defaultHTTPAddr),
 
 		ModeratorsFile: os.Getenv("MODERATORS_FILE"),
+		Ranking: envOr("RANKING", "newest"),
+	}
+
+	if cfg.Ranking != "newest" && cfg.Ranking != "endorsed" {
+		return Config{}, fmt.Errorf("RANKING: %q is neither newest nor "+
+		                            "endorsed", cfg.Ranking)
 	}
 
 	return cfg, nil
