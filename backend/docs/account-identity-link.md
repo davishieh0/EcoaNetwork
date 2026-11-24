@@ -118,7 +118,26 @@ it.
 
 ## What has to be built
 
-None of this exists today.
+Some of the pieces exist since the gateway began issuing `human` claims
+(`src/services/verifier.py`, `src/routers/claims.py`):
+
+- **A verifier key**: `HUMAN_VERIFIER_SEED`, an Ed25519 seed in the
+  environment. Rotating it is not built.
+- **Building, canonicalizing and signing an event in Python**:
+  `src/utils/protocol.py` (`canonicalize`, `did_of`, `sign_event`).
+- **Publishing**: the claim goes to the nodes through the same client, with
+  the same failover, as a published event.
+- **The indexer side**: a delegated claim counts when its issuer is in the
+  indexer's `VERIFIERS_FILE`.
+
+What is still missing for this link is everything that binds the claim to
+an account: the `human` claim is issued about whatever `did:key` the request
+names, after a proof of work, with no signature from that identity and no
+account. For a `human` claim that is acceptable — claiming one for someone
+else gives them a weak mark they did not ask for, and costs the caller the
+work. An account claim needs the identity's own signature on a challenge.
+
+What follows is the original list, still accurate for those missing pieces.
 
 **Backend**
 
@@ -126,14 +145,14 @@ None of this exists today.
   stored and how it is rotated. A leaked verifier key lets an attacker mint
   claims at will.
 - `did:key` handling in Python: decoding the identity into a public key and
-  verifying an Ed25519 signature. No component in this repo does it yet. The
+  verifying an Ed25519 signature. Encoding a key into a `did:key` exists
+  (`did_of`); decoding and verifying do not. The
   encoding is settled in [docs/decisions.md](../../docs/decisions.md):
   Ed25519, multibase `z`, multicodec `0xed01`, with ZIP-215 signature rules.
 - A challenge endpoint: issues a short-lived nonce to a logged-in account.
 - A claim endpoint: receives the identity and the signed nonce, verifies the
   signature, builds the `verification.claim_created` event in canonical form,
   signs it and publishes it.
-- Publishing: a way for the backend to hand an event to a node or gateway.
 - Revocation: issuing `verification.claim_revoked`, and deciding what triggers
   it.
 - Depending on the shape chosen: the migration, the storage class and their
