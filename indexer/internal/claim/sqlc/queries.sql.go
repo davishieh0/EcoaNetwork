@@ -67,6 +67,74 @@ func (q *Queries) DueChecks(ctx context.Context, arg DueChecksParams) ([]DueChec
 	return items, nil
 }
 
+const recognizedOf = `-- name: RecognizedOf :many
+SELECT c.event_id, c.claim_type, c.subject, c.entity, c.expires_at,
+       k.verified_since, COALESCE(k.dnssec, false) AS dnssec
+FROM claims c
+LEFT JOIN claim_checks k USING (event_id)
+WHERE c.subject = ANY ($1::text[])
+  AND NOT c.revoked
+  AND c.expires_at > $2
+  AND ((c.claim_type = 'domain' AND c.issuer = c.subject
+        AND k.verified AND k.checked_at > $3)
+       OR (c.claim_type = 'human'
+           AND c.issuer = ANY ($4::text[])))
+ORDER BY c.subject, c.claim_type, c.event_id
+`
+
+type RecognizedOfParams struct {
+	Subjects   []string
+	Now        time.Time
+	FreshAfter time.Time
+	Verifiers  []string
+}
+
+type RecognizedOfRow struct {
+	EventID       string
+	ClaimType     string
+	Subject       string
+	Entity        *string
+	ExpiresAt     time.Time
+	VerifiedSince *time.Time
+	Dnssec        bool
+}
+
+// The claims that count for some subjects: live and not revoked, a domain
+// claim self-signed and verified by a lookup not older than fresh_after, a
+// human claim issued by a verifier this indexer follows.
+func (q *Queries) RecognizedOf(ctx context.Context, arg RecognizedOfParams) ([]RecognizedOfRow, error) {
+	rows, err := q.db.Query(ctx, recognizedOf,
+		arg.Subjects,
+		arg.Now,
+		arg.FreshAfter,
+		arg.Verifiers,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RecognizedOfRow
+	for rows.Next() {
+		var i RecognizedOfRow
+		if err := rows.Scan(
+			&i.EventID,
+			&i.ClaimType,
+			&i.Subject,
+			&i.Entity,
+			&i.ExpiresAt,
+			&i.VerifiedSince,
+			&i.Dnssec,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const revokeClaim = `-- name: RevokeClaim :exec
 UPDATE claims SET revoked = true
 WHERE event_id = $1

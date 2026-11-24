@@ -56,3 +56,20 @@ SET verified       = EXCLUDED.verified,
         ELSE EXCLUDED.checked_at
     END,
     detail         = EXCLUDED.detail;
+
+-- name: RecognizedOf :many
+-- The claims that count for some subjects: live and not revoked, a domain
+-- claim self-signed and verified by a lookup not older than fresh_after, a
+-- human claim issued by a verifier this indexer follows.
+SELECT c.event_id, c.claim_type, c.subject, c.entity, c.expires_at,
+       k.verified_since, COALESCE(k.dnssec, false) AS dnssec
+FROM claims c
+LEFT JOIN claim_checks k USING (event_id)
+WHERE c.subject = ANY (sqlc.arg(subjects)::text[])
+  AND NOT c.revoked
+  AND c.expires_at > sqlc.arg(now)
+  AND ((c.claim_type = 'domain' AND c.issuer = c.subject
+        AND k.verified AND k.checked_at > sqlc.arg(fresh_after))
+       OR (c.claim_type = 'human'
+           AND c.issuer = ANY (sqlc.arg(verifiers)::text[])))
+ORDER BY c.subject, c.claim_type, c.event_id;
