@@ -71,6 +71,52 @@ func (q *Queries) ChainOfVersion(ctx context.Context, eventID string) (string, e
 	return chain_root, err
 }
 
+const eventLabels = `-- name: EventLabels :many
+SELECT event_id, label, moderator
+FROM labels l
+WHERE NOT l.revoked
+  AND l.moderator = ANY ($1::text[])
+  AND (l.target = $2
+       OR l.response = $2
+       OR l.profile = $2
+       OR l.chain_root = (SELECT r.chain_root FROM reviews r
+                          WHERE r.event_id = $2))
+ORDER BY event_id
+`
+
+type EventLabelsParams struct {
+	Moderators []string
+	EventID    string
+}
+
+type EventLabelsRow struct {
+	EventID   string
+	Label     string
+	Moderator string
+}
+
+// The labels that count on one event: on itself, on the chain it is a
+// version of, on it as a response or as a profile.
+func (q *Queries) EventLabels(ctx context.Context, arg EventLabelsParams) ([]EventLabelsRow, error) {
+	rows, err := q.db.Query(ctx, eventLabels, arg.Moderators, arg.EventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EventLabelsRow
+	for rows.Next() {
+		var i EventLabelsRow
+		if err := rows.Scan(&i.EventID, &i.Label, &i.Moderator); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const isProfile = `-- name: IsProfile :one
 SELECT EXISTS (SELECT 1 FROM events
                WHERE event_id = $1 AND event_type = 'profile.updated')

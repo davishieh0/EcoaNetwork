@@ -36,3 +36,27 @@ export type DraftField = 'identifier' | 'rating' | 'title' | 'body'
 export type Checked =
   | { ok: true; payload: ReviewPayload }
   | { ok: false; problems: Partial<Record<DraftField, string>> }
+
+/** What a version of a review is typed as: a draft without its entity. */
+export type VersionFields = Pick<
+  ReviewDraft,
+  'rating' | 'title' | 'body' | 'lang'
+>
+
+/** What a version says, signed: an edit's payload without `replaces`. */
+export type VersionText = {
+  rating: Rating
+  body: string
+  title?: string
+  lang?: string
+}
+
+/** What checking a version gave. */
+export type CheckedVersion =
+  | { ok: true; text: VersionText }
+  | { ok: false; problems: Partial<Record<DraftField, string>> }
+
+/** What checking a response gave. */
+export type CheckedResponse =
+  | { ok: true; body: string }
+  | { ok: false; problem: string }

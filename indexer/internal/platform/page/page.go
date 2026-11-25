@@ -37,6 +37,10 @@ var ErrBadCursor = errors.New("malformed cursor")
 // Cursor is where a page ended: the last item it showed, by the time and id
 // the list is ordered by. Clients hold it as an opaque string.
 type Cursor struct {
+	// Score is the score a ranked list is ordered by first, nil for a list
+	// ordered by time alone.
+	Score *int64
+
 	// At is the time the list is ordered by.
 	At time.Time
 
@@ -59,6 +63,11 @@ type Page struct {
 func (c Cursor) Encode() string {
 	plain := c.At.UTC().Format(time.RFC3339Nano) + "|" + c.ID
 
+	// a ranked list's cursor starts with its score
+	if c.Score != nil {
+		plain = "s" + strconv.FormatInt(*c.Score, 10) + "|" + plain
+	}
+
 	return base64.RawURLEncoding.EncodeToString([]byte(plain))
 }
 
@@ -70,7 +79,20 @@ func Decode(s string) (Cursor, error) {
 		return Cursor{}, ErrBadCursor
 	}
 
-	at, id, found := strings.Cut(string(plain), "|")
+	rest := string(plain)
+
+	var score *int64
+	if strings.HasPrefix(rest, "s") {
+		head, tail, found := strings.Cut(rest[1:], "|")
+		n, err := strconv.ParseInt(head, 10, 64)
+		if !found || err != nil {
+			return Cursor{}, ErrBadCursor
+		}
+
+		score, rest = &n, tail
+	}
+
+	at, id, found := strings.Cut(rest, "|")
 	if !found || id == "" {
 		return Cursor{}, ErrBadCursor
 	}
@@ -80,7 +102,7 @@ func Decode(s string) (Cursor, error) {
 		return Cursor{}, ErrBadCursor
 	}
 
-	return Cursor{At: t, ID: id}, nil
+	return Cursor{Score: score, At: t, ID: id}, nil
 }
 
 

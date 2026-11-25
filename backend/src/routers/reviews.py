@@ -9,6 +9,7 @@ from fastapi import Query
 from fastapi import Response
 from src.clients.indexer import IndexerClient
 from src.dependencies.indexer import get_indexer
+from src.schemas.reads import MODERATORS_HELP
 from src.schemas.reads import ItemPage
 from src.schemas.reads import ReviewDetail
 from src.schemas.reads import read_responses
@@ -26,12 +27,14 @@ router = APIRouter()
             responses=read_responses(400, 404, 410, 451))
 async def get_review(
     event_id: str,
+    moderators: str | None = Query(None, description=MODERATORS_HELP),
     indexer: IndexerClient = Depends(get_indexer),
 ) -> Response:
     """
     One version of a review, any of them, with every version of its chain.
     """
-    return relay(await indexer.get_review(event_id=event_id))
+    return relay(await indexer.get_review(event_id=event_id,
+                       moderators=moderators))
 
 
 @router.get('/{event_id}/responses',
@@ -44,6 +47,7 @@ async def list_responses(
     after: str | None = Query(None, description='The next of a page.'),
     labeled: str | None = Query(None, description='show, to see what '
                                                   'moderation hides, marked.'),
+    moderators: str | None = Query(None, description=MODERATORS_HELP),
     indexer: IndexerClient = Depends(get_indexer),
 ) -> Response:
     """
@@ -51,4 +55,5 @@ async def list_responses(
     """
     return relay(await indexer.list_review_responses(
         event_id=event_id, limit=limit, after=after, labeled=labeled,
+        moderators=moderators,
     ))

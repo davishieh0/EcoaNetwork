@@ -7,9 +7,12 @@ import { createBrowserRouter } from 'react-router'
 
 import { Account } from '@/app/account/Account'
 import { ChooseHandle } from '@/app/auth/chooseHandle/ChooseHandle'
+import { Claims } from '@/app/claims/Claims'
 import { Dashboard } from '@/app/dashboard/Dashboard'
 import { ForgotPassword } from '@/app/auth/forgotPassword/ForgotPassword'
 import { Login } from '@/app/auth/login/Login'
+import { Moderation } from '@/app/moderation/Moderation'
+import { IdentityPage } from '@/app/identity/IdentityPage'
 import { Register } from '@/app/auth/register/Register'
 import { ResetPassword } from '@/app/auth/resetPassword/ResetPassword'
 import { VerifyEmail } from '@/app/auth/verifyEmail/VerifyEmail'
@@ -48,6 +51,8 @@ export const router = createBrowserRouter([
           { path: 'explore', element: <Explore /> },
           { path: 'entities/:entity', element: <EntityPage /> },
           { path: 'reviews/:eventId', element: <ReviewPage /> },
+          { path: 'moderation', element: <Moderation /> },
+          { path: 'identity', element: <IdentityPage /> },
         ],
       },
       // for someone not signed in yet: signing in, or recovering an account
@@ -75,6 +80,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Dashboard /> },
           { path: 'account', element: <Account /> },
           { path: 'write', element: <Write /> },
+          { path: 'claims', element: <Claims /> },
         ],
       },
     ],

@@ -6,18 +6,25 @@
 // --- IMPORTS ---
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useParams, useSearchParams } from 'react-router'
-import type { ReviewState } from '@/app/reads/review/ReviewPage.t'
+import type {
+  Expectation,
+  ReviewState,
+} from '@/app/reads/review/ReviewPage.t'
 import { useAuthors } from '@/app/reads/useAuthors'
 import { usePaged } from '@/app/reads/usePaged'
 import { useRead } from '@/app/reads/useRead'
 import type { ReviewItem } from '@/logic/datasource/entities.t'
 import { getReview, listReviewResponses } from '@/logic/datasource/reviews'
 import { HttpError } from '@/logic/errors/httpError'
+import { useModeration } from '@/logic/moderation/moderation'
 import { readEnvelope, reviewTextOf } from '@/logic/protocol/signed'
 
 // --- GLOBALS ---
 // how long to wait for the index to have a review just published
 const PATIENCE = { tries: 10, every: 1500 }
+
+// after an action here, how long to read again for the index to show it
+const FOLLOW = { tries: 12, every: 1000 }
 
 // --- CODE ---
 /**
@@ -38,20 +45,68 @@ export function useReviewData() {
   // the review just published, until the index has it: read it again
   const [attempt, setAttempt] = useState(0)
 
+  const { param } = useModeration()
+
   const readReview = useCallback(
-    () => getReview(eventId),
+    () => getReview(eventId, param),
     // a new attempt is a new read
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eventId, attempt],
+    [eventId, param, attempt],
   )
   const review = useRead(readReview)
 
   const loadResponses = useCallback(
-    (after?: string) => listReviewResponses(eventId, after, labeled),
+    (after?: string) => listReviewResponses(eventId, after, labeled, param),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eventId, labeled, attempt],
+    [eventId, labeled, param, attempt],
   )
   const responses = usePaged(loadResponses)
+
+  // what an action here expects the index to show, read again until it does
+  const [expected, setExpected] = useState<Expectation | null>(null)
+  const { reload: reloadReview } = review
+  const { reload: reloadResponses } = responses
+
+  const expect = useCallback(
+    (check: Expectation['check']) =>
+      setExpected({ check, tries: FOLLOW.tries }),
+    [],
+  )
+
+  useEffect(() => {
+    if (!expected || review.loading || responses.loading) return
+
+    const status =
+      review.error instanceof HttpError ? review.error.status : null
+    const seen = {
+      detail: review.data,
+      status,
+      responses: responses.items,
+    }
+    if (expected.check(seen)) {
+      const done = setTimeout(() => setExpected(null), 0)
+      return () => clearTimeout(done)
+    }
+
+    const timer = setTimeout(() => {
+      setExpected((now) =>
+        now && now.tries > 1 ? { ...now, tries: now.tries - 1 } : null,
+      )
+      reloadReview()
+      reloadResponses()
+    }, FOLLOW.every)
+    return () => clearTimeout(timer)
+    // each answer that arrives is checked again
+  }, [
+    expected,
+    review.loading,
+    review.data,
+    review.error,
+    responses.loading,
+    responses.items,
+    reloadReview,
+    reloadResponses,
+  ])
 
   // while reading again too, so the review does not blink in and out
   const waiting =
@@ -98,6 +153,7 @@ export function useReviewData() {
     [...versions, ...responses.items].map(
       (item) => readEnvelope(item.envelope).author,
     ),
+    param,
   )
 
   const showLabeled = useCallback(
@@ -112,6 +168,8 @@ export function useReviewData() {
 
   return {
     eventId,
+    expect,
+    following: expected !== null,
     labeled: !!labeled,
     showLabeled,
     review,

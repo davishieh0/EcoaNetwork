@@ -50,6 +50,8 @@ export function Composer({ data }: ComposerProps) {
     edit,
     publish,
     reset,
+    fresh,
+    setFresh,
   } = data
 
   if (!account?.handle) return null
@@ -230,6 +232,42 @@ export function Composer({ data }: ComposerProps) {
           </fieldset>
           <span className="hidden lg:inline">{NOTES[phase.name]}</span>
         </div>
+        {phase.name === 'checked' || phase.name === 'publishing' ? (
+          <div
+            className={cn(
+              'flex basis-full flex-col gap-3 border-y border-line py-4',
+              'font-sans text-secondary',
+            )}
+          >
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                checked={fresh}
+                disabled={phase.name === 'publishing'}
+                onChange={(event) => setFresh(event.target.checked)}
+                className="mt-1"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-body-m">
+                  Publish under a fresh identity
+                </span>
+                <span className="text-body-s text-muted">
+                  A key made for this review alone: readers cannot tell it
+                  comes from you or link it to your other reviews. It carries
+                  none of your claims, and it is never backed up — you can
+                  edit or withdraw it from this browser only.
+                </span>
+              </span>
+            </label>
+            <p role="note" className="text-body-s text-muted">
+              Pseudonymous is not anonymous: this gateway and the node it
+              hands the review to see your IP address, and a fresh key does
+              not change it. Hiding it takes a network such as Tor, outside
+              Ecoa. Once published, the review is copied to nodes other
+              people run, and stays there even if you withdraw it.
+            </p>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center justify-end gap-4">
           {phase.name === 'checked' && phase.error ? (
             <p role="alert" className="text-danger">

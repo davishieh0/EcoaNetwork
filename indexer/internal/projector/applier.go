@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/identities"
@@ -52,6 +53,9 @@ var subjects = map[string]func(context.Context, pgx.Tx, *envelope.Envelope) erro
 
 	"identity.key_rotated": applyRotation,
 	"identity.key_revoked": identities.ApplyRevoked,
+
+	"verification.claim_created": claim.ApplyCreated,
+	"verification.claim_revoked": claim.ApplyRevoked,
 }
 
 
@@ -66,6 +70,7 @@ var skippable = []error{
 	entity.ErrMalformed,
 	profile.ErrMalformed,
 	identities.ErrMalformed,
+	claim.ErrMalformed,
 }
 
 
@@ -127,11 +132,23 @@ func projectOne(ctx context.Context,
 		return err
 	}
 
+	holder := event.Holder{
+		Node:     r.Node,
+		Sequence: int64(r.Event.GetSequence()),
+	}
+
 	if received := r.Event.GetReceivedAt(); received != 0 {
-		err := events.Observe(ctx, signed.ID, time.Unix(0, received))
-		if err != nil {
+		at := time.Unix(0, received)
+		holder.ReceivedAt = &at
+
+		if err := events.Observe(ctx, signed.ID, at); err != nil {
 			return err
 		}
+	}
+
+	// every node that has it, for the inspection view
+	if err := events.Hold(ctx, signed.ID, holder); err != nil {
+		return err
 	}
 
 	// a copy from another node, or the same event read again

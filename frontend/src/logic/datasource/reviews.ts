@@ -17,8 +17,8 @@ import type { Labeled, Page } from '@/logic/datasource/signed.t'
  * @param eventId - The eventId of any version.
  * @returns The version asked for and the chain.
  */
-export function getReview(eventId: string) {
-  return request<ReviewDetail>(route(['reviews', eventId]))
+export function getReview(eventId: string, moderators?: string) {
+  return request<ReviewDetail>(route(['reviews', eventId], { moderators }))
 }
 
 /**
@@ -33,8 +33,9 @@ export function listReviewResponses(
   eventId: string,
   after?: string,
   labeled?: Labeled,
+  moderators?: string,
 ) {
   return request<Page<ResponseItem>>(
-    route(['reviews', eventId, 'responses'], { after, labeled }),
+    route(['reviews', eventId, 'responses'], { after, labeled, moderators }),
   )
 }

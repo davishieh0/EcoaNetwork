@@ -18,7 +18,9 @@ RUN npm run build
 # setup, as Vite's proxy does in development.
 FROM nginx:1.27-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# the gateway this site talks to; another one needs no rebuild
+ENV BACKEND_ORIGIN=http://backend:8000
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 8080

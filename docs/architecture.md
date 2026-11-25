@@ -1,6 +1,6 @@
 # Architecture
 
-This describes the *roles* components play and how they relate. For the same material as diagrams — the publish path, the validation branches, sync, the determinism boundary — see [docs/diagrams/diagrams.md](./diagrams/diagrams.md). That's a decision for whenever each piece actually gets implemented, and different implementations of the same role are expected to coexist. See [docs/protocol.md](./protocol.md) for the one thing every implementation must actually agree on.
+This describes the *roles* components play and how they relate. For the same material as diagrams — the publish path, the validation branches, sync, the determinism boundary, and the services and data models as built — see [docs/diagrams/diagrams.md](./diagrams/diagrams.md). The roles don't fix a stack: different implementations of the same role are expected to coexist. Where this repository's implementation builds less than a role describes, a **v1, as built** note says so. See [docs/protocol.md](./protocol.md) for the one thing every implementation must actually agree on.
 
 ## High-level flow
 
@@ -16,21 +16,18 @@ This describes the *roles* components play and how they relate. For the same mat
           ▼                    ▼
               Gateway API
           │                    │
-          │ signed event       │ query
+          │ signed event       │ read API
           ▼                    ▼
-        Node ──────────────► Index
-          │   local-sequence   ▲
-          │   cursor           │
-          │        ┌───────────┘
-          │        │ projects
-          │     Indexer
+        Node ◄────────────── Indexer ──────► Index
+          │   stream from its    projects,
+          │   own cursor         answers queries
           │
           │ libp2p / Gossipsub + sync
           ▼
    P2P Network — Node A ↔ Node B ↔ Node C ↔ community nodes
 ```
 
-Writes go left-to-right through a node and out to the network; reads never touch a node at all. The indexer sits between the two, pulling validated events off a node and projecting them into the index the gateway queries.
+Writes go left-to-right through a node and out to the network; reads never touch a node at all. The indexer sits between the two, reading validated events off nodes from cursors it keeps, projecting them into the index, and answering the gateway's queries over it.
 
 ## Roles
 
@@ -54,8 +51,9 @@ Writes go left-to-right through a node and out to the network; reads never touch
 - **Gateway → Node:** one *primary* node configured per gateway deployment, with a fallback list. Not a random peer lookup — the gateway always knows exactly which node it talks to.
 - **Publishing:** the gateway sends to the primary node; if unavailable, falls back to the next. Because `eventId` is a content hash, publishing is idempotent — sending to multiple nodes is safe (duplicates just return `already_exists`).
 - **Node → Node:** libp2p. New events propagate via **Gossipsub** (real-time). Missed events are recovered via a small **sync protocol** over libp2p streams — two calls, `GetEventsSince(cursor)` to catch up and `GetEvents(ids)` to fill a known hole — because pub/sub alone loses messages for any peer that was offline. See [docs/protocol.md](./protocol.md#node-to-node-sync).
-- **Node → Indexer:** the indexer polls the node for new events using a cursor over the node's **local receive sequence** — never over `createdAt`, for the same reason node-to-node sync doesn't ([docs/protocol.md](./protocol.md#node-to-node-sync)). The node can push a notification to speed things up. Because the cursor is a position in one node's sequence, an indexer that switches to a different node re-reads from zero rather than resuming; at v1 volumes that's a full rebuild, which is a thing the design already requires to work.
-- **Reads never touch the node.** `Client → Gateway → Index` for search/browse. The node is only involved in publishing, fetching a raw event by ID, and feeding the indexer.
+- **Node → Indexer:** the indexer reads each node's log from a cursor over the node's **local receive sequence** — never over `createdAt`, for the same reason node-to-node sync doesn't ([docs/protocol.md](./protocol.md#node-to-node-sync)). The cursor is the indexer's, kept in its own database in the same transaction as what each event changed; the node keeps nothing about who reads it. Because the cursor is a position in one node's sequence, it carries that log's id: a node whose log started over is read again from zero, and an indexer that changes nodes re-reads rather than resumes — at v1 volumes that's a full rebuild, which the design already requires to work.
+  - **v1, as built:** one gRPC call, `SubscribeEvents(cursor, log_id)`, sends the history after the cursor and then each new event as the node stores it, over the same stream ([protobuf/node_api.proto](../protobuf/node_api.proto)). The indexer follows **every** node it is given, one cursor each, and stores an event once however many nodes send it — noting which nodes hold it, an observation.
+- **Reads never touch the node.** `Client → Gateway → Indexer → Index` for search/browse; the gateway passes the indexer's answer on byte for byte. The node is only involved in publishing and feeding the indexer. (v1's raw-event read, `GET /events/{id}`, is answered by the indexer from the envelope it stored, not by a node.)
 
 ## Integrity is verifiable; completeness is not
 
@@ -92,6 +90,10 @@ A client that actually cares has one option and it's an honest one: fetch the en
 - **An entity's rating.** The protocol defines what one review's `rating` means and nothing about how a set of them becomes a number ([docs/protocol.md](./protocol.md#the-protocol-does-not-define-an-entitys-rating)) — mean, median, distribution, weighted or not, which reviews are excluded. There is no canonical average, deliberately.
 - **The revocation cut** — whether an event signed shortly after an `identity.key_revoked` is accepted depends on whether this node had seen the revocation yet ([docs/protocol.md](./protocol.md#when-rotation-and-revocation-take-effect)). This is the one place validity itself is an observation, and it's a deliberate trade: the alternative lets an attacker place the cut.
 - Ranking and default sort order, which are the whole point of allowing plural indexers.
+- Which nodes this indexer saw holding an event, which depends on which nodes it follows.
+- Which labels count, which is the moderators a reader or the indexer follows — in v1, chosen per request (`?moderators=`), so it can differ between two readers of the same indexer.
+
+The v1 indexer keeps the two halves in separate tables, and its tests and a live check confirm the deterministic half: a rebuild reproduces it, and a second indexer fed the same logs in another order agrees on it ([diagrams.md §13](./diagrams/diagrams.md#13-the-indexers-data-model)).
 
 Note the shape of the two entries in bold. Neither is a rule that differs between indexers — the rules are identical and written down. What differs is an *input* that no implementation can derive from the log alone. That's the honest test for which list something belongs in: not "is the rule shared" but "can it be recomputed from the events and nothing else".
 
@@ -121,6 +123,8 @@ So the split is structural, not cosmetic:
 
 This is what makes the MVP's "the client can be pointed at a different gateway without code changes" a security property rather than a convenience feature. It is also why key handling in [docs/identity.md](./identity.md#key-storage-client-dependent) is a client concern that no gateway can help with — and no gateway should be in a position to hurt.
 
+**v1, as built, falls short of this, and it is worth saying.** The official client is a static bundle the gateway never serves — nginx serves it — but nginx passes `/api` to the gateway on the same origin, so session cookies need no cross-origin setup. Which gateway is set when the site is deployed (`BACKEND_ORIGIN`), with no rebuild, not chosen by each user at run time. Anyone can host the same bundle against another gateway; a user cannot yet switch from inside the page.
+
 ## Deployment and repository layout
 
-Deliberately not specified here. Where things get deployed, how they're packaged, and how the repository is organized all follow from stack decisions that haven't been made yet — see [docs/mvp.md](./mvp.md). Once an implementation exists, its own deployment story belongs next to it, not baked into this document.
+Not specified by the roles: another implementation may package and deploy them however it likes. This repository's implementation is laid out in the [README](../README.md#repository) — the node and the indexer in Go, the gateway in Python, the client in React — and runs as a whole with Docker Compose ([infra/local](../infra/local/README.md)), drawn in [diagrams.md §11](./diagrams/diagrams.md#11-the-services-as-they-run). Each service's own README says how to run, configure and test it.

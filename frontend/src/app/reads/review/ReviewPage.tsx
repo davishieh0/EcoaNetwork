@@ -12,9 +12,16 @@ import { LoadMore } from '@/app/reads/LoadMore'
 import { Placeholder } from '@/app/reads/Placeholder'
 import { ShowLabeled } from '@/app/reads/ShowLabeled'
 import { Status } from '@/app/reads/Status'
+import { EditReview } from '@/app/reads/review/EditReview'
+import { LabelForm } from '@/app/reads/review/LabelForm'
+import { Respond } from '@/app/reads/review/Respond'
+import { ReviewActions } from '@/app/reads/review/ReviewActions'
+import { useReviewActions } from '@/app/reads/review/useReviewActions'
 import { useReviewData } from '@/app/reads/review/useReviewData'
+import { WithdrawReview } from '@/app/reads/review/WithdrawReview'
+import { useMe } from '@/app/reads/useMe'
 import { useInspection } from '@/app/reads/useInspection'
-import { identifierOf } from '@/app/reads/words'
+import { identifierOf, shortOf } from '@/app/reads/words'
 import { Conversation } from '@/components/ecoa/Conversation'
 import { EventInspector } from '@/components/ecoa/EventInspector'
 import { ReviewCard } from '@/components/ecoa/ReviewCard'
@@ -23,7 +30,8 @@ import { Container } from '@/components/ui/Container'
 import { useReveal } from '@/components/ui/useReveal'
 import { useRise } from '@/components/ui/useRise'
 import { HttpError } from '@/logic/errors/httpError'
-import { readEnvelope } from '@/logic/protocol/signed'
+import { useModeration } from '@/logic/moderation/moderation'
+import { readEnvelope, reviewTextOf } from '@/logic/protocol/signed'
 import { ROUTES } from '@/routes'
 
 // --- GLOBALS ---
@@ -61,8 +69,28 @@ export function ReviewPage() {
     names,
     labeled,
     showLabeled,
+    expect,
+    following,
   } = useReviewData()
   const { inspect, inspector } = useInspection()
+  const me = useMe()
+  const { choice } = useModeration()
+  const actions = useReviewActions(pending ? null : head, expect, me.known)
+  const moderating = choice.moderating && me.canAct && !pending
+  const headId = head ? readEnvelope(head.envelope).eventId : null
+  const ownLabels = (head?.observed.labels ?? []).filter(
+    (applied) => applied.moderator === me.did,
+  )
+  const replies = repliesOf(responses.items, names)
+
+  // the author edits and withdraws; anyone else votes
+  const author = head ? readEnvelope(head.envelope).author : null
+  const mine = author !== null && me.dids.includes(author)
+  // the response being answered, named as the conversation names it
+  const answered = replies.find((reply) => reply.eventId === actions.replyTo)
+  const answering = answered
+    ? (names[answered.authorId] ?? shortOf(answered.authorId))
+    : null
   const rise = useRise()
   const reveal = useReveal()
   const reduceMotion = useReducedMotion()
@@ -183,14 +211,124 @@ export function ReviewPage() {
 
           <motion.div {...rise(0.12)} className="mt-6">
             <ReviewCard
-              review={cardOf(head, names)}
+              review={cardOf(head, names, entity ?? undefined)}
               onInspect={
                 pending
                   ? undefined
                   : () => inspect(readEnvelope(head.envelope).eventId)
               }
+              actions={
+                pending ? null : (
+                  <ReviewActions
+                    canAct={me.canAct}
+                    sessionKnown={me.sessionKnown}
+                    mine={mine}
+                    busy={actions.busy}
+                    onEdit={() => actions.open('editing')}
+                    onWithdraw={() => actions.open('withdrawing')}
+                    onVote={(kind) => void actions.vote(kind)}
+                    onLabel={
+                      moderating && headId
+                        ? () => actions.setLabeling(headId)
+                        : undefined
+                    }
+                  />
+                )
+              }
             />
           </motion.div>
+
+          <AnimatePresence initial={false} mode="wait">
+            {actions.mode === 'editing' ? (
+              <motion.div key="editing" {...fold} className="overflow-hidden">
+                <div className="mt-4">
+                  <EditReview
+                    current={reviewTextOf(readEnvelope(head.envelope))}
+                    busy={actions.busy}
+                    onSave={actions.edit}
+                    onCancel={() => actions.open('idle')}
+                  />
+                </div>
+              </motion.div>
+            ) : actions.mode === 'withdrawing' ? (
+              <motion.div
+                key="withdrawing"
+                {...fold}
+                className="overflow-hidden"
+              >
+                <div className="mt-4">
+                  <WithdrawReview
+                    busy={actions.busy}
+                    onWithdraw={actions.withdraw}
+                    onCancel={() => actions.open('idle')}
+                  />
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          <AnimatePresence initial={false}>
+            {actions.labeling ? (
+              <motion.div key="labeling" {...fold} className="overflow-hidden">
+                <div className="mt-4">
+                  <LabelForm
+                    what={
+                      actions.labeling === headId
+                        ? 'this review'
+                        : 'this response'
+                    }
+                    busy={actions.busy}
+                    onLabel={actions.label}
+                    onCancel={() => actions.setLabeling(null)}
+                  />
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+
+          {moderating && ownLabels.length > 0 ? (
+            <ul className="mt-3 flex flex-col gap-2">
+              {ownLabels.map((applied) => (
+                <li
+                  key={applied.eventId}
+                  className="flex flex-wrap items-center gap-3"
+                >
+                  <span className="meta text-muted">
+                    Your label · {applied.label}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={actions.busy}
+                    onClick={() => void actions.revoke(applied.eventId)}
+                    className={
+                      'meta cursor-pointer text-secondary hover:text-primary'
+                    }
+                  >
+                    Revoke
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <Status
+            text={
+              actions.error ??
+              (following
+                ? `${actions.notice ?? 'Published.'} Waiting for the index…`
+                : (actions.notice ?? ''))
+            }
+            failed={!!actions.error}
+            className="mt-3"
+          />
+          {actions.needsIdentity ? (
+            <Link
+              to={ROUTES.identity}
+              className="meta mt-1 inline-block border-b border-signal"
+            >
+              Create or restore your identity →
+            </Link>
+          ) : null}
 
           {versions.length > 1 ? (
             <motion.section {...reveal()} className="mt-12">
@@ -224,8 +362,10 @@ export function ReviewPage() {
               </div>
             ) : null}
             <Conversation
-              replies={repliesOf(responses.items, names)}
+              replies={replies}
               onInspect={inspect}
+              onReply={me.canAct && !pending ? actions.setReplyTo : undefined}
+              onLabel={moderating ? actions.setLabeling : undefined}
               className="mt-4"
             />
             <LoadMore
@@ -233,6 +373,14 @@ export function ReviewPage() {
               more={responses.more}
               onLoad={responses.loadMore}
             />
+            {me.canAct && !pending ? (
+              <Respond
+                answering={answering}
+                busy={actions.busy}
+                onRespond={actions.respond}
+                onCancel={() => actions.setReplyTo(null)}
+              />
+            ) : null}
           </motion.section>
         </>
       ) : null}

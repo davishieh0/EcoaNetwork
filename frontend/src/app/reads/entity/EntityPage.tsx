@@ -15,9 +15,17 @@ import { ShowLabeled } from '@/app/reads/ShowLabeled'
 import { Status } from '@/app/reads/Status'
 import { stagger } from '@/app/reads/stagger'
 import { useInspection } from '@/app/reads/useInspection'
-import { categoryOf, identifierOf, kindOf, nameOf } from '@/app/reads/words'
+import {
+  categoryOf,
+  dateOf,
+  identifierOf,
+  kindOf,
+  nameOf,
+} from '@/app/reads/words'
 import { EventInspector } from '@/components/ecoa/EventInspector'
+import { RatingSummary } from '@/components/ecoa/RatingSummary'
 import { ReviewCard } from '@/components/ecoa/ReviewCard'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { useRise } from '@/components/ui/useRise'
@@ -58,9 +66,12 @@ export function EntityPage() {
       ? messageOf(reviews.error)
       : reviews.items.length === 0
       ? 'No reviews yet. Be the first to sign one.'
-      : labeled
-        ? 'Reviews, newest first, with what moderation hides marked'
-        : 'Reviews, newest first'
+      : `Reviews, ${
+          reviews.ranking === 'endorsed'
+            ? 'most endorsed first'
+            : 'newest first'
+        } — as this index ranks them` +
+        (labeled ? ', with what moderation hides marked' : '')
 
   return (
     <Container className="max-w-4xl pt-28 pb-16">
@@ -115,6 +126,21 @@ export function EntityPage() {
               {' · anyone can propose, the network weighs them'}
             </motion.p>
           ) : null}
+          {entity.data?.observed.representative ? (
+            <motion.p {...arrive} className="flex flex-wrap items-center gap-2">
+              <Badge tone="valid" glyph="◆">
+                Verified representative
+              </Badge>
+              <span className="font-mono text-mono-s break-all text-secondary">
+                {entity.data.observed.representative.identity}
+              </span>
+              {entity.data.observed.representative.since ? (
+                <span className="meta text-muted">
+                  since {dateOf(entity.data.observed.representative.since)}
+                </span>
+              ) : null}
+            </motion.p>
+          ) : null}
           {unnamed ? (
             <motion.p {...arrive} className="meta text-muted">
               Nobody has proposed a name for it yet.
@@ -131,6 +157,14 @@ export function EntityPage() {
           </Button>
         </motion.div>
       </header>
+
+      {entity.data?.observed.summary &&
+      (entity.data.observed.summary.count > 0 ||
+        entity.data.observed.summary.conflicted > 0) ? (
+        <motion.div {...arrive} className="mt-8">
+          <RatingSummary {...entity.data.observed.summary} />
+        </motion.div>
+      ) : null}
 
       {failed ? (
         <motion.p {...arrive} role="alert" className="mt-6 text-danger">
@@ -160,7 +194,7 @@ export function EntityPage() {
 
       <ul className="mt-6 grid gap-4">
         {reviews.items.map((item, index) => {
-          const review = cardOf(item, names)
+          const review = cardOf(item, names, entityId)
 
           return (
             <motion.li key={review.eventId} {...rise(stagger(index))}>

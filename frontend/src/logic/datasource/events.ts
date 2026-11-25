@@ -98,6 +98,6 @@ export async function publishEvent(envelope: Envelope): Promise<PublishResult> {
  * @param eventId - The eventId.
  * @returns The event.
  */
-export function getEvent(eventId: string) {
-  return request<EventItem>(route(['events', eventId]))
+export function getEvent(eventId: string, moderators?: string) {
+  return request<EventItem>(route(['events', eventId], { moderators }))
 }

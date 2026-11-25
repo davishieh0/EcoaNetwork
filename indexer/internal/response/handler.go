@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/ids"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
@@ -26,9 +27,10 @@ const maxDepth = 2
 
 // Handler answers the routes of the responses.
 type Handler struct {
-	responses  *Repository
-	reviews    *review.Repository
-	moderation *label.Moderation
+	responses   *Repository
+	reviews     *review.Repository
+	moderation  *label.Moderation
+	recognition *claim.Recognition
 }
 
 
@@ -52,6 +54,13 @@ type observed struct {
 
 	// the labels that count on this response, by followed moderators
 	Labels []label.Applied `json:"labels,omitempty"`
+
+	// the claims that count for its author
+	Claims []claim.Recognized `json:"claims,omitempty"`
+
+	// its author represents the entity the review is about, by a domain
+	// claim this indexer verified: the entity's own answer
+	Official bool `json:"official,omitempty"`
 }
 
 
@@ -65,11 +74,13 @@ type listing struct {
 // NewHandler returns the handler of the response routes.
 func NewHandler(responses *Repository,
                 reviews *review.Repository,
-                moderation *label.Moderation) *Handler {
+                moderation *label.Moderation,
+                recognition *claim.Recognition) *Handler {
 	return &Handler{
-		responses:  responses,
-		reviews:    reviews,
-		moderation: moderation,
+		responses:   responses,
+		reviews:     reviews,
+		moderation:  moderation,
+		recognition: recognition,
 	}
 }
 
@@ -78,6 +89,11 @@ func NewHandler(responses *Repository,
 // the chain any version of the review belongs to, oldest first, a page at a
 // time.
 func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
@@ -115,7 +131,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	chainLabels, err := h.moderation.OnChains(r.Context(),
+	chainLabels, err := moderation.OnChains(r.Context(),
 	                                          []string{rev.ChainRoot})
 	if err != nil {
 		respond.Failed(w, err)
@@ -128,7 +144,7 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	moderators, err := h.moderation.Moderators(r.Context())
+	moderators, err := moderation.Moderators(r.Context())
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -151,7 +167,24 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 		ids = append(ids, res.EventID)
 	}
 
-	labels, err := h.moderation.OnResponses(r.Context(), ids)
+	labels, err := moderation.OnResponses(r.Context(), ids)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	authors := make([]string, 0, len(responses))
+	for _, res := range responses {
+		authors = append(authors, claim.AuthorOf(res.Envelope))
+	}
+
+	held, err := h.recognition.Of(r.Context(), authors)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	entity, err := h.recognition.EntityOfChain(r.Context(), rev.ChainRoot)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -175,6 +208,9 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 			Observed: observed{
 				ReceivedAt: utc(res.ReceivedAt),
 				Labels:     labels[res.EventID],
+				Claims:     held[claim.AuthorOf(res.Envelope)],
+				Official: claim.Official(held[claim.AuthorOf(res.Envelope)],
+				                         entity),
 			},
 		})
 	}

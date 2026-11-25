@@ -8,6 +8,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/identities"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/fixturetest"
@@ -21,7 +22,8 @@ import (
 func identityOf(t *testing.T, pool *pgxpool.Pool, did string) identities.Identity {
 	t.Helper()
 
-	h := identities.NewHandler(identities.NewRepository(pool))
+	h := identities.NewHandler(identities.NewRepository(pool),
+	                           claim.NewRecognition(claim.Policy{}, pool))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /identities/{did}", h.Get)

@@ -10,10 +10,37 @@ export type Applied = {
   moderator: string
 }
 
+/** A node the indexer saw holding an event. */
+export type Holder = {
+  /** The node's address, as the indexer knows it. */
+  node: string
+  /** Where the event sits in that node's log. */
+  sequence: number
+  receivedAt?: string
+}
+
+/** A claim that counts for an author, as this indexer judged it. */
+export type Recognized = {
+  eventId: string
+  claimType: 'domain' | 'human' | string
+  /** The entity a domain claim is about. */
+  entity?: string
+  expiresAt: string
+  /** Since when a domain claim has verified without a gap. */
+  since?: string
+  dnssec?: boolean
+}
+
 /** What the indexer observed about an item: not every indexer agrees. */
 export type Observed = {
   receivedAt?: string
   labels?: Applied[]
+  /** The nodes it saw holding the event; on /events/{eventId} only. */
+  nodes?: Holder[]
+  /** The claims that count for the item's author. */
+  claims?: Recognized[]
+  /** A response by the entity's verified representative. */
+  official?: boolean
 }
 
 /**
@@ -31,6 +58,8 @@ export type Signed<Derived = Record<string, never>, Seen = Observed> = {
 export type Page<Item> = {
   items: Item[]
   next: string | null
+  /** How the index ordered the list, when it says: an opinion of its own. */
+  ranking?: 'newest' | 'endorsed' | string
 }
 
 /** Whether a list shows what moderation hides, marked. */

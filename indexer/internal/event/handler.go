@@ -24,6 +24,21 @@ type Handler struct {
 // observed is what the indexer observed of an event.
 type observed struct {
 	ReceivedAt *time.Time `json:"receivedAt,omitempty"`
+
+	// the nodes this indexer saw holding it; another, following other
+	// nodes, sees others
+	Nodes []holder `json:"nodes,omitempty"`
+
+	// the labels that count, by the moderators this indexer follows
+	Labels []label.Applied `json:"labels,omitempty"`
+}
+
+
+// holder is one node that holds an event, as the API names it.
+type holder struct {
+	Node       string     `json:"node"`
+	Sequence   int64      `json:"sequence"`
+	ReceivedAt *time.Time `json:"receivedAt,omitempty"`
 }
 
 
@@ -36,6 +51,11 @@ func NewHandler(repo *Repository, moderation *label.Moderation) *Handler {
 
 // Get answers GET /events/{eventId}: the envelope alone.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	moderation, ok := h.moderation.ForRequest(w, r)
+	if !ok {
+		return
+	}
+
 	id := r.PathValue("eventId")
 
 	if !ids.IsEventID(id) {
@@ -58,7 +78,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// the envelope too: the indexer is where removed content leaves the
 	// reading path, so it must not leave by this route either
-	removed, err := h.moderation.Removed(r.Context(), id)
+	removed, err := moderation.Removed(r.Context(), id)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -69,10 +89,35 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	holders, err := h.repo.Holders(r.Context(), id)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	labels, err := moderation.OnEvent(r.Context(), id)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	nodes := make([]holder, len(holders))
+	for i, held := range holders {
+		nodes[i] = holder{
+			Node:       held.Node,
+			Sequence:   held.Sequence,
+			ReceivedAt: utc(held.ReceivedAt),
+		}
+	}
+
 	respond.JSON(w, http.StatusOK, respond.Item{
 		Envelope: string(e.Envelope),
 		Derived:  struct{}{},
-		Observed: observed{ReceivedAt: utc(e.ReceivedAt)},
+		Observed: observed{
+			ReceivedAt: utc(e.ReceivedAt),
+			Nodes:      nodes,
+			Labels:     labels,
+		},
 	})
 }
 

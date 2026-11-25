@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
@@ -41,9 +42,12 @@ func api(t *testing.T,
 	t.Helper()
 
 	moderation := label.NewModeration(policy, pool)
-	reviews := review.NewHandler(review.NewRepository(pool), moderation)
+	recognition := claim.NewRecognition(claim.Policy{}, pool)
+	reviews := review.NewHandler(review.NewRepository(pool), moderation,
+	                             recognition, review.Newest)
 	responses := response.NewHandler(response.NewRepository(pool),
-	                                 review.NewRepository(pool), moderation)
+	                                 review.NewRepository(pool), moderation,
+	                                 recognition)
 	events := event.NewHandler(event.NewRepository(pool), moderation)
 
 	mux := http.NewServeMux()
@@ -416,5 +420,68 @@ func TestLabeledMustBeShowOrAbsent(t *testing.T) {
 	if rec.Code != http.StatusBadRequest ||
 	   !strings.Contains(rec.Body.String(), "invalid_labeled_error") {
 		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
+	}
+}
+
+
+func TestTheClientChoosesTheModeratorsItFollows(t *testing.T) {
+	// Arrange: m labels one review spam and removes another; the indexer's
+	// own file follows m
+	pool := migrated(t)
+
+	spam, spamID := reviewOf(t, 'b', "01", "spam")
+	gone, goneID := reviewOf(t, 'c', "02", "gone")
+	clean, _ := reviewOf(t, 'd', "03", "clean")
+	l1, _ := labelOf(t, 'm', spamID, "spam")
+	l2, _ := labelOf(t, 'm', goneID, "illegal")
+
+	feed(t, pool, "node-a", spam, gone, clean, l1, l2)
+
+	file := label.Follow(didOf('m'))
+	list := "/entities/" + bakery + "/reviews"
+
+	cases := []struct {
+		name   string
+		query  string
+		bodies []string
+	}{
+		{"the indexer's own list", "", []string{"clean"}},
+		{"a client following m", "?moderators=" + didOf('m'),
+		 []string{"clean"}},
+		{"a client following nobody", "?moderators=",
+		 []string{"clean", "gone", "spam"}},
+		{"a client following someone else", "?moderators=" + didOf('z'),
+		 []string{"clean", "gone", "spam"}},
+		{"a client following m and someone else",
+		 "?moderators=" + didOf('z') + "," + didOf('m'), []string{"clean"}},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			// Act
+			bodies, _ := listed(t, api(t, pool, file, list+c.query))
+
+			// Assert: the label is a projection, not a deletion
+			if !slices.Equal(bodies, c.bodies) {
+				t.Fatalf("listing = %v, want %v", bodies, c.bodies)
+			}
+		})
+	}
+
+	// the removed review answers by id only to a client not following m
+	byID := "/reviews/" + goneID
+	if rec := api(t, pool, file, byID+"?moderators="+didOf('m'));
+		rec.Code != http.StatusUnavailableForLegalReasons {
+		t.Fatalf("following m, GET %s = %d, want 451", byID, rec.Code)
+	}
+
+	if rec := api(t, pool, file, byID+"?moderators="); rec.Code != http.StatusOK {
+		t.Fatalf("following nobody, GET %s = %d, want 200", byID, rec.Code)
+	}
+
+	// a list that is not did:key is refused
+	if rec := api(t, pool, file, list+"?moderators=someone");
+		rec.Code != http.StatusBadRequest {
+		t.Fatalf("malformed moderators = %d, want 400", rec.Code)
 	}
 }

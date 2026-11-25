@@ -67,6 +67,55 @@ func (q *Queries) FirstDescriptor(ctx context.Context, entity string) (string, e
 	return descriptor, err
 }
 
+const headRatings = `-- name: HeadRatings :many
+SELECT r.author, r.rating
+FROM review_chains c
+JOIN reviews r ON r.event_id = c.head
+WHERE c.entity = $1
+  AND NOT c.withdrawn
+  AND NOT c.truncated
+  AND NOT EXISTS (
+      SELECT 1 FROM labels l
+      WHERE l.chain_root = c.chain_root
+        AND NOT l.revoked
+        AND l.moderator = ANY ($2::text[])
+        AND l.label = ANY ($3::text[]))
+`
+
+type HeadRatingsParams struct {
+	Entity     string
+	Moderators []string
+	Hiding     []string
+}
+
+type HeadRatingsRow struct {
+	Author string
+	Rating int16
+}
+
+// The rating and author of the head of each chain of an entity that can
+// count: not withdrawn, not truncated, not hidden or removed by a followed
+// moderator.
+func (q *Queries) HeadRatings(ctx context.Context, arg HeadRatingsParams) ([]HeadRatingsRow, error) {
+	rows, err := q.db.Query(ctx, headRatings, arg.Entity, arg.Moderators, arg.Hiding)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HeadRatingsRow
+	for rows.Next() {
+		var i HeadRatingsRow
+		if err := rows.Scan(&i.Author, &i.Rating); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const proposalEnvelopes = `-- name: ProposalEnvelopes :many
 SELECT p.entity, e.envelope
 FROM entity_proposals p
@@ -159,16 +208,29 @@ WHERE ($1::text = ''
                  WHERE l.proposal = p.event_id
                    AND NOT l.revoked
                    AND l.moderator = ANY ($2::text[]))))
-  AND ($3::timestamptz IS NULL
+  -- a category: some proposal still in the contest says it; whether it is
+  -- the one that holds is checked when the answer is worked out
+  AND ($3::text IS NULL
+       OR EXISTS (
+           SELECT 1 FROM entity_proposals p
+           WHERE p.entity = n.entity
+             AND p.category = $3::text
+             AND NOT EXISTS (
+                 SELECT 1 FROM labels l
+                 WHERE l.proposal = p.event_id
+                   AND NOT l.revoked
+                   AND l.moderator = ANY ($2::text[]))))
+  AND ($4::timestamptz IS NULL
        OR (n.first_seen, n.entity)
-          < ($3::timestamptz, $4::text))
+          < ($4::timestamptz, $5::text))
 ORDER BY n.first_seen DESC, n.entity DESC
-LIMIT $5
+LIMIT $6
 `
 
 type SearchEntitiesParams struct {
 	Query       string
 	Moderators  []string
+	Category    *string
 	AfterSeen   *time.Time
 	AfterEntity *string
 	RowLimit    int32
@@ -180,6 +242,7 @@ func (q *Queries) SearchEntities(ctx context.Context, arg SearchEntitiesParams) 
 	rows, err := q.db.Query(ctx, searchEntities,
 		arg.Query,
 		arg.Moderators,
+		arg.Category,
 		arg.AfterSeen,
 		arg.AfterEntity,
 		arg.RowLimit,

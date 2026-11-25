@@ -13,7 +13,8 @@ import type { Loader, PagedState } from '@/app/reads/usePaged.t'
  *
  * @param load - Reads one page. Keep it stable (`useCallback`): a new one
  * means a new list.
- * @returns The items so far, where the list is, and loadMore.
+ * @returns The items so far, where the list is, loadMore, and reload,
+ * which reads the first page again keeping the list until it answers.
  */
 export function usePaged<Item>(load: Loader<Item>) {
   const [state, setState] = useState<PagedState<Item>>({
@@ -23,6 +24,7 @@ export function usePaged<Item>(load: Loader<Item>) {
     error: null,
     more: 'idle',
   })
+  const [round, setRound] = useState(0)
 
   useEffect(() => {
     let live = true
@@ -34,6 +36,7 @@ export function usePaged<Item>(load: Loader<Item>) {
           source: load,
           items: page.items,
           next: page.next,
+          ranking: page.ranking,
           error: null,
           more: 'idle',
         })
@@ -47,9 +50,11 @@ export function usePaged<Item>(load: Loader<Item>) {
     return () => {
       live = false
     }
-  }, [load])
+    // a new round reads again with the same loader
+  }, [load, round])
 
   const current = state.source === load
+  const reload = useCallback(() => setRound((now) => now + 1), [])
   const { next } = state
 
   const loadMore = useCallback(() => {
@@ -80,7 +85,9 @@ export function usePaged<Item>(load: Loader<Item>) {
     items: current ? state.items : [],
     error: current ? state.error : null,
     hasMore: current && state.next !== null,
+    ranking: current ? state.ranking : undefined,
     more: current ? state.more : 'idle',
     loadMore,
+    reload,
   }
 }

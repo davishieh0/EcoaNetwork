@@ -21,3 +21,17 @@ INSERT INTO event_observations (event_id, received_at)
 VALUES ($1, $2)
 ON CONFLICT (event_id) DO UPDATE
 SET received_at = LEAST(event_observations.received_at, EXCLUDED.received_at);
+
+-- name: HoldEvent :exec
+-- Records that a node holds the event, where in its log and when it had it.
+INSERT INTO event_holders (event_id, node, sequence, received_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (event_id, node) DO UPDATE
+SET sequence = EXCLUDED.sequence, received_at = EXCLUDED.received_at;
+
+-- name: HoldersOf :many
+-- The nodes that hold an event, the first to have it first.
+SELECT node, sequence, received_at
+FROM event_holders
+WHERE event_id = $1
+ORDER BY received_at NULLS LAST, node;

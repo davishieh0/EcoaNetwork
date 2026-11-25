@@ -34,6 +34,65 @@ func (q *Queries) EventByID(ctx context.Context, eventID string) (EventByIDRow, 
 	return i, err
 }
 
+const holdEvent = `-- name: HoldEvent :exec
+INSERT INTO event_holders (event_id, node, sequence, received_at)
+VALUES ($1, $2, $3, $4)
+ON CONFLICT (event_id, node) DO UPDATE
+SET sequence = EXCLUDED.sequence, received_at = EXCLUDED.received_at
+`
+
+type HoldEventParams struct {
+	EventID    string
+	Node       string
+	Sequence   int64
+	ReceivedAt *time.Time
+}
+
+// Records that a node holds the event, where in its log and when it had it.
+func (q *Queries) HoldEvent(ctx context.Context, arg HoldEventParams) error {
+	_, err := q.db.Exec(ctx, holdEvent,
+		arg.EventID,
+		arg.Node,
+		arg.Sequence,
+		arg.ReceivedAt,
+	)
+	return err
+}
+
+const holdersOf = `-- name: HoldersOf :many
+SELECT node, sequence, received_at
+FROM event_holders
+WHERE event_id = $1
+ORDER BY received_at NULLS LAST, node
+`
+
+type HoldersOfRow struct {
+	Node       string
+	Sequence   int64
+	ReceivedAt *time.Time
+}
+
+// The nodes that hold an event, the first to have it first.
+func (q *Queries) HoldersOf(ctx context.Context, eventID string) ([]HoldersOfRow, error) {
+	rows, err := q.db.Query(ctx, holdersOf, eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []HoldersOfRow
+	for rows.Next() {
+		var i HoldersOfRow
+		if err := rows.Scan(&i.Node, &i.Sequence, &i.ReceivedAt); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const observeEvent = `-- name: ObserveEvent :exec
 INSERT INTO event_observations (event_id, received_at)
 VALUES ($1, $2)

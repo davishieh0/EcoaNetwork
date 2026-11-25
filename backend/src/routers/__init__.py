@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from fastapi import FastAPI
 from src.config import config
 from src.routers import auth
+from src.routers import claims
 from src.routers import entities
 from src.routers import events
 from src.routers import identities
@@ -29,6 +30,7 @@ def mount(app: FastAPI) -> None:
     api.include_router(system.router, tags=['system'], prefix='/system')
     api.include_router(auth.router, tags=['auth'], prefix='/auth')
     api.include_router(events.router, tags=['events'], prefix='/events')
+    api.include_router(claims.router, tags=['claims'], prefix='/claims')
 
     # reads: passed on from the indexer, no account needed
     api.include_router(entities.router, tags=['reads'], prefix='/entities')

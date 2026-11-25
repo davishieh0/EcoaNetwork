@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity/sqlc"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/envelope"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/projection"
@@ -40,7 +42,8 @@ func NewRepository(db sqlc.DBTX) *Repository {
 // moderator among moderators labeled, or ErrNotFound.
 func (r *Repository) ByID(ctx context.Context,
                           id string,
-                          moderators []string) (Entity, error) {
+                          moderators []string,
+                          judge Judge) (Entity, error) {
 	row, err := r.queries.EntityExists(ctx, id)
 	if err != nil {
 		return Entity{}, err
@@ -50,7 +53,20 @@ func (r *Repository) ByID(ctx context.Context,
 		return Entity{}, ErrNotFound
 	}
 
-	resolved, err := r.resolve(ctx, []string{id}, moderators)
+	resolved, err := r.resolve(ctx, []string{id}, moderators, judge)
+	if err != nil {
+		return Entity{}, err
+	}
+
+	metadata := resolved[id]
+	if judge != nil {
+		metadata.Representative, err = judge.RepresentativeOf(ctx, id)
+		if err != nil {
+			return Entity{}, err
+		}
+	}
+
+	metadata.Summary, err = r.summarize(ctx, id, moderators, judge)
 	if err != nil {
 		return Entity{}, err
 	}
@@ -58,7 +74,7 @@ func (r *Repository) ByID(ctx context.Context,
 	e := Entity{
 		Entity:   id,
 		Derived:  derived{Proposals: row.Proposals},
-		Observed: resolved[id],
+		Observed: metadata,
 	}
 
 	if strings.HasPrefix(id, "entity:") {
@@ -77,10 +93,13 @@ func (r *Repository) ByID(ctx context.Context,
 func (r *Repository) Search(ctx context.Context,
                             text string,
                             moderators []string,
-                            p page.Page) ([]Entity, *page.Cursor, error) {
+                            p page.Page,
+                            category *string,
+                            judge Judge) ([]Entity, *page.Cursor, error) {
 	params := sqlc.SearchEntitiesParams{
 		Query:      likePattern(fold(text)),
 		Moderators: moderators,
+		Category:   category,
 		RowLimit:   int32(p.Limit + 1),
 	}
 
@@ -108,13 +127,19 @@ func (r *Repository) Search(ctx context.Context,
 		ids = append(ids, row.Entity)
 	}
 
-	resolved, err := r.resolve(ctx, ids, moderators)
+	resolved, err := r.resolve(ctx, ids, moderators, judge)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	found := make([]Entity, 0, len(ids))
 	for _, id := range ids {
+		// a proposal said the category, but another holds: not this one
+		held := resolved[id].Category
+		if category != nil && (held == nil || held.Value != *category) {
+			continue
+		}
+
 		found = append(found, Entity{Entity: id, Observed: resolved[id]})
 	}
 
@@ -123,11 +148,12 @@ func (r *Repository) Search(ctx context.Context,
 
 
 // resolve works out each entity's metadata with the protocol's rule, from
-// the proposals still in the contest. v1 has no weights and no recognized
-// claims, so each field holds its first proposal; when they come, the same
-// call starts using them.
+// the proposals still in the contest: a verified representative's latest
+// value first (tier 1), otherwise the first value (tier 2). Weights wait on
+// reputation, so no challenger outweighs the first yet.
 func (r *Repository) resolve(ctx context.Context,
-                             ids, moderators []string) (map[string]Metadata, error) {
+                             ids, moderators []string,
+                             judge Judge) (map[string]Metadata, error) {
 	rows, err := r.queries.ProposalEnvelopes(ctx, sqlc.ProposalEnvelopesParams{
 		Entities:   ids,
 		Moderators: moderators,
@@ -153,11 +179,26 @@ func (r *Repository) resolve(ctx context.Context,
 		})
 	}
 
+	identities := map[string]projection.Identity{}
+
+	if judge != nil {
+		var authors []string
+		for _, list := range proposals {
+			for _, p := range list {
+				authors = append(authors, p.Author)
+			}
+		}
+
+		identities, err = judge.Identities(ctx, authors)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	resolved := map[string]Metadata{}
 
 	for _, id := range ids {
-		fields := projection.ResolveFields(proposals[id],
-		                                   map[string]projection.Identity{})
+		fields := projection.ResolveFields(proposals[id], identities)
 
 		resolved[id] = Metadata{
 			Name:        fieldOf(fields, "name"),
@@ -194,6 +235,62 @@ func (r *Repository) describe(ctx context.Context, e *Entity) error {
 	e.Derived.DescriptorMatches = &matches
 
 	return nil
+}
+
+
+// summarize works out id's summary of ratings, leaving out what a moderator
+// among moderators hid and what an author with a claim on id wrote.
+func (r *Repository) summarize(ctx context.Context,
+                               id string,
+                               moderators []string,
+                               judge Judge) (*Summary, error) {
+	rows, err := r.queries.HeadRatings(ctx, sqlc.HeadRatingsParams{
+		Entity:     id,
+		Moderators: moderators,
+		Hiding:     label.Hiding(false),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	conflicted := map[string]bool{}
+	if judge != nil {
+		authors := make([]string, 0, len(rows))
+		for _, row := range rows {
+			authors = append(authors, row.Author)
+		}
+
+		conflicted, err = judge.Conflicted(ctx, authors, id)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	s := Summary{}
+	total := 0
+
+	for _, row := range rows {
+		if conflicted[row.Author] {
+			s.Conflicted++
+			continue
+		}
+
+		if row.Rating < 1 || row.Rating > 5 {
+			continue
+		}
+
+		s.Distribution[row.Rating-1]++
+		s.Count++
+		total += int(row.Rating)
+	}
+
+	if s.Count > 0 {
+		// two decimals: a summary, not a measurement
+		mean := math.Round(float64(total)/float64(s.Count)*100) / 100
+		s.Mean = &mean
+	}
+
+	return &s, nil
 }
 
 

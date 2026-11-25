@@ -35,12 +35,14 @@ Every port is published on `127.0.0.1`, reachable from this machine only.
 
 | Service | Port | What it is |
 |---|---|---|
-| `frontend` | 8080 | The built site; nginx passes `/api` on to the backend, so the site and the API share one origin, as Vite's proxy does in development |
+| `frontend` | 8080 | The built site; nginx passes `/api` on to the backend named in `BACKEND_ORIGIN`, so the site and the API share one origin, as Vite's proxy does in development |
 | `backend` | 8000 (`BACKEND_PORT`) | The gateway API |
 | `indexer-serve` | 8081 | The indexer's read API, `/entities/...`, `/reviews/...` |
+| `indexer-2-serve` | 8082 | The second index's read API, with `--profile second-index` |
 | `indexer-project` | — | Follows the three nodes and writes the projections |
 | `node-1`, `node-2`, `node-3` | gRPC 50051, 50052, 50053; libp2p 4001, 4002, 4003 | The network, each node dialing the other two |
 | `postgres` | 5432 | The backend's and the indexer's databases |
+| `dns` | 5353/udp | The `.test` zone (`configs/dns/test.zone`) the indexer checks domain claims against |
 | `backend-migrate`, `indexer-migrate` | — | Apply the migrations, then exit; the services that need them wait for them |
 
 When 8000 is taken, by a backend run outside for instance:
@@ -51,6 +53,67 @@ BACKEND_PORT=8001 docker compose up -d
 
 The frontend reaches the backend inside the Docker network, whatever port
 it has here.
+
+## Data to look at
+
+Seed the network with a few hundred signed reviews across sixty entities
+(synthetic, in the Receita Federal's layout; see `indexer/cmd/seed`):
+
+```bash
+(cd ../../indexer && go run ./cmd/seed -node localhost:50051)
+```
+
+Running it again publishes nothing new.
+
+## Verifying a domain
+
+Domain claims are checked against `configs/dns/test.zone`. Add the line the
+site's Verification screen shows, relative to `test.`, and raise the serial:
+
+```
+_ecoa-verify.minhaloja IN TXT "ecoa-identity=did:key:z6Mk…"
+```
+
+CoreDNS rereads the file every few seconds; on macOS, Docker can take a
+minute to show it a change to a mounted file (its log says `Successfully
+reloaded zone`). The indexer tries a failed lookup again every 30 seconds, so
+publishing the record before signing the claim is quickest. The backend issues human claims with the key in
+`HUMAN_VERIFIER_SEED`, which `configs/indexer/verifiers.json` lists. **That
+key is for this machine only**, like the nodes' peer keys.
+
+## The demonstration
+
+Steps 5 and 6, a tampered event and an edit of someone else's review:
+
+```bash
+(cd ../../indexer && go run ./cmd/demo tamper && go run ./cmd/demo foreign-edit)
+```
+
+Step 9, the index dropped and rebuilt from the nodes' logs:
+
+```bash
+docker compose stop indexer-serve indexer-project
+docker compose run --rm indexer-project rebuild
+docker compose start indexer-project indexer-serve
+```
+
+Step 10, a second index over the same logs with another ranking: its own
+database and projector, ranking by endorsements, its API on `:8082` beside
+the first one's on `:8081`. The same entity's reviews come back in another
+order, and each answer names its `ranking`:
+
+```bash
+docker compose --profile second-index up -d
+curl -s 'localhost:8081/entities/<entity>/reviews'
+curl -s 'localhost:8082/entities/<entity>/reviews'
+```
+
+Its database, `ecoa_indexer_2`, is created with the others when the
+Postgres volume is first made; on an older volume, create it once:
+
+```bash
+docker compose exec postgres psql -U postgres -c 'CREATE DATABASE ecoa_indexer_2 OWNER indexer'
+```
 
 ## The nodes
 

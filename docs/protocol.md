@@ -105,7 +105,7 @@ Note the consequence for `author` comparisons: they are always against the *iden
 9. **Resolve references and check authorship** — that `replaces` and similar targets exist, that the author is entitled to act on them ([Who may sign what](#who-may-sign-what)), and, once the root/device model is adopted, that an `identity.device_authorized` from `author` covers `deviceKey` and no `identity.device_revoked` has retired it (v1 rejects a set `deviceKey`, see [Signing key vs. identity](#signing-key-vs-identity)). Anything unresolvable goes to the orphan buffer rather than being rejected ([Unresolved references](#unresolved-references)). *Type-specific, except the `deviceKey` part.*
 10. **Node admission policy** — per-author rate, per-identity thresholds, whatever this operator has configured ([docs/identity.md](./identity.md#where-these-controls-actually-sit)). Local, never protocol-level.
 11. **Store**, assigning a local receive timestamp and the next monotonic local sequence number.
-12. **Notify the indexer.**
+12. **Notify the indexer.** (In v1, storing wakes the indexers' open `SubscribeEvents` streams, which read the log from their own cursors — [decisions.md §15.8](./decisions.md#158-indexers-follow-the-log-over-one-grpc-stream-woken-by-the-store--call).)
 13. **Rebroadcast.**
 
 Steps 1–4 and 6–8 are **universal**: they need no knowledge of what the payload means, which is what lets a node relay an event type it has never heard of ([Event types and payload schemas](#event-types-and-payload-schemas--usually-no-version-bump-at-all)). Steps 5 and 9 are largely **type-specific** and are skipped for an unrecognized `eventType` — such an event is stored and relayed as structurally sound and authentically signed, but semantically opaque. Step 10 is **local policy** and binds nobody but the node applying it.
@@ -201,7 +201,7 @@ There is deliberately **no `profile.created` or `entity.created`**, and no `enti
 
 `moderation.report_created` and `moderation.label_created` are two different acts, not two names for one. A **report** is a request, publishable by anyone: *"I think this is spam."* A **label** is a verdict, published by an identity acting as a moderator, and it's the one clients and indexers actually act on. Reports feed a moderator's queue; labels feed presentation. Neither is privileged by the protocol — a label matters only to a consumer that has chosen to follow the identity that signed it.
 
-Not all of these need to ship in the MVP — see [mvp.md](./mvp.md).
+Not all of these need to ship in the MVP — see [mvp.md](./mvp.md). In v1 every node validates and relays all eighteen; the indexer projects fourteen and stores the rest, unprojected: `entity.alias_proposed` (aliases are out of scope), `moderation.report_created` (no moderation queue yet), and `identity.device_authorized` and `identity.device_revoked` (v1 ships the single-key model).
 
 ## Who may sign what
 
@@ -504,6 +504,7 @@ Before a node can sync or gossip anything, it needs to find at least one peer al
 - **After the first connection**, ordinary Gossipsub mesh membership and peer exchange handle finding more peers. No DHT in v1 — consistent with the rest of the MVP scope (see [docs/mvp.md](./mvp.md)).
 - **A node that has run before** should try the peers it knew from its last session before falling back to the bootstrap list — the network shouldn't depend on bootstrap nodes staying up forever.
 - **Being in the bootstrap list grants no authority.** It's purely a discovery convenience, same as every other node — consistent with no node being authoritative. Relying on bootstrap sources from more than one independent operator avoids this becoming a single point of dependency.
+- **In v1 the default list is empty**, because no public node exists yet: a new node needs `BOOTSTRAP_ADDRS` (layer 2) to find the network, and the local network's three nodes bootstrap from each other's fixed addresses. Shipping a default list is the first step of self-hosting ([roadmap.md](./roadmap.md#11-self-hosting)).
 - **In v1 there is only one operator**, so that last point is an aspiration rather than a property. Every bootstrap node is run by the project, and a bad default list would steer every new node at once. What v1 can do is make the list overridable from configuration on day one (layer 2 above) so the fix requires no new software, and treat "a second operator runs a bootstrap node" as the first concrete milestone of decentralization rather than a later nicety — it is cheaper than any other item on that path and it removes the most complete single point of dependency in the design.
 
 ## Node-to-node sync

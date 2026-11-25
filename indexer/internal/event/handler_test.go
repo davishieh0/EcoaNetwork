@@ -3,10 +3,12 @@ package event
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -129,5 +131,58 @@ func TestGetAnswers503WhenTheDatabaseIsUnreachable(t *testing.T) {
 	if rec.Code != http.StatusServiceUnavailable ||
 	   !bytes.Contains(rec.Body.Bytes(), []byte(`"error":"database_unavailable_error"`)) {
 		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
+	}
+}
+
+
+func TestGetListsTheNodesThatHoldIt(t *testing.T) {
+	// Arrange: node-2 had it before node-1; node-3 did not say when
+	pool := migrated(t)
+	insert(t, pool, id("b"), tricky, true)
+
+	repo := NewRepository(pool)
+	ctx := context.Background()
+	early := time.Date(2026, 11, 21, 14, 2, 11, 0, time.UTC)
+	late := early.Add(time.Second)
+
+	for _, h := range []Holder{
+		{Node: "node-1:50051", Sequence: 7, ReceivedAt: &late},
+		{Node: "node-2:50051", Sequence: 3, ReceivedAt: &early},
+		{Node: "node-3:50051", Sequence: 9},
+	} {
+		if err := repo.Hold(ctx, id("b"), h); err != nil {
+			t.Fatalf("Hold: %v", err)
+		}
+	}
+
+	// the same node reporting it again moves it, never doubles it
+	again := Holder{Node: "node-1:50051", Sequence: 8, ReceivedAt: &late}
+	if err := repo.Hold(ctx, id("b"), again); err != nil {
+		t.Fatalf("Hold again: %v", err)
+	}
+
+	// Act
+	rec := get(t, pool, id("b"))
+
+	// Assert
+	var body struct {
+		Observed struct {
+			Nodes []struct {
+				Node     string `json:"node"`
+				Sequence int64  `json:"sequence"`
+			} `json:"nodes"`
+		} `json:"observed"`
+	}
+
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode %q: %v", rec.Body.String(), err)
+	}
+
+	got := body.Observed.Nodes
+	if len(got) != 3 ||
+		got[0].Node != "node-2:50051" ||
+		got[1].Node != "node-1:50051" || got[1].Sequence != 8 ||
+		got[2].Node != "node-3:50051" {
+		t.Fatalf("nodes = %+v, want node-2, node-1 at 8, node-3", got)
 	}
 }

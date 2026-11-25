@@ -3,15 +3,24 @@
  */
 
 // --- IMPORTS ---
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { messageOf } from '@/app/forms/messages'
 import { useRouteState } from '@/app/navigation/navigation'
 import type { WritePhase, WriteState } from '@/app/write/Write.t'
 import { publishEvent } from '@/logic/datasource/events'
 import { HttpError } from '@/logic/errors/httpError'
-import { MAX_ENVELOPE, signEnvelope, sizeOf } from '@/logic/protocol/envelope'
-import { loadIdentity } from '@/logic/protocol/identity'
+import {
+  createdAtNow,
+  MAX_ENVELOPE,
+  signEnvelope,
+  sizeOf,
+} from '@/logic/protocol/envelope'
+import {
+  createFresh,
+  loadIdentity,
+  peekIdentity,
+} from '@/logic/protocol/identity'
 import { normalizeEntity } from '@/logic/protocol/entity'
 import { checkReview } from '@/logic/protocol/review'
 import type { EntityKind } from '@/logic/protocol/entity.t'
@@ -75,15 +84,6 @@ function draftFor(state: WriteState): ReviewDraft {
 }
 
 /**
- * Formats now as createdAt: RFC 3339, UTC, whole seconds, literal Z.
- *
- * @returns The timestamp.
- */
-function now(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
-}
-
-/**
  * Holds the draft and moves it from writing to checked to published.
  *
  * @returns The account, the draft, its problems and the actions on it.
@@ -91,6 +91,18 @@ function now(): string {
 export function useWriteData() {
   const session = useSession()
   const handed = useRouteState<'write'>()
+
+  // publish under a key made for this review alone, unlinked to the others
+  const [fresh, setFresh] = useState(false)
+
+  // whether this browser has an identity to sign with; undefined until read
+  const [hasIdentity, setHasIdentity] = useState<boolean | undefined>()
+  useEffect(() => {
+    peekIdentity().then(
+      (did) => setHasIdentity(did !== null),
+      () => setHasIdentity(false),
+    )
+  }, [])
   const [draft, setDraft] = useState<ReviewDraft>(() => draftFor(handed))
   const [phase, setPhase] = useState<WritePhase>({
     name: 'editing',
@@ -139,7 +151,7 @@ export function useWriteData() {
     setPhase({
       name: 'checked',
       payload: result.payload,
-      createdAt: now(),
+      createdAt: createdAtNow(),
       error: null,
     })
   }
@@ -162,7 +174,7 @@ export function useWriteData() {
     setPhase({ name: 'publishing', payload, createdAt })
 
     try {
-      const identity = await loadIdentity()
+      const identity = fresh ? await createFresh() : await loadIdentity()
       const envelope = await signEnvelope(
         identity,
         'review.created',
@@ -202,11 +214,14 @@ export function useWriteData() {
    * Clears the draft to write another review.
    */
   const reset = () => {
+    setFresh(false)
     setDraft(draftFor(handed))
     setPhase({ name: 'editing', attempted: false })
   }
 
   return {
+    hasIdentity,
+    identityReady: () => setHasIdentity(true),
     account: session.status === 'signed-in' ? session.account : null,
     draft,
     entity: normalizeEntity(draft.kind, draft.identifier),
@@ -217,5 +232,9 @@ export function useWriteData() {
     edit,
     publish,
     reset,
+    fresh,
+    setFresh: (on: boolean) => {
+      if (!locked) setFresh(on)
+    },
   }
 }

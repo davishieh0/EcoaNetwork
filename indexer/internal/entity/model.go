@@ -5,7 +5,11 @@ package entity
 
 
 import (
+	"context"
 	"encoding/json"
+	"time"
+
+	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/projection"
 )
 
 
@@ -26,6 +30,55 @@ type Metadata struct {
 	Name        *Field `json:"name"`
 	Category    *Field `json:"category"`
 	Description *Field `json:"description"`
+
+	// Representative is the one identity with authority over the entity,
+	// by a domain claim this indexer verified; absent when none.
+	Representative *Representative `json:"representative,omitempty"`
+
+	// Summary is this indexer's summary of the ratings, on GET
+	// /entities/{entity} only. The protocol defines one rating, never how to
+	// add them up: another indexer may summarize differently.
+	Summary *Summary `json:"summary,omitempty"`
+}
+
+
+// Summary is the ratings of an entity's reviews that count: the head of each
+// chain, leaving out withdrawn chains, chains a followed moderator hid or
+// removed, and reviews by an identity holding a claim on the entity itself.
+type Summary struct {
+	// Count is how many reviews count.
+	Count int `json:"count"`
+
+	// Mean is their average rating, absent when none counts.
+	Mean *float64 `json:"mean,omitempty"`
+
+	// Distribution is how many count with each rating, 1 to 5.
+	Distribution [5]int `json:"distribution"`
+
+	// Conflicted is how many reviews were left out as a conflict of
+	// interest: shown, marked, not counted.
+	Conflicted int `json:"conflicted"`
+}
+
+
+// Representative is an entity's verified representative.
+type Representative struct {
+	Identity string     `json:"identity"`
+	EventID  string     `json:"eventId"`
+	Since    *time.Time `json:"since,omitempty"`
+}
+
+
+// Judge is what resolving an entity needs to know about the authors of its
+// proposals: the claims that count for them, and who represents an entity.
+type Judge interface {
+	Identities(ctx context.Context,
+	           authors []string) (map[string]projection.Identity, error)
+	RepresentativeOf(ctx context.Context,
+	                 entity string) (*Representative, error)
+	Conflicted(ctx context.Context,
+	           authors []string,
+	           entity string) (map[string]bool, error)
 }
 
 

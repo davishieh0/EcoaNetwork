@@ -18,12 +18,16 @@ x-indexer: &indexer
     context: ../..
     dockerfile: indexer/Dockerfile
   image: ecoa-indexer:local
-  environment:
+  environment: &indexer-env
     DATABASE_URL: postgres://indexer:${INDEXER_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_indexer?sslmode=disable
     NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
     MODERATORS_FILE: /config/moderators.json
+    VERIFIERS_FILE: /config/verifiers.json
+    # domain claims are looked up in the local zone, not the public DNS
+    DNS_SERVER: dns:53
   volumes:
     - ./configs/indexer/moderators.json:/config/moderators.json:ro
+    - ./configs/indexer/verifiers.json:/config/verifiers.json:ro
 
 x-backend: &backend
   build: ../../backend
@@ -31,9 +35,12 @@ x-backend: &backend
   env_file:
     - path: ../../backend/.env
       required: false
-  environment:
+  environment: &backend-env
     DATABASE_URL: postgresql+asyncpg://backend:${BACKEND_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_backend
     NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    # the human verifier's key, for this machine only: anyone with the
+    # repository has it (configs/indexer/verifiers.json lists its did:key)
+    HUMAN_VERIFIER_SEED: 341203c990162088dd711512907df227606c510bc83404d5f8c38d8c267c728d
     INDEXER_URL: http://indexer-serve:8081
     BIND: 0.0.0.0
     PORT: "8000"
@@ -65,6 +72,17 @@ services:
       - ./data/postgres:/var/lib/postgresql
     ports:
       - "127.0.0.1:5432:5432"
+
+  # the local zone the indexer checks domain claims against: real DNS, on a
+  # name nobody else can answer for
+  dns:
+    image: coredns/coredns:1.11.3
+    command: ["-conf", "/etc/coredns/Corefile"]
+    restart: unless-stopped
+    volumes:
+      - ./configs/dns:/etc/coredns:ro
+    ports:
+      - "127.0.0.1:5353:53/udp"
 
 
   # --- cluster of nodes ---
@@ -120,6 +138,8 @@ services:
     depends_on:
       indexer-migrate:
         condition: service_completed_successfully
+      dns:
+        condition: service_started
 
   indexer-serve:
     <<: *indexer
@@ -170,3 +190,43 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:8080:8080"
+
+
+  # --- a second index, for the demonstration's last step ---
+  # Same events, another opinion: its own database and projector following
+  # the same three nodes, its API ranking by endorsements on :8082. Started
+  # with `--profile second-index`.
+  indexer-2-migrate:
+    <<: *indexer
+    profiles: [second-index]
+    command: ["migrate"]
+    restart: "no"
+    environment: &indexer-2-env
+      <<: *indexer-env
+      DATABASE_URL: postgres://indexer:${INDEXER_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_indexer_2?sslmode=disable
+      RANKING: endorsed
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  indexer-2-project:
+    <<: *indexer
+    profiles: [second-index]
+    command: ["project"]
+    restart: unless-stopped
+    environment: *indexer-2-env
+    depends_on:
+      indexer-2-migrate:
+        condition: service_completed_successfully
+
+  indexer-2-serve:
+    <<: *indexer
+    profiles: [second-index]
+    command: ["serve"]
+    restart: unless-stopped
+    environment: *indexer-2-env
+    depends_on:
+      indexer-2-migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:8082:8081"

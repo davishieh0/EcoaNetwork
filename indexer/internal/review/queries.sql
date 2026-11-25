@@ -104,3 +104,40 @@ SET head = sqlc.narg(head),
     withdrawn = sqlc.arg(withdrawn),
     truncated = sqlc.arg(truncated)
 WHERE chain_root = sqlc.arg(chain_root);
+
+-- name: HeadsByScore :many
+-- The same heads, ranked by the head's score — the endorsements that count on
+-- it less its disputes — then newest original first, after the cursor when
+-- there is one. A ranking is an opinion: another indexer orders otherwise.
+SELECT c.chain_root,
+       c.created_at AS chain_created_at,
+       c.head::text AS head,
+       e.envelope,
+       o.received_at,
+       (SELECT count(*) FROM reviews v WHERE v.chain_root = c.chain_root)
+           AS versions,
+       COALESCE(t.endorsements, 0)::integer AS endorsements,
+       COALESCE(t.disputes, 0)::integer AS disputes,
+       (COALESCE(t.endorsements, 0) - COALESCE(t.disputes, 0))::bigint
+           AS score
+FROM review_chains c
+JOIN events e ON e.event_id = c.head
+LEFT JOIN event_observations o ON o.event_id = c.head
+LEFT JOIN version_votes t ON t.version = c.head
+WHERE c.entity = sqlc.arg(entity)
+  AND NOT c.withdrawn
+  AND NOT c.truncated
+  AND NOT EXISTS (
+      SELECT 1 FROM labels l
+      WHERE l.chain_root = c.chain_root
+        AND NOT l.revoked
+        AND l.moderator = ANY (sqlc.arg(moderators)::text[])
+        AND l.label = ANY (sqlc.arg(hiding)::text[]))
+  AND (sqlc.narg(after_score)::bigint IS NULL
+       OR ((COALESCE(t.endorsements, 0) - COALESCE(t.disputes, 0))::bigint,
+           c.created_at, c.chain_root)
+          < (sqlc.narg(after_score)::bigint,
+             sqlc.narg(after_created_at)::timestamptz,
+             sqlc.narg(after_root)::text))
+ORDER BY score DESC, c.created_at DESC, c.chain_root DESC
+LIMIT sqlc.arg(row_limit);

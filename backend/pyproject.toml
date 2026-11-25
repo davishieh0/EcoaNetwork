@@ -1,6 +1,6 @@
 [project]
 name = "ecoa-backend"
-version = "0.10.0"
+version = "0.11.0"
 description = "Ecoa platform backend API"
 authors = [{ name = "Eduardo Kairalla", email = "eduardokairalla123@gmail.com" }]
 requires-python = ">=3.12,<4.0"
@@ -19,6 +19,7 @@ dependencies = [
     "grpcio>=1.84.0",
     "protobuf>=7.36.2",
     "httpx>=0.28.1",
+    "altcha>=2.5.0",
 ]
 
 [dependency-groups]

@@ -147,7 +147,7 @@ export function EventInspector({
               >
                 <dl className="flex flex-col">
                   {event.rows.map((row) => (
-                    <Row key={row.label} label={row.label}>
+                    <Row key={`${row.label}:${row.value}`} label={row.label}>
                       {row.value}
                     </Row>
                   ))}

@@ -59,23 +59,35 @@ def client(indexer: FakeIndexer) -> Iterator[TestClient]:
 # --- ROUTES ---
 @pytest.mark.parametrize(('url', 'method', 'arguments'), [
     ('/api/entities?q=joao&limit=5&after=x',
-     'search_entities', {'q': 'joao', 'limit': '5', 'after': 'x'}),
+     'search_entities', {'q': 'joao', 'limit': '5', 'after': 'x',
+                         'category': None, 'moderators': None}),
+    ('/api/entities?category=retail',
+     'search_entities', {'q': None, 'limit': None, 'after': None,
+                         'category': 'retail', 'moderators': None}),
     ('/api/entities',
-     'search_entities', {'q': None, 'limit': None, 'after': None}),
+     'search_entities', {'q': None, 'limit': None, 'after': None,
+                         'category': None, 'moderators': None}),
     ('/api/entities/cnpj:12345678000199',
-     'get_entity', {'entity': 'cnpj:12345678000199'}),
+     'get_entity', {'entity': 'cnpj:12345678000199', 'moderators': None}),
     ('/api/entities/cnpj:12345678000199/reviews?labeled=show&limit=2',
      'list_entity_reviews', {'entity': 'cnpj:12345678000199', 'limit': '2',
-                             'after': None, 'labeled': 'show'}),
-    ('/api/reviews/evt_a', 'get_review', {'event_id': 'evt_a'}),
+                             'after': None, 'labeled': 'show',
+                             'moderators': None}),
+    ('/api/reviews/evt_a',
+     'get_review', {'event_id': 'evt_a', 'moderators': None}),
     ('/api/reviews/evt_a/responses?after=y',
      'list_review_responses', {'event_id': 'evt_a', 'limit': None,
-                               'after': 'y', 'labeled': None}),
-    ('/api/events/evt_a', 'get_event', {'event_id': 'evt_a'}),
+                               'after': 'y', 'labeled': None,
+                               'moderators': None}),
+    ('/api/events/evt_a',
+     'get_event', {'event_id': 'evt_a', 'moderators': None}),
     ('/api/profiles?ids=did:key:a,did:key:b',
-     'list_profiles', {'ids': 'did:key:a,did:key:b'}),
-    ('/api/profiles/did:key:a', 'get_profile', {'did': 'did:key:a'}),
+     'list_profiles', {'ids': 'did:key:a,did:key:b', 'moderators': None}),
+    ('/api/profiles/did:key:a',
+     'get_profile', {'did': 'did:key:a', 'moderators': None}),
     ('/api/identities/did:key:a', 'get_identity', {'did': 'did:key:a'}),
+    ('/api/reviews/evt_a?moderators=did:key:m',
+     'get_review', {'event_id': 'evt_a', 'moderators': 'did:key:m'}),
 ])
 def test_each_route_calls_its_indexer_method(
     client: TestClient,
@@ -96,10 +108,11 @@ def test_a_route_passes_only_the_parameters_it_takes(
     client: TestClient, indexer: FakeIndexer,
 ) -> None:
     # Act
-    client.get('/api/reviews/evt_a?limit=1&admin=true&moderators=x')
+    client.get('/api/reviews/evt_a?limit=1&admin=true&role=x')
 
     # Assert: nothing a client adds reaches the indexer
-    assert indexer.calls == [('get_review', {'event_id': 'evt_a'})]
+    assert indexer.calls == [('get_review', {'event_id': 'evt_a',
+                                             'moderators': None})]
 
 
 def test_the_body_passes_on_byte_for_byte(

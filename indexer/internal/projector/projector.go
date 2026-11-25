@@ -32,7 +32,18 @@ const (
 	// after the database refused it.
 	retryFirst = time.Second
 	retryMax   = 30 * time.Second
+
+	// checkEvery is how often a run that stops once caught up checks it.
+	checkEvery = 200 * time.Millisecond
 )
+
+
+// --- GLOBALS ---
+
+// settle is how long a run that stops once caught up waits with nothing
+// arriving, every node at its head, before it stops: a node that has
+// nothing to send sends nothing, so quiet is the only sign of the end.
+var settle = 2 * time.Second
 
 
 // --- CODE ---
@@ -48,6 +59,24 @@ type progress struct {
 // Run follows every node in addrs and writes what they send through pool,
 // until ctx ends.
 func Run(ctx context.Context, pool *pgxpool.Pool, addrs []string) error {
+	return follow(ctx, pool, addrs, false)
+}
+
+
+// RunUntilCaughtUp follows every node in addrs like Run, and stops once it
+// has applied each one's log up to its head and nothing more arrives.
+func RunUntilCaughtUp(ctx context.Context,
+                      pool *pgxpool.Pool,
+                      addrs []string) error {
+	return follow(ctx, pool, addrs, true)
+}
+
+
+// follow follows every node in addrs, stopping once caught up when asked.
+func follow(ctx context.Context,
+            pool *pgxpool.Pool,
+            addrs []string,
+            untilCaughtUp bool) error {
 	followers := make([]stream.Follower, 0, len(addrs))
 	positions := positionsFrom(pool)
 
@@ -67,7 +96,7 @@ func Run(ctx context.Context, pool *pgxpool.Pool, addrs []string) error {
 		})
 	}
 
-	return run(ctx, pool, followers)
+	return feedAll(ctx, pool, followers, untilCaughtUp)
 }
 
 
@@ -75,6 +104,19 @@ func Run(ctx context.Context, pool *pgxpool.Pool, addrs []string) error {
 func run(ctx context.Context,
          pool *pgxpool.Pool,
          followers []stream.Follower) error {
+	return feedAll(ctx, pool, followers, false)
+}
+
+
+// feedAll feeds every follower into one applier until ctx ends or, when
+// untilCaughtUp, until every node is at its head and the streams are quiet.
+func feedAll(ctx context.Context,
+             pool *pgxpool.Pool,
+             followers []stream.Follower,
+             untilCaughtUp bool) error {
+	ctx, stop := context.WithCancel(ctx)
+	defer stop()
+
 	received := make(chan stream.Received, buffered)
 
 	var wg sync.WaitGroup
@@ -91,6 +133,11 @@ func run(ctx context.Context,
 	ticker := time.NewTicker(progressEvery)
 	defer ticker.Stop()
 
+	check := time.NewTicker(checkEvery)
+	defer check.Stop()
+
+	last := time.Now()
+
 	for {
 		select {
 		case r := <-received:
@@ -100,6 +147,17 @@ func run(ctx context.Context,
 			}
 
 			record(seen, r)
+			last = time.Now()
+
+		case <-check.C:
+			if untilCaughtUp && caughtUp(seen) && time.Since(last) >= settle {
+				stop()
+				wg.Wait()
+				report(seen)
+				slog.Info("caught up", "nodes", len(seen))
+
+				return nil
+			}
 
 		case <-ticker.C:
 			report(seen)
@@ -166,6 +224,19 @@ func record(seen map[string]*progress, r stream.Received) {
 	p.sequence = r.Event.GetSequence()
 	p.head = r.Event.GetHead()
 	p.applied++
+}
+
+
+// caughtUp reports whether every node heard from has been applied up to
+// the head it last reported.
+func caughtUp(seen map[string]*progress) bool {
+	for _, p := range seen {
+		if p.sequence < p.head {
+			return false
+		}
+	}
+
+	return true
 }
 
 

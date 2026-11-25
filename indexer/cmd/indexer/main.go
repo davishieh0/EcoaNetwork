@@ -4,7 +4,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -12,10 +11,12 @@ import (
 	"syscall"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/api"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/config"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/database"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/projector"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
 )
 
 
@@ -26,12 +27,8 @@ var commands = map[string]func(context.Context, config.Config) error{
 	"migrate": migrate,
 	"project": project,
 	"serve":   serve,
-	"rebuild": notBuilt,
+	"rebuild": rebuild,
 }
-
-
-// errNotBuilt is what a subcommand that does not exist yet returns.
-var errNotBuilt = errors.New("not built yet")
 
 
 // --- CODE ---
@@ -86,7 +83,25 @@ func project(ctx context.Context, cfg config.Config) error {
 	}
 	defer pool.Close()
 
+	// domain claims are looked up beside the projection, writing what this
+	// indexer observed of each
+	go claim.NewChecker(pool, lookupOf(cfg)).Run(ctx)
+
 	return projector.Run(ctx, pool, cfg.NodeAddrs)
+}
+
+
+// lookupOf is how domain claims are resolved: the DNS server when one is
+// set, DNS-over-HTTPS otherwise.
+func lookupOf(cfg config.Config) claim.Lookup {
+	if cfg.DNSServer != "" {
+		slog.Info("claims", "dns", cfg.DNSServer)
+		return claim.Plain{Server: cfg.DNSServer}
+	}
+
+	slog.Info("claims", "doh", cfg.DoHURL)
+
+	return claim.DoH{URL: cfg.DoHURL}
 }
 
 
@@ -100,17 +115,41 @@ func serve(ctx context.Context, cfg config.Config) error {
 
 	slog.Info("moderation", "following", len(policy.Moderators()))
 
+	verifiers, err := claim.LoadPolicy(cfg.VerifiersFile)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("verification", "human verifiers", len(verifiers.Human()))
+
 	pool, err := database.Open(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
 
-	return api.Serve(ctx, cfg.HTTPAddr, pool, policy)
+	slog.Info("ranking", "order", cfg.Ranking)
+
+	return api.Serve(ctx, cfg.HTTPAddr, pool, policy, verifiers,
+	                 review.Ranking(cfg.Ranking))
 }
 
 
-// notBuilt stands in for a subcommand that does not exist yet.
-func notBuilt(context.Context, config.Config) error {
-	return errNotBuilt
+// rebuild empties the projection and projects every node's log again from
+// the start, then stops once caught up. Run it with the API and the
+// projector stopped; `project` carries on from where it left off.
+func rebuild(ctx context.Context, cfg config.Config) error {
+	pool, err := database.Open(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	if err := projector.Empty(ctx, pool); err != nil {
+		return err
+	}
+
+	slog.Info("rebuild", "emptied", true, "nodes", len(cfg.NodeAddrs))
+
+	return projector.RunUntilCaughtUp(ctx, pool, cfg.NodeAddrs)
 }

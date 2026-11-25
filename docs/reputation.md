@@ -72,6 +72,8 @@ It also makes clear which claim is the interesting one for a review platform spe
 
 The formula lives entirely in the indexer — like reputation and moderation, different indexers can tune or replace it without forking the protocol.
 
+**v1, as built: no weighting yet.** The indexer counts the latest vote of each identity on each exact version (`version_votes`), so every vote weighs the same. The claims it recognizes are already at hand — they mark authors and decide entity authority — so the formula above is the next step, not a redesign.
+
 ## What the score actually changes
 
 Only presentation, never the record:
@@ -81,6 +83,8 @@ Only presentation, never the record:
 - Anyone can still read every review, sorted however they want, on a client/indexer that chooses to expose that.
 
 A review the community rejects fades in the default view — it doesn't disappear from the network. That's the same non-deletion guarantee the rest of the protocol makes, applied to ranking instead of to content.
+
+**v1, as built:** an indexer's ranking is a setting. `RANKING=newest` lists the newest original first; `endorsed` lists the head with the best score first — its endorsements less its disputes, unweighted — then newest. Each answer names the ranking it used, and the client says it ("as this index ranks them"). The demonstration's step 10 runs two indexers over the same logs, one of each ([decisions.md §16.6](./decisions.md#166-ranking-is-a-setting-and-the-demonstrations-second-indexer-uses-it--call)).
 
 ## Anti-brigading (later, not v1)
 

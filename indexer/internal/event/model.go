@@ -23,6 +23,19 @@ type Event struct {
 }
 
 
+// Holder is a node that holds an event, as the indexer saw it.
+type Holder struct {
+	// Node is the node's address, as configured.
+	Node string
+
+	// Sequence is where the event sits in that node's log.
+	Sequence int64
+
+	// ReceivedAt is when that node had it, nil when it did not say.
+	ReceivedAt *time.Time
+}
+
+
 // Signed is an event as it arrives from a node, to be stored.
 type Signed struct {
 	// ID is the eventId.

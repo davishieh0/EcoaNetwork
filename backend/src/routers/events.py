@@ -5,6 +5,7 @@ Event endpoints.
 # --- IMPORTS ---
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import Query
 from fastapi import Response
 from fastapi.responses import JSONResponse
 from src.clients.indexer import IndexerClient
@@ -15,6 +16,7 @@ from src.err.invalid_request_error import InvalidRequestError
 from src.err.node_unavailable_error import NodeUnavailableError
 from src.schemas.errors import error_responses
 from src.schemas.events import PublishResult
+from src.schemas.reads import MODERATORS_HELP
 from src.schemas.reads import Item
 from src.schemas.reads import read_responses
 from src.services.events import EventService
@@ -56,9 +58,11 @@ async def publish(
             responses=read_responses(400, 404, 451))
 async def get_event(
     event_id: str,
+    moderators: str | None = Query(None, description=MODERATORS_HELP),
     indexer: IndexerClient = Depends(get_indexer),
 ) -> Response:
     """
     The envelope alone, for inspection, passed on from the indexer.
     """
-    return relay(await indexer.get_event(event_id=event_id))
+    return relay(await indexer.get_event(event_id=event_id,
+                       moderators=moderators))

@@ -20,10 +20,22 @@ npm run dev
 `npm run dev` does **not** type-check — only `build` does. Keep an eye on the
 editor, or run `build` before pushing.
 
+The dev server sends `/api` to a gateway on `localhost:8000`. The whole network
+— three nodes, the indexer, the gateway and this site behind nginx — runs from
+[infra/local](../infra/local/README.md).
+
+## Deploying
+
+The `Dockerfile` builds the site and serves it with nginx, which also proxies
+`/api` to the gateway named by `BACKEND_ORIGIN` (`nginx.conf.template`). One
+image serves any gateway: pointing the client at another one is a setting, not
+a code change. The network the client signs for is `ecoa-dev` unless
+`VITE_ECOA_NETWORK` is set when building, which the image does not do yet.
+
 ## Stack
 
 React 19 · TypeScript 6 · Vite 8 · Tailwind CSS 4 · React Router 8 ·
-Motion · Radix (Dialog, Accordion)
+Motion · Radix (Dialog, Accordion) · ALTCHA (the human check)
 
 ## Where things are
 

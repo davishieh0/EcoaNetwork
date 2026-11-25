@@ -87,3 +87,17 @@ WHERE profile = ANY (sqlc.arg(profiles)::text[])
   AND NOT revoked
   AND moderator = ANY (sqlc.arg(moderators)::text[])
 ORDER BY event_id;
+
+-- name: EventLabels :many
+-- The labels that count on one event: on itself, on the chain it is a
+-- version of, on it as a response or as a profile.
+SELECT event_id, label, moderator
+FROM labels l
+WHERE NOT l.revoked
+  AND l.moderator = ANY (sqlc.arg(moderators)::text[])
+  AND (l.target = sqlc.arg(event_id)
+       OR l.response = sqlc.arg(event_id)
+       OR l.profile = sqlc.arg(event_id)
+       OR l.chain_root = (SELECT r.chain_root FROM reviews r
+                          WHERE r.event_id = sqlc.arg(event_id)))
+ORDER BY event_id;

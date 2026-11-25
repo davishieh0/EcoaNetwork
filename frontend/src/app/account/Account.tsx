@@ -6,6 +6,7 @@
 import { motion } from 'motion/react'
 
 import { DeleteAccount } from '@/app/account/DeleteAccount'
+import { PublicProfile } from '@/app/account/PublicProfile'
 import { useAccountData } from '@/app/account/useAccountData'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
@@ -77,6 +78,9 @@ export function Account() {
               </div>
             ))}
           </motion.dl>
+          <motion.div {...rise(0.15)}>
+            <PublicProfile handle={account.handle} />
+          </motion.div>
 
           <motion.div {...rise(0.18)} className="flex flex-col gap-4">
             <FormAlert>{signOut.message}</FormAlert>

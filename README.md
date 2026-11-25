@@ -24,10 +24,10 @@ explains the ideas in plain terms.
 
 ```
 frontend ──▶ backend (gateway) ──▶ node ◀──▶ node ◀──▶ node    libp2p: Gossipsub + sync
- signs           │                  │
- locally         │ reads            │ gRPC SubscribeEvents
-                 ▼                  ▼
-              indexer ◀──────── follows the logs, projects them into Postgres
+ signs           │                   ▲
+ locally         │ reads             │ gRPC SubscribeEvents, from its own cursor
+                 ▼                   │
+              indexer ───────────────┘  follows every node's log, projects it into Postgres
 ```
 
 Writes go through a node and out to the network; reads never touch a node.
@@ -37,7 +37,9 @@ answer carries the whole signed envelope so the client can check it.
 ![Architecture](docs/diagrams/architecture.png)
 
 [Architecture](docs/architecture.md) describes each role, and
-[How It Fits Together](docs/diagrams/diagrams.md) draws the flows.
+[How It Fits Together](docs/diagrams/diagrams.md) draws the flows, the
+services as they run, and the data model of the indexer, the gateway and the
+node.
 
 ## Repository
 
@@ -49,7 +51,7 @@ answer carries the whole signed envelope so the client can check it.
 | [`indexer/`](indexer/) | Follows the nodes' logs, projects them into tables, answers the read API | Go · Postgres · sqlc · goose |
 | [`backend/`](backend/) | The gateway: accounts, publishing to a node, reads from the indexer | Python · FastAPI · Postgres · Cognito |
 | [`frontend/`](frontend/) | The web client; holds the key and signs in the browser | React · TypeScript · Vite · Tailwind |
-| [`infra/local/`](infra/local/) | The whole project on one machine: Postgres, three nodes, indexer, backend, frontend | Docker Compose |
+| [`infra/local/`](infra/local/) | The whole project on one machine: Postgres, three nodes, indexer, backend, frontend, a DNS zone for domain claims, and a second index on demand | Docker Compose |
 | [`infra/cloud/`](infra/cloud/) | The AWS resources behind the platform (Cognito) | Terraform · LocalStack |
 | [`docs/`](docs/) | The design: protocol, identity, entities, reputation, MVP, roadmap, decisions | — |
 | [`brand/`](brand/) | Logo, banner, favicons and the [guidelines](brand/guidelines.md) | — |
@@ -67,34 +69,48 @@ docker compose up -d --build
 ```
 
 Then open <http://localhost:8080>. That starts Postgres, three peered nodes,
-the indexer, the backend and the frontend behind nginx.
+the indexer, the backend and the frontend behind nginx. To have something to
+read, seed the network with sixty entities and a few hundred signed reviews:
+
+```bash
+(cd indexer && go run ./cmd/seed -node localhost:50051)
+```
+
 [`infra/local/README.md`](infra/local/README.md) has the ports, the data
-folders and how to start a service over.
+folders, verifying a domain against the local DNS zone, and the commands of
+the demonstration: a tampered event, a foreign edit, a rebuild of the index,
+and a second index with another ranking.
 
 To work on one service, run only what it needs from Compose and the service
 itself from its folder, as its README shows.
 
 ## Status
 
-Building the MVP ([scope and acceptance criteria](docs/mvp.md)), in the order
-of the [roadmap](docs/roadmap.md):
+The MVP ([scope and acceptance criteria](docs/mvp.md)) is built, in the order
+of the [roadmap](docs/roadmap.md), except self-hosting:
 
 | Step | State |
 |---|---|
 | 0–1. Decisions, schemas, vectors, fixtures | Done |
 | 2. Core library (`protocol/go`) | Done |
-| 3–4. Node: storage, validation, libp2p, sync | Done; three nodes run locally |
-| 5. Indexer | Projects every v1 event type and serves the read API; `rebuild` and the entity summary are next ([what remains](indexer/docs/roadmap.md#what-remains-for-the-mvp-indexer)) |
-| 6. Gateway | Accounts, publishing and every read route; rate limiting is pending |
-| 7. Client | In progress: accounts, writing and signing a review, browsing |
-| 8–11. Domain verification, seeding, social features, self-hosting | Not started |
+| 3–4. Node: storage, validation, libp2p, sync | Done; three nodes run locally, a node down catches up |
+| 5. Indexer | Done: every v1 event type, the read API, `rebuild`, the entity summary, ranking, claims; the guarantees tested |
+| 6. Gateway | Done: accounts, publishing with failover, every read route, the human verifier; rate limiting is not built |
+| 7. Client | Done: identity with an encrypted backup, writing, editing, withdrawing, voting, responding, search, entity and review pages, the inspection view with signature checks |
+| 8. Domain verification | Done: DNS lookup by the indexer, the representative's tier 1 and official responses |
+| 9. Seeding and the demonstration | Done: the generator, a Receita-layout importer, the demonstration's commands |
+| 10. Social features | Done: profiles, moderation labels, moderators chosen by the reader |
+| 11. Self-hosting | Partly: a container image and the local network; a published image, a public node, metrics and a status page remain |
+
+What is open, service by service, is in each roadmap: [docs/roadmap.md](docs/roadmap.md#status)
+and [indexer/docs/roadmap.md](indexer/docs/roadmap.md#what-remains-for-the-mvp-indexer).
 
 ## Docs
 
 - [Overview](docs/overview.md) — what this is and why
 - [Concepts](docs/concepts.md) — the ideas behind it, in plain terms
 - [Architecture](docs/architecture.md) — component roles and how they talk to each other
-- [How It Fits Together](docs/diagrams/diagrams.md) — the same thing as diagrams, for the flows that are hard to read as prose
+- [How It Fits Together](docs/diagrams/diagrams.md) — the flows that are hard to read as prose, the services as they run, and the data models
 - [Protocol](docs/protocol.md) — event format, signing, sync
 - [Entities](docs/entities.md) — what's being reviewed, and who can edit it
 - [Identity, Trust & Security](docs/identity.md) — keys, verification, threat model

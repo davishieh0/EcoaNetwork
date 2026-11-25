@@ -2,7 +2,6 @@ package projector
 
 
 import (
-	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/response"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/review"
@@ -32,7 +33,8 @@ func responsesPath(t *testing.T,
 
 	h := response.NewHandler(response.NewRepository(pool),
 	                         review.NewRepository(pool),
-	                         label.NewModeration(label.Policy{}, pool))
+	                         label.NewModeration(label.Policy{}, pool),
+	                         claim.NewRecognition(claim.Policy{}, pool))
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /reviews/{eventId}/responses", h.ListByReview)

@@ -2,7 +2,6 @@ package main
 
 
 import (
-	"errors"
 	"testing"
 )
 
@@ -22,23 +21,8 @@ func TestRunRefusesAMissingOrUnknownSubcommand(t *testing.T) {
 			err := run(args)
 
 			// Assert
-			if err == nil || errors.Is(err, errNotBuilt) {
-				t.Fatalf("run(%q) = %v, want a usage error", args, err)
-			}
-		})
-	}
-}
-
-
-func TestRunSaysWhichSubcommandsAreNotBuiltYet(t *testing.T) {
-	for _, name := range []string{"rebuild"} {
-		t.Run(name, func(t *testing.T) {
-			// Act
-			err := run([]string{name})
-
-			// Assert
-			if !errors.Is(err, errNotBuilt) {
-				t.Fatalf("run(%s) = %v, want errNotBuilt", name, err)
+			if err == nil {
+				t.Fatalf("run(%q) = nil, want a usage error", args)
 			}
 		})
 	}

@@ -24,6 +24,8 @@ const INDENT = ['', '', 'ml-8']
 export function Conversation({
   replies,
   onInspect,
+  onReply,
+  onLabel,
   className,
 }: ConversationProps) {
   const reveal = useReveal()
@@ -35,12 +37,23 @@ export function Conversation({
           {...reveal()}
           key={reply.eventId}
           className={cn(
-            'border border-structural bg-surface px-5 py-4',
+            'border bg-surface px-5 py-4',
+            reply.official ? 'border-valid' : 'border-structural',
             INDENT[Math.min(reply.depth, 2)],
           )}
         >
           <div className="flex flex-wrap items-center gap-2">
+            {reply.official ? (
+              <Badge tone="valid" glyph="◆">
+                Official response
+              </Badge>
+            ) : null}
             <span className="meta text-secondary">{reply.author}</span>
+            {reply.human && !reply.official ? (
+              <Badge tone="info" glyph="◆">
+                Human
+              </Badge>
+            ) : null}
             <span
               title={reply.authorId}
               className="font-mono text-mono-s break-all text-muted"
@@ -76,13 +89,39 @@ export function Conversation({
                 Labeled · {label}
               </Badge>
             ))}
+            {onLabel ? (
+              <button
+                type="button"
+                onClick={() => onLabel(reply.eventId)}
+                className={cn(
+                  'meta cursor-pointer text-muted transition-colors',
+                  'hover:text-warning',
+                  onReply ? '' : 'ml-auto',
+                )}
+              >
+                Label…
+              </button>
+            ) : null}
+            {onReply ? (
+              <button
+                type="button"
+                onClick={() => onReply(reply.eventId)}
+                className={cn(
+                  'meta ml-auto cursor-pointer text-muted transition-colors',
+                  'hover:text-primary',
+                )}
+              >
+                Reply
+              </button>
+            ) : null}
             {onInspect ? (
               <button
                 type="button"
                 onClick={() => onInspect(reply.eventId)}
                 className={cn(
-                  'meta ml-auto cursor-pointer border-b border-signal',
-                  'text-primary hover:text-secondary',
+                  'meta cursor-pointer border-b border-signal text-primary',
+                  'hover:text-secondary',
+                  onReply ? '' : 'ml-auto',
                 )}
               >
                 Inspect ↗

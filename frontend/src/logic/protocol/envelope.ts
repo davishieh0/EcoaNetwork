@@ -95,3 +95,12 @@ export async function signEnvelope(
 export function sizeOf(envelope: Envelope): number {
   return new TextEncoder().encode(JSON.stringify(envelope)).length
 }
+
+/**
+ * Now, as an envelope's createdAt: RFC 3339, UTC, whole seconds, literal Z.
+ *
+ * @returns The timestamp.
+ */
+export function createdAtNow(): string {
+  return new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
+}

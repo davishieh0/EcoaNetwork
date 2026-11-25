@@ -13,6 +13,23 @@ export type Field = {
   tier: number
 } | null
 
+/** The ratings that count, as this index adds them up. */
+export type Summary = {
+  count: number
+  mean?: number
+  /** How many count with each rating, 1 to 5. */
+  distribution: [number, number, number, number, number]
+  /** Left out as a conflict of interest: shown, marked, not counted. */
+  conflicted: number
+}
+
+/** An entity's verified representative. */
+export type Representative = {
+  identity: string
+  eventId: string
+  since?: string
+}
+
 /** An entity and the value of each of its fields. */
 export type Entity = {
   entity: string
@@ -25,6 +42,10 @@ export type Entity = {
     name: Field
     category: Field
     description: Field
+    /** The one identity with authority over it, by a verified domain claim. */
+    representative?: Representative
+    /** This index's summary of the ratings; on the entity's own route. */
+    summary?: Summary
   }
 }
 

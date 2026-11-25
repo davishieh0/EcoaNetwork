@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/entity"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/identities"
@@ -33,10 +34,12 @@ const shutdownTimeout = 5 * time.Second
 func Serve(ctx context.Context,
            addr string,
            pool *pgxpool.Pool,
-           policy label.Policy) error {
+           policy label.Policy,
+           verifiers claim.Policy,
+           ranking review.Ranking) error {
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           Handler(pool, policy),
+		Handler:           Handler(pool, policy, verifiers, ranking),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
@@ -65,17 +68,24 @@ func Serve(ctx context.Context,
 // Handler returns the router of every endpoint the API answers.
 //
 // Each route lives in a file of its own; this is the one list of them all.
-func Handler(pool *pgxpool.Pool, policy label.Policy) http.Handler {
+func Handler(pool *pgxpool.Pool,
+             policy label.Policy,
+             verifiers claim.Policy,
+             ranking review.Ranking) http.Handler {
 	moderation := label.NewModeration(policy, pool)
+	recognition := claim.NewRecognition(verifiers, pool)
 
 	events := event.NewHandler(event.NewRepository(pool), moderation)
-	entities := entity.NewHandler(entity.NewRepository(pool), moderation)
+	entities := entity.NewHandler(entity.NewRepository(pool), moderation,
+	                              recognition)
 	profiles := profile.NewHandler(profile.NewRepository(pool), moderation)
-	keys := identities.NewHandler(identities.NewRepository(pool))
-	reviews := review.NewHandler(review.NewRepository(pool), moderation)
+	keys := identities.NewHandler(identities.NewRepository(pool), recognition)
+	reviews := review.NewHandler(review.NewRepository(pool), moderation,
+	                             recognition, ranking)
 	responses := response.NewHandler(response.NewRepository(pool),
 	                                 review.NewRepository(pool),
-	                                 moderation)
+	                                 moderation,
+	                                 recognition)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))

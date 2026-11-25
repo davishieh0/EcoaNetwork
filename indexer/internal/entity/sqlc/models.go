@@ -8,6 +8,26 @@ import (
 	"time"
 )
 
+type Claim struct {
+	EventID     string
+	ClaimType   string
+	Issuer      string
+	Subject     string
+	Entity      *string
+	EvidenceRef *string
+	ExpiresAt   time.Time
+	Revoked     bool
+}
+
+type ClaimCheck struct {
+	EventID       string
+	Verified      bool
+	Dnssec        bool
+	CheckedAt     time.Time
+	VerifiedSince *time.Time
+	Detail        string
+}
+
 type Entity struct {
 	Entity    string
 	FirstSeen time.Time
@@ -31,6 +51,13 @@ type Event struct {
 	Author    string
 	CreatedAt time.Time
 	Envelope  []byte
+}
+
+type EventHolder struct {
+	EventID    string
+	Node       string
+	Sequence   int64
+	ReceivedAt *time.Time
 }
 
 type EventObservation struct {

@@ -17,6 +17,7 @@ import { ROUTES } from '@/routes'
 const APP_LINKS = [
   { label: 'Explore', to: ROUTES.explore },
   { label: 'Write a review', to: ROUTES.write },
+  { label: 'Moderation', to: ROUTES.moderation },
 ] as const
 
 // --- CODE ---

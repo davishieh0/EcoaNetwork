@@ -1,0 +1,12 @@
+; The .test zone of the local network. To verify a domain, add a line
+;   _ecoa-verify.<name>.test. IN TXT "ecoa-identity=<your did:key>"
+; and raise the serial: CoreDNS reloads the file within seconds.
+$ORIGIN test.
+$TTL 30
+@   IN SOA ns.test. admin.test. (2026112405 60 30 600 30)
+@   IN NS  ns.test.
+ns  IN A   127.0.0.1
+_ecoa-verify.padariaaurora IN TXT "ecoa-identity=did:key:z6MknyZhxYKizGbyKw4ZhfNgock231itYRvj3xcyCT6Pqj6A"
+_ecoa-verify.minhaloja IN TXT "ecoa-identity=did:key:z6Mkgb1BQZGx5bjcTaPboRTZgtRALPC3UnYxfWaos9Q6VJTb"
+_ecoa-verify.minhaloja IN TXT "ecoa-identity=did:key:z6MknDUy8AtApp4mwsiwLGE6uW3Xm6T9n8Cq4sLWgSkzecQs"
+_ecoa-verify.loja19879 IN TXT "ecoa-identity=did:key:z6Mkfcf2Rb3PU2QmzMdrvjdji3Hc5GcLKQJiwY8A4skFGFqz"

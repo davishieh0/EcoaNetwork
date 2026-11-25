@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { motion } from 'motion/react'
 
+import { IdentitySetup } from '@/app/identity/IdentitySetup'
 import { Composer } from '@/app/write/Composer'
 import { GradientASCII } from '@/app/write/GradientASCII'
 import { useWriteData } from '@/app/write/useWriteData'
@@ -61,9 +62,19 @@ export function Write() {
             Write a review.
           </motion.h1>
 
-          <motion.div {...rise(0.08)} className="border border-line bg-canvas">
-            <Composer data={data} />
-          </motion.div>
+          {/* signing needs an identity: made here, with its backup, first */}
+          {data.hasIdentity === false ? (
+            <motion.div {...rise(0.08)}>
+              <IdentitySetup onDone={data.identityReady} />
+            </motion.div>
+          ) : data.hasIdentity ? (
+            <motion.div
+              {...rise(0.08)}
+              className="border border-line bg-canvas"
+            >
+              <Composer data={data} />
+            </motion.div>
+          ) : null}
         </div>
       </Container>
     </section>

@@ -76,3 +76,36 @@ func (r *Repository) Observe(ctx context.Context,
 		ReceivedAt: receivedAt,
 	})
 }
+
+
+// Hold records that node holds event id, at sequence in its log, since
+// receivedAt.
+func (r *Repository) Hold(ctx context.Context, id string, h Holder) error {
+	return r.queries.HoldEvent(ctx, sqlc.HoldEventParams{
+		EventID:    id,
+		Node:       h.Node,
+		Sequence:   h.Sequence,
+		ReceivedAt: h.ReceivedAt,
+	})
+}
+
+
+// Holders returns the nodes that hold event id, the first to have it first.
+func (r *Repository) Holders(ctx context.Context,
+                             id string) ([]Holder, error) {
+	rows, err := r.queries.HoldersOf(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	holders := make([]Holder, len(rows))
+	for i, row := range rows {
+		holders[i] = Holder{
+			Node:       row.Node,
+			Sequence:   row.Sequence,
+			ReceivedAt: row.ReceivedAt,
+		}
+	}
+
+	return holders, nil
+}

@@ -101,7 +101,7 @@ func TestListOfAnEntityWithNoReviewsIsEmpty(t *testing.T) {
 
 	// Assert
 	if rec.Code != http.StatusOK ||
-	   rec.Body.String() != "{\"items\":[],\"next\":null}\n" {
+	   rec.Body.String() != "{\"ranking\":\"newest\",\"items\":[],\"next\":null}\n" {
 		t.Fatalf("GET = %d %q", rec.Code, rec.Body.String())
 	}
 }

@@ -54,8 +54,15 @@ One binary, one subcommand per job:
 |------------|------|-------|
 | `migrate`  | Applies the database migrations | built |
 | `project`  | Follows the nodes and writes the projections | every event type of v1 the indexer understands |
-| `serve`    | Answers the HTTP API | events and reviews |
-| `rebuild`  | Rebuilds the projections from cursor 0, then switches | not built yet |
+| `serve`    | Answers the HTTP API | every route below |
+| `rebuild`  | Empties the projection and projects every node's log again from the start, stopping once caught up; run it with `project` and `serve` stopped | built; building beside the live tables and switching comes later |
+
+Two more commands share the module:
+
+| Command | Does |
+|---------|------|
+| `go run ./cmd/seed` | Generates the MVP's seeded dataset and publishes it to a node: entities from the Receita Federal's CNPJ data (a synthetic sample in its layout by default; `-estabelecimentos` and `-empresas` take the real files), named by an operator's `entity.updated`, and a few hundred signed synthetic reviews with edits, votes, responses and withdrawals. The same flags give the same events, so a rerun publishes nothing new. `-dry-run` only counts. |
+| `go run ./cmd/demo tamper` / `foreign-edit` | The demonstration's steps 5 and 6: a review with one payload byte flipped, and an edit of someone else's review, each published to `-node` and refused, with `-peers` asked whether it spread |
 
 ## Configuration
 
@@ -65,6 +72,10 @@ One binary, one subcommand per job:
 | `NODE_ADDRS`   | `127.0.0.1:50051`                | gRPC addresses of the nodes `project` follows, comma-separated |
 | `HTTP_ADDR`    | `127.0.0.1:8081`                 | host:port the HTTP API answers on |
 | `MODERATORS_FILE` | none, so nobody is followed   | JSON file of the moderators whose labels count, read when `serve` starts |
+| `VERIFIERS_FILE` | none, so no delegated claim counts | JSON file of the verifiers whose claims count, `{"human": ["did:key:…"]}`, read when `serve` starts |
+| `DOH_URL` | `https://cloudflare-dns.com/dns-query` | DNS-over-HTTPS resolver `project` looks domain claims up through |
+| `DNS_SERVER` | none | host:port of a plain DNS server, used instead of `DOH_URL` when set: for a network running its own, as `infra/local` does |
+| `RANKING` | `newest` | How `serve` orders an entity's reviews: `newest` (original first) or `endorsed` (the head's endorsements less its disputes) |
 
 
 ## API
@@ -72,15 +83,15 @@ One binary, one subcommand per job:
 | Route | Answers |
 |-------|---------|
 | `GET /health` | 200 when the database answers, 503 when it does not |
-| `GET /events/{eventId}` | the signed envelope, as a string, with `derived` and `observed` |
-| `GET /entities?q=` | entities with a name that holds `q`, ignoring case and accents, newest first, paged; every entity without `q` |
-| `GET /entities/{entity}` | the value of each field (name, category, description) and the proposal that set it; 404 when nothing named it |
+| `GET /events/{eventId}` | the signed envelope, as a string, with `derived` and `observed`: when the network had it, the nodes this indexer saw holding it (`nodes`), and the labels that count |
+| `GET /entities?q=` | entities with a name that holds `q`, ignoring case and accents, newest first, paged; every entity without `q`; `?category=` keeps those whose category that holds is it |
+| `GET /entities/{entity}` | the value of each field (name, category, description) and the proposal that set it, tier 1 when the verified representative set it; the representative; this indexer's summary of the ratings; 404 when nothing named it |
 | `GET /profiles/{did}` | the identity's current profile, as a signed item; 404 when it published none |
 | `GET /profiles?ids=` | the current profiles of up to 100 identities, in the order asked, for the authors of a page in one call |
-| `GET /identities/{did}` | the identity a key belongs to: its keys in order, the current one, whether it is contested, its revocations |
-| `GET /entities/{entity}/reviews` | the current version of each review, newest first; `?limit=` (1 to 100, 20 by default) and `?after=` (the `next` of the previous page) |
+| `GET /identities/{did}` | the identity a key belongs to: its keys in order, the current one, whether it is contested, its revocations, and the claims that count for it |
+| `GET /entities/{entity}/reviews` | the current version of each review, in the order `RANKING` picks, named in `ranking`; `?limit=` (1 to 100, 20 by default) and `?after=` (the `next` of the previous page) |
 | `GET /reviews/{eventId}` | one version with every version of its chain; 410 when the author withdrew it |
-| `GET /reviews/{eventId}/responses` | the conversation on a review, in order, paged like the listing; each says what it answers and whether the text changed since |
+| `GET /reviews/{eventId}/responses` | the conversation on a review, in order, paged like the listing; each says what it answers, whether the text changed since, and whether it is `official`: by the entity's verified representative |
 
 A failure is `{"error": "<slug>", "message": "..."}`, as the backend answers.
 
@@ -96,6 +107,25 @@ the moderators in `MODERATORS_FILE`:
 `off-topic` and `other` are shown. The labels that count come in each item's
 `observed.labels`. A file that is not valid stops `serve`. Change it and
 restart `serve`; nothing needs rebuilding.
+
+A client picks its own moderators with `?moderators=` on every read route but
+`/identities`: up to 20 did:key, comma-separated, empty for nobody. The file
+holds only when the parameter is absent, so a label changes what a client
+following its moderator sees, and nothing for one that does not.
+
+## Claims
+
+Every `verification.claim_created` is stored, whoever signed it. Which
+count is decided when the API answers, and lands in `observed.claims`:
+
+- **`domain`**, self-verifiable: `project` looks up the TXT record at
+  `_ecoa-verify.<domain>` and needs `ecoa-identity=<the subject's did:key>`
+  among its values. A pass holds for 30 days before the lookup is done again;
+  a failure is tried again after 30 seconds. A lapse downgrades the claim, it
+  never revokes it. The sole verified holder of an entity's domain is its
+  representative: its proposals hold at tier 1, its responses are official,
+  and its own reviews of the entity are left out of the summary.
+- **`human`**, delegated: counts when its issuer is in `VERIFIERS_FILE`.
 
 ## Following the nodes
 

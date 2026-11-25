@@ -8,6 +8,8 @@ Three kinds of entry:
 - **Bug** — something they said that was wrong or self-contradictory.
 - **Call** — a genuine fork in the road where the alternatives were defensible and one was picked.
 
+Sections 1 to 15 were taken in review; section 16 records the decisions taken while building this repository's implementation.
+
 Everything here is scoped to v1. The bias throughout is toward decisions that are cheap now and expensive later — wire format, envelope shape, anything that would force a lockstep upgrade across the network — and toward leaving genuinely reversible things (weights, thresholds, ranking) as tunable defaults.
 
 A second pass re-read every document against this log to check that each decision was actually reflected in the specs rather than only recorded here. It found stale text in four places and one genuine gap per document on average; those fixes are folded into the sections below rather than listed separately, and the entries marked **§2nd pass** are the ones that came out of it.
@@ -586,7 +588,7 @@ Decisions taken while mapping the node's implementation, each of them closing a 
 - **Protocol ID `/ecoa/sync/1.0.0`**, one request and one response per stream, each message prefixed by its length as a varint, the libp2p convention.
 - **`GetEventsResponse` carries a status per id**, `FOUND`, `PRUNED` or `UNKNOWN`, with the bytes when found. A v1 node never answers `PRUNED`, since it does not prune (§4.3), but the value exists from day one.
 
-### 15.2 bbolt is the node database, in six buckets — **call**
+### 15.2 bbolt is the node database, in seven buckets — **call**
 
 The node needs an append-only log with a monotonic local sequence, a cheap lookup by `eventId` (checklist step 4), a cursor per peer that survives a restart, and room for tombstones.
 
@@ -666,14 +668,72 @@ The architecture has the indexer read the node's log in sequence order, and step
 - **At most 16 streams at once** (`SUBSCRIBE_MAX_STREAMS`), refused over the cap with `RESOURCE_EXHAUSTED`. Each stream may read the whole log from disk. One limit for all, unlike sync's per-peer limits, because the port has no authentication and is published only to the gateways and indexers that need it.
 - **Streams end when the node stops**, with `UNAVAILABLE`, so a graceful stop of the gRPC server does not wait forever on a stream that never ends on its own.
 
+## 16. Implementation decisions taken while building v1
+
+The sections above were taken in review, before code. These were taken while building this repository's implementation, where the documents left a choice open or the code found one they had not seen. They bind this implementation, not the protocol: another implementation may decide otherwise and still interoperate.
+
+### 16.1 The indexer is Go over Postgres; the gateway is Python — **call**
+
+The indexer is Go, like the node: it shares `protocol/go` for decoding, verification and the projection rules (`ResolveHead`, `CurrentVote`, `ResolveFields`), so the deterministic half is written once. Postgres, with `goose` migrations embedded in the binary and `sqlc` generating typed queries per subject (`internal/<subject>/queries.sql`). One binary, run twice: `project` writes, `serve` reads. The gateway is Python with FastAPI, where the accounts (Cognito) already lived; it speaks HTTP and gRPC and never decodes an envelope. **Rejected: one service doing both**, which would put the account system in the read path that every indexer operator is meant to be able to run alone.
+
+### 16.2 The indexer follows every node, stores an event once, and keeps which nodes hold it — **call**
+
+One cursor per node, each with that node's `log_id`. An event that arrives from three nodes is stored once (`ON CONFLICT DO NOTHING`), and each arrival is an observation: the earliest `receivedAt` (`event_observations`) and every node holding it (`event_holders`), which the inspection view shows. **Rejected: following one node**, which the architecture allowed but which shows nothing of replication and makes the indexer's view hostage to one node's uptime.
+
+### 16.3 Which labels count is decided per request — **call**
+
+Every label is stored, whoever signed it; `?moderators=` on each read route names the moderators that count, and the indexer's file holds only when the parameter is absent. A label is never written into a projection. **Cost:** each read joins the labels and expands the moderators' keys through `identities`. **Rejected: one list per indexer**, which cannot show the MVP's criterion — a label that changes what one reader sees and nothing for another — and makes changing who you follow a rebuild.
+
+### 16.4 Claims: the indexer checks domains itself; the gateway issues human claims behind ALTCHA — **call**
+
+A `domain` claim is looked up by `indexer project` (DNS-over-HTTPS by default, a plain DNS server when configured) and the result is observed state (`claim_checks`): a pass holds 30 days, a failure is tried again after 30 seconds, a lapse downgrades and never revokes. Only a self-signed claim on a `domain:` entity is looked up. The sole verified holder is the entity's representative: tier 1 in `ResolveFields`, `official` on responses, left out of the summary. A `human` claim is issued by the gateway after a proof of work solved in the browser (ALTCHA), each challenge usable once, signed with a verifier key the indexer lists in `VERIFIERS_FILE`. **Rejected: a hosted CAPTCHA** (Turnstile, hCaptcha), which hands every author's IP address to a third party — the exposure [identity.md](./identity.md#and-the-network-layer-knows-more-than-the-protocol-does) asks the project not to add to. **Cost:** a proof of work is a cost, not a person; it is the weak signal `human` was always meant to be.
+
+### 16.5 The summary counts the head of each chain, and leaves three things out — **call**
+
+The distribution 1 to 5 and the mean, rounded to two decimals, over the current version of each review, leaving out withdrawn chains, chains a followed moderator hid or removed, and reviews by an identity holding a recognized claim on the same entity — counted apart as `conflicted`, shown and marked. Worked out at answer time, not stored: every input but the review is observed.
+
+### 16.6 Ranking is a setting, and the demonstration's second indexer uses it — **call**
+
+`RANKING=newest` (the original's `createdAt`, so an edit never moves a review) or `endorsed` (the head's endorsements less its disputes, then newest). The cursor carries the score so pages never repeat or skip. Each answer names the ranking it used. Weights wait on reputation, so `endorsed` counts identities, not weight.
+
+### 16.7 The MVP's rebuild empties and projects again — **call**
+
+`indexer rebuild` truncates every table but the migrations' record and projects every node's log from zero, stopping once each node is at its head and nothing has arrived for two seconds. The API is down meanwhile. **Rejected for now: building beside the live tables and switching**, which the design describes and which is worth its complexity only when a rebuild takes longer than an operator will wait (1712 events took about five seconds).
+
+### 16.8 The identity is made on purpose, with its backup made at that moment — **call**
+
+The browser no longer makes a key the first time something is signed. Creating it with a password generates an Ed25519 key that is exportable for an instant: its PKCS #8 bytes are sealed (PBKDF2-SHA-256, 600 000 rounds; AES-GCM, with the `did:key` as additional data so a file edited to another identity fails) into a file the browser downloads, and the key is re-imported non-extractable and kept in IndexedDB. Restoring decrypts, signs a probe, and checks it against the `did:key` before keeping the key. **Rejected: a key exportable at any time**, against [mvp.md](./mvp.md)'s non-exportable requirement and open to any script on the page; **a backup by rotation** (a new backed-up key, the old one rotated to it), which covers old identities too but makes the demonstration depend on rotation. **Cost:** identities made before, or made without a password, have no backup, and the screen says so.
+
+### 16.9 Fresh identities are kept in the browser, never backed up — **call**
+
+Publishing under a fresh identity makes a key for that review alone, stored beside the main one so its author can edit or withdraw it — the authorship rule allows nothing else to. It carries none of the main identity's claims and no backup. **Rejected: a throwaway key discarded after signing**, which would leave a review nobody can ever edit or withdraw, including in the `privacy` case withdrawal exists for.
+
+### 16.10 The client verifies with WebCrypto until `protocol/ts` exists — **call**
+
+The inspection view recomputes the `eventId` and checks the signature with WebCrypto, which verifies under RFC 8032; the network verifies under ZIP-215 (§13.1). They agree on every signature an honest client makes. A browser without Ed25519 in WebCrypto says it cannot check, never that a signature fails. The switch to ZIP-215 is one function (`frontend/src/logic/protocol/verify.ts`).
+
+### 16.11 Writing asks for an account at this gateway; reading and making an identity do not — **call**
+
+The official client asks for an account to write, vote, respond or label, so this gateway can refuse abuse it can attribute; it never ties the account to the key, and the protocol knows nothing of accounts. Reading, inspecting and creating an identity need none. Another gateway may decide otherwise.
+
+### 16.12 The seeded dataset is synthetic, in the Receita's layout — **call**
+
+`indexer/cmd/seed` reads the Receita Federal's own CSV layout (`Estabelecimentos`, `Empresas`), so the real dump is a path away; the repository carries sixty made-up establishments in that layout, marked as such, rather than real companies' data. Their names are `entity.updated` proposals signed by an operator key, competing like anyone's. Every review is generated from a seed, so the same flags give the same events and a rerun publishes nothing.
+
+### 16.13 The gateway is chosen when the site is deployed — **honesty fix**
+
+The site's nginx reads `BACKEND_ORIGIN`, so one build serves any gateway without code changes, which is the MVP's criterion. It is not the per-user, run-time choice [architecture.md](./architecture.md#substitutability-only-counts-if-the-client-isnt-served-by-the-gateway) describes, and the documents now say so where they claim it.
+
+### 16.14 Search by category checks the category that holds after narrowing in SQL — **call**
+
+The category that holds is resolved at answer time, so the query narrows to entities with a proposal saying the category, and the answer keeps those whose resolved category is it. A page can come out short when a proposal says a category that does not hold. **Rejected for now: a table of the metadata that holds**, which is observed state to rebuild whenever claims or weights change.
+
 ## Still open, and owned by the project
 
-- **Payload schemas per event type.** The largest remaining gap before Phase 0 closes. The rating scale is settled (§1.5) because its meaning has to be uniform across the network; the rest of each payload is ordinary schema work and nothing above depends on how it lands.
 - **LGPD, Marco Civil, and the illegal-content/PII process.** A dedicated pass, not a paragraph.
-- Max review character length beyond the 16 KB byte ceiling.
-- `expiresAt` for `email` and `human` claims (settled for `domain`).
 - Whether an indexer publishes an auditable completeness commitment.
 - Vote decay over time, and per-category reputation scoping.
+- Settled since this list was written, and kept here so the history reads: payload schemas per event type ([protocol.md](./protocol.md#payloads)), the review body's limit (5000 characters inside the 16 KB envelope), and `expiresAt` for delegated claims (at most two years).
 
 ## Things deliberately not built
 

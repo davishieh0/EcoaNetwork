@@ -14,6 +14,7 @@ import type {
 } from '@/components/ecoa/EventInspector.t'
 import { getEvent } from '@/logic/datasource/events'
 import type { EventItem } from '@/logic/datasource/events.t'
+import { useModeration } from '@/logic/moderation/moderation'
 import { readEnvelope } from '@/logic/protocol/signed'
 import { verifyEnvelope } from '@/logic/protocol/verify'
 import type { Verdict } from '@/logic/protocol/verify.t'
@@ -22,7 +23,8 @@ import type { Verdict } from '@/logic/protocol/verify.t'
 const NOTES = [
   'Signed at is the author’s clock, inside the signature; received is when ' +
     'the network first had it, as this index observed.',
-  'Which nodes hold it is not tracked by this index yet.',
+  'The nodes are the ones this index follows: another index, following ' +
+    'others, may see more.',
 ]
 
 // --- CODE ---
@@ -47,18 +49,35 @@ function inspectedOf(item: EventItem, check: Check): InspectedEvent {
     ...(item.observed.receivedAt
       ? [{ label: 'Received', value: momentOf(item.observed.receivedAt) }]
       : []),
+    ...(item.observed.nodes ?? []).map((held, index) => ({
+      label: index === 0 ? 'Held by' : '',
+      value:
+        `${held.node} · #${held.sequence}` +
+        (held.receivedAt ? ` · ${momentOf(held.receivedAt)}` : ''),
+    })),
     { label: 'Network', value: envelope.protocol },
     { label: 'Signature', value: envelope.signature },
   ]
 
+  const held = item.observed.nodes?.length ?? 0
+
   return {
     rows,
     check,
-    badges: item.observed.labels?.map((applied) => ({
-      label: `Labeled · ${applied.label}`,
-      tone: 'warning',
-      glyph: '●',
-    })),
+    badges: [
+      {
+        label:
+          `Held by ${String(held).padStart(2, '0')} ` +
+          (held === 1 ? 'node' : 'nodes'),
+        tone: 'neutral' as const,
+        glyph: '●' as const,
+      },
+      ...(item.observed.labels ?? []).map((applied) => ({
+        label: `Labeled · ${applied.label}`,
+        tone: 'warning' as const,
+        glyph: '●' as const,
+      })),
+    ],
     raw: item.envelope,
     notes: NOTES,
   }
@@ -72,9 +91,11 @@ function inspectedOf(item: EventItem, check: Check): InspectedEvent {
 export function useInspection() {
   const [eventId, setEventId] = useState<string | null>(null)
 
+  const { param } = useModeration()
+
   const read = useCallback(
-    () => (eventId ? getEvent(eventId) : Promise.resolve(null)),
-    [eventId],
+    () => (eventId ? getEvent(eventId, param) : Promise.resolve(null)),
+    [eventId, param],
   )
   const { data, error } = useRead(read)
 

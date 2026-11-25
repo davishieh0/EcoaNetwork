@@ -18,6 +18,9 @@ export const ROUTES = {
   resetPassword: `${APP}/reset-password`,
   welcome: `${APP}/welcome`,
   account: `${APP}/account`,
+  claims: `${APP}/claims`,
+  identity: `${APP}/identity`,
+  moderation: `${APP}/moderation`,
   entity: (entity: string) => `${APP}/entities/${encodeURIComponent(entity)}`,
   review: (eventId: string) => `${APP}/reviews/${eventId}`,
 } as const

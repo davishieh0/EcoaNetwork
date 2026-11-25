@@ -6,9 +6,12 @@
 import { normalizeEntity } from '@/logic/protocol/entity'
 import type {
   Checked,
+  CheckedResponse,
+  CheckedVersion,
   DraftField,
   ReviewDraft,
-  ReviewPayload,
+  VersionFields,
+  VersionText,
 } from '@/logic/protocol/review.t'
 
 // --- GLOBALS ---
@@ -75,31 +78,43 @@ function clean(text: string): string {
 }
 
 /**
- * Checks the draft and builds the payload it signs to.
+ * Checks a body: present, under the limit, one line feed the only control
+ * character.
  *
- * @param draft - What the user typed.
- * @returns The payload, or the problem with each field that has one.
+ * @param text - The body as typed.
+ * @returns The body as it will be signed, or what is wrong with it.
  */
-export function checkReview(draft: ReviewDraft): Checked {
+function checkBody(text: string): { body: string } | { problem: string } {
+  const body = clean(text)
+
+  if (!body) return { problem: 'Say what happened.' }
+  if (characters(body) > BODY_MAX) {
+    return { problem: `Keep it under ${BODY_MAX} characters.` }
+  }
+  if (hasControl(body, true)) {
+    return { problem: 'Remove the invisible control characters.' }
+  }
+  if (LONE_SURROGATE.test(body)) return { problem: BROKEN }
+
+  return { body }
+}
+
+/**
+ * Checks what one version of a review says: its rating, title and body.
+ * An edit says only this; a new review also names its entity.
+ *
+ * @param fields - The rating, title, body and language typed.
+ * @returns The text as it will be signed, or the problem with each field.
+ */
+export function checkVersion(fields: VersionFields): CheckedVersion {
   const problems: Partial<Record<DraftField, string>> = {}
 
-  const entity = normalizeEntity(draft.kind, draft.identifier)
-  if (!entity.ok) problems.identifier = entity.reason
+  if (fields.rating === null) problems.rating = 'Pick a rating from 1 to 5.'
 
-  if (draft.rating === null) problems.rating = 'Pick a rating from 1 to 5.'
+  const checked = checkBody(fields.body)
+  if ('problem' in checked) problems.body = checked.problem
 
-  const body = clean(draft.body)
-  if (!body) {
-    problems.body = 'Say what happened.'
-  } else if (characters(body) > BODY_MAX) {
-    problems.body = `Keep it under ${BODY_MAX} characters.`
-  } else if (hasControl(body, true)) {
-    problems.body = 'Remove the invisible control characters.'
-  } else if (LONE_SURROGATE.test(body)) {
-    problems.body = BROKEN
-  }
-
-  const title = clean(draft.title)
+  const title = clean(fields.title)
   if (characters(title) > TITLE_MAX) {
     problems.title = `Keep the title under ${TITLE_MAX} characters.`
   } else if (hasControl(title, false)) {
@@ -108,18 +123,48 @@ export function checkReview(draft: ReviewDraft): Checked {
     problems.title = BROKEN
   }
 
-  if (!entity.ok || draft.rating === null || Object.keys(problems).length) {
+  if (
+    fields.rating === null ||
+    'problem' in checked ||
+    Object.keys(problems).length
+  ) {
     return { ok: false, problems }
   }
 
-  const payload: ReviewPayload = {
-    entity: entity.id,
-    rating: draft.rating,
-    body,
-  }
+  const text: VersionText = { rating: fields.rating, body: checked.body }
+  if (title) text.title = title
+  if (LANG.test(fields.lang)) text.lang = fields.lang
 
-  if (title) payload.title = title
-  if (LANG.test(draft.lang)) payload.lang = draft.lang
+  return { ok: true, text }
+}
 
-  return { ok: true, payload }
+/**
+ * Checks a response before it is signed.
+ *
+ * @param text - The response as typed.
+ * @returns The body as it will be signed, or what is wrong with it.
+ */
+export function checkResponse(text: string): CheckedResponse {
+  const checked = checkBody(text)
+  return 'problem' in checked
+    ? { ok: false, problem: checked.problem }
+    : { ok: true, body: checked.body }
+}
+
+/**
+ * Checks the draft and builds the payload it signs to.
+ *
+ * @param draft - What the user typed.
+ * @returns The payload, or the problem with each field that has one.
+ */
+export function checkReview(draft: ReviewDraft): Checked {
+  const entity = normalizeEntity(draft.kind, draft.identifier)
+  const version = checkVersion(draft)
+
+  const problems = version.ok ? {} : { ...version.problems }
+  if (!entity.ok) problems.identifier = entity.reason
+
+  if (!entity.ok || !version.ok) return { ok: false, problems }
+
+  return { ok: true, payload: { entity: entity.id, ...version.text } }
 }

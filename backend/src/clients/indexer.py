@@ -90,30 +90,44 @@ class IndexerClient:
         return IndexerAnswer(status=response.status_code, body=response.content)
 
 
-    async def get_entity(self, entity: str) -> IndexerAnswer:
+    async def get_entity(
+        self,
+        entity: str,
+        moderators: str | None = None,
+    ) -> IndexerAnswer:
         """
         An entity and the value of each of its fields.
 
         :param entity: The entity id.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
         :return: The indexer's status and body.
         """
-        return await self._get('entities', entity)
+        return await self._get('entities', entity,
+                               params={'moderators': moderators})
 
 
-    async def get_event(self, event_id: str) -> IndexerAnswer:
+    async def get_event(
+        self,
+        event_id: str,
+        moderators: str | None = None,
+    ) -> IndexerAnswer:
         """
         A signed event alone, for inspection.
 
         :param event_id: The eventId.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
         :return: The indexer's status and body.
         """
-        return await self._get('events', event_id)
+        return await self._get('events', event_id,
+                               params={'moderators': moderators})
 
 
     async def get_identity(self, did: str) -> IndexerAnswer:
@@ -129,30 +143,44 @@ class IndexerClient:
         return await self._get('identities', did)
 
 
-    async def get_profile(self, did: str) -> IndexerAnswer:
+    async def get_profile(
+        self,
+        did: str,
+        moderators: str | None = None,
+    ) -> IndexerAnswer:
         """
         An identity's current profile, through any of its keys.
 
         :param did: A did:key of the identity.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
         :return: The indexer's status and body.
         """
-        return await self._get('profiles', did)
+        return await self._get('profiles', did,
+                               params={'moderators': moderators})
 
 
-    async def get_review(self, event_id: str) -> IndexerAnswer:
+    async def get_review(
+        self,
+        event_id: str,
+        moderators: str | None = None,
+    ) -> IndexerAnswer:
         """
         One version of a review, with every version of its chain.
 
         :param event_id: The eventId of any version.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
         :return: The indexer's status and body.
         """
-        return await self._get('reviews', event_id)
+        return await self._get('reviews', event_id,
+                               params={'moderators': moderators})
 
 
     async def list_entity_reviews(
@@ -161,6 +189,7 @@ class IndexerClient:
         limit: str | None,
         after: str | None,
         labeled: str | None,
+        moderators: str | None = None,
     ) -> IndexerAnswer:
         """
         The current version of each of an entity's reviews, newest first.
@@ -169,6 +198,8 @@ class IndexerClient:
         :param limit: The page size, as the client sent it.
         :param after: The next of a previous page.
         :param labeled: 'show', to see what moderation hides, marked.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
@@ -176,20 +207,28 @@ class IndexerClient:
         """
         return await self._get('entities', entity, 'reviews',
                                params={'limit': limit, 'after': after,
-                                       'labeled': labeled})
+                                       'labeled': labeled,
+                                       'moderators': moderators})
 
 
-    async def list_profiles(self, ids: str | None) -> IndexerAnswer:
+    async def list_profiles(
+        self,
+        ids: str | None,
+        moderators: str | None = None,
+    ) -> IndexerAnswer:
         """
         The current profiles of some identities, in the order asked.
 
         :param ids: 1 to 100 did:key, comma-separated.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
         :return: The indexer's status and body.
         """
-        return await self._get('profiles', params={'ids': ids})
+        return await self._get('profiles', params={'ids': ids,
+                                                   'moderators': moderators})
 
 
     async def list_review_responses(
@@ -198,6 +237,7 @@ class IndexerClient:
         limit: str | None,
         after: str | None,
         labeled: str | None,
+        moderators: str | None = None,
     ) -> IndexerAnswer:
         """
         The conversation on a review, in order.
@@ -206,6 +246,8 @@ class IndexerClient:
         :param limit: The page size, as the client sent it.
         :param after: The next of a previous page.
         :param labeled: 'show', to see what moderation hides, marked.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
@@ -213,7 +255,8 @@ class IndexerClient:
         """
         return await self._get('reviews', event_id, 'responses',
                                params={'limit': limit, 'after': after,
-                                       'labeled': labeled})
+                                       'labeled': labeled,
+                                       'moderators': moderators})
 
 
     async def search_entities(
@@ -221,6 +264,8 @@ class IndexerClient:
         q: str | None,
         limit: str | None,
         after: str | None,
+        category: str | None = None,
+        moderators: str | None = None,
     ) -> IndexerAnswer:
         """
         Entities with a name that holds q, newest first; every entity
@@ -229,13 +274,19 @@ class IndexerClient:
         :param q: Part of a name; None for every entity.
         :param limit: The page size, as the client sent it.
         :param after: The next of a previous page.
+        :param category: One of the protocol's categories, to keep only
+            the entities it holds for.
+        :param moderators: The moderators the client follows, comma-separated
+            did:key; None for the indexer's own.
 
         :raises IndexerUnavailableError: If the indexer does not answer.
 
         :return: The indexer's status and body.
         """
         return await self._get('entities',
-                               params={'q': q, 'limit': limit, 'after': after})
+                               params={'q': q, 'limit': limit, 'after': after,
+                                       'category': category,
+                                       'moderators': moderators})
 
 
     async def close(self) -> None:

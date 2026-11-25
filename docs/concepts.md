@@ -18,6 +18,8 @@ The system never "updates a row." It only ever produces new, signed, timestamped
 
 **Identity** is a cryptographic keypair the user controls — it's what actually authors and proves ownership of events. **Account** is an optional convenience (login, saved preferences, notifications) that any given website can layer on top. Lose the account, and you can still publish from another client with the same identity. Lose the identity's private key without a backup, and the account can't save you.
 
+The official web client asks for an account to write — it lets the gateway refuse abuse — and keeps the identity apart from it: the key is made in the browser, sealed into a backup file only its owner holds, and never sent anywhere, the account's server included.
+
 ## Node
 
 A node is a program that stores events, checks their signatures, and talks to other nodes. It is *not* a server in the traditional sense — no node has special authority, and nothing requires a specific one to be up. Nodes can be run at different scales: **personal** (light, just for one user), **community** (always-on, helps others catch up), **full** (tries to mirror everything, backs the network up). In v1 no node prunes anything, so the distinction is about availability and reach rather than about how much history each one keeps — the tiers matter later, when retention becomes a choice someone actually has to make.
