@@ -3,6 +3,7 @@
  */
 
 // --- IMPORTS ---
+import { useTranslation } from 'react-i18next'
 import { AuthShell } from '@/app/auth/AuthShell'
 import { Button } from '@/components/ui/Button'
 import { loadSession } from '@/logic/session/session'
@@ -14,6 +15,8 @@ import { loadSession } from '@/logic/session/session'
  * @returns The screen.
  */
 export function SessionUnavailable() {
+  const { t } = useTranslation()
+
   return (
     <AuthShell
       eyebrow="Unavailable"
@@ -22,7 +25,7 @@ export function SessionUnavailable() {
       footer="Nothing you did was lost."
     >
       <Button size="lg" onClick={() => void loadSession()}>
-        Try again
+        {t('Try again')}
       </Button>
     </AuthShell>
   )
