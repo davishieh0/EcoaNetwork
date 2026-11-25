@@ -6,6 +6,7 @@
 // --- IMPORTS ---
 import { motion } from 'motion/react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { HumanCheck } from '@/app/claims/HumanCheck'
 import { IdentitySetup } from '@/app/identity/IdentitySetup'
 import { useClaimsData } from '@/app/claims/useClaimsData'
@@ -16,6 +17,7 @@ import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { cn } from '@/components/ui/cn'
 import { useRise } from '@/components/ui/useRise'
+import { known } from '@/i18n/i18n'
 import { normalizeEntity } from '@/logic/protocol/entity'
 
 // --- GLOBALS ---
@@ -34,11 +36,12 @@ const FIELD = cn(
  * @returns The line, with a copy button.
  */
 function Copyable({ label, value }: { label: string; value: string }) {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="meta text-muted">{label}</span>
+      <span className="meta text-muted">{t(label)}</span>
       <div className="flex items-stretch gap-2">
         <code
           className={cn(
@@ -57,7 +60,7 @@ function Copyable({ label, value }: { label: string; value: string }) {
             setCopied(true)
           }}
         >
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? t('Copied') : t('Copy')}
         </Button>
       </div>
     </div>
@@ -82,6 +85,7 @@ export function Claims() {
     human,
     domain,
   } = useClaimsData()
+  const { t } = useTranslation()
   const rise = useRise()
   const [typed, setTyped] = useState('')
 
@@ -92,19 +96,24 @@ export function Claims() {
   const status = error
     ? error
     : waitingFor
-      ? `Published. Waiting for the index to recognize ${waitingFor}…` +
-        ' A domain is looked up every 30 seconds.'
+      ? t(
+          'Published. Waiting for the index to recognize {{what}}… A ' +
+            'domain is looked up every 30 seconds.',
+          { what: known(t, waitingFor) },
+        )
       : ''
 
   return (
     <Container className="max-w-3xl pt-28 pb-16">
       <motion.h1 {...rise()} className="font-display text-h1">
-        Verification
+        {t('Verification')}
       </motion.h1>
       <motion.p {...rise(0.06)} className="reading-measure text-secondary">
-        Claims are signed statements about your identity. Nobody needs to
-        approve them: an index checks a domain claim itself, and decides
-        whose word it takes for the rest.
+        {t(
+          'Claims are signed statements about your identity. Nobody needs ' +
+            'to approve them: an index checks a domain claim itself, and ' +
+            'decides whose word it takes for the rest.',
+        )}
       </motion.p>
 
       {missing ? (
@@ -114,15 +123,15 @@ export function Claims() {
       ) : null}
 
       <motion.section {...rise(0.12)} className={cn(CARD, 'mt-8')}>
-        <p className="meta text-muted">This browser’s identity</p>
+        <p className="meta text-muted">{t('This browser’s identity')}</p>
         <p className="font-mono text-mono-s break-all">
-          {did ?? 'Opening the key…'}
+          {did ?? t('Opening the key…')}
         </p>
         <div className="flex flex-wrap gap-2">
           {loading ? (
-            <span className="meta text-muted">Reading your claims…</span>
+            <span className="meta text-muted">{t('Reading your claims…')}</span>
           ) : claims.length === 0 ? (
-            <span className="meta text-muted">No claim counts yet.</span>
+            <span className="meta text-muted">{t('No claim counts yet.')}</span>
           ) : (
             claims.map((c) => (
               <Badge
@@ -131,9 +140,11 @@ export function Claims() {
                 glyph="◆"
               >
                 {c.claimType === 'domain'
-                  ? `Domain · ${c.entity?.slice('domain:'.length)}` +
-                    (c.since ? ` · since ${dateOf(c.since)}` : '')
-                  : 'Human'}
+                  ? `${t('Domain')} · ${c.entity?.slice('domain:'.length)}` +
+                    (c.since
+                      ? ` · ${t('since {{date}}', { date: dateOf(c.since) })}`
+                      : '')
+                  : t('Human')}
               </Badge>
             ))
           )}
@@ -144,16 +155,18 @@ export function Claims() {
 
       <motion.section {...rise(0.18)} className={cn(CARD, 'mt-6')}>
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-h4">Human</h2>
+          <h2 className="font-display text-h4">{t('Human')}</h2>
           <p className="text-body-s text-secondary">
-            A small proof of work, solved in this browser. It identifies
-            nobody: the gateway signs that this key paid the cost, which
-            counts a little more than a brand-new key.
+            {t(
+              'A small proof of work, solved in this browser. It identifies ' +
+                'nobody: the gateway signs that this key paid the cost, ' +
+                'which counts a little more than a brand-new key.',
+            )}
           </p>
         </div>
         {isHuman ? (
           <Badge tone="info" glyph="◆">
-            You hold a human claim
+            {t('You hold a human claim')}
           </Badge>
         ) : did ? (
           <div aria-busy={busy === 'human'}>
@@ -164,17 +177,20 @@ export function Claims() {
 
       <motion.section {...rise(0.24)} className={cn(CARD, 'mt-6')}>
         <div className="flex flex-col gap-1">
-          <h2 className="font-display text-h4">Domain</h2>
+          <h2 className="font-display text-h4">{t('Domain')}</h2>
           <p className="text-body-s text-secondary">
-            Prove you control a website by publishing a DNS record. The index
-            looks it up itself: there is no verifier to trust. A verified
-            domain makes you its representative: your details for it hold,
-            and your responses to its reviews are marked official.
+            {t(
+              'Prove you control a website by publishing a DNS record. The ' +
+                'index looks it up itself: there is no verifier to trust. A ' +
+                'verified domain makes you its representative: your details ' +
+                'for it hold, and your responses to its reviews are marked ' +
+                'official.',
+            )}
           </p>
         </div>
 
         <label className="flex flex-col gap-1">
-          <span className="meta text-muted">Your domain</span>
+          <span className="meta text-muted">{t('Your domain')}</span>
           <input
             value={typed}
             onChange={(event) => setTyped(event.target.value)}
@@ -182,21 +198,29 @@ export function Claims() {
             className={FIELD}
           />
           {normalized && !normalized.ok ? (
-            <span className="text-body-s text-danger">{normalized.reason}</span>
+            <span className="text-body-s text-danger">
+              {t(normalized.reason)}
+            </span>
           ) : null}
         </label>
 
         {name && did ? (
           <>
             <p className="text-body-s text-secondary">
-              1. Add this TXT record to the domain’s DNS. It can stay next to
-              others, and it has to stay: the claim is checked again.
+              {t(
+                '1. Add this TXT record to the domain’s DNS. It can stay ' +
+                  'next to others, and it has to stay: the claim is checked ' +
+                  'again.',
+              )}
             </p>
             <Copyable label="Name" value={`_ecoa-verify.${name}`} />
             <Copyable label="Value" value={`ecoa-identity=${did}`} />
             <p className="text-body-s text-secondary">
-              2. Sign the claim. It says this identity holds {name} for a
-              year, and it counts once the index finds the record.
+              {t(
+                '2. Sign the claim. It says this identity holds {{name}} for ' +
+                  'a year, and it counts once the index finds the record.',
+                { name },
+              )}
             </p>
             <div>
               <Button
@@ -204,7 +228,9 @@ export function Claims() {
                 pending={busy === 'domain'}
                 onClick={() => void domain(typed)}
               >
-                {busy === 'domain' ? 'Signing and sending' : 'Sign the claim'}
+                {busy === 'domain'
+                  ? t('Signing and sending')
+                  : t('Sign the claim')}
               </Button>
             </div>
           </>
