@@ -1,0 +1,9 @@
+# The local network's DNS: answers the .test zone, where a developer
+# publishes the _ecoa-verify TXT records domain claims are checked against.
+# The indexer resolves through it (DNS_SERVER) instead of the public DoH.
+test:53 {
+    file /etc/coredns/test.zone
+    reload 2s
+    log
+    errors
+}
