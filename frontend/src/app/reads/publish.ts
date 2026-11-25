@@ -5,6 +5,7 @@
 
 // --- IMPORTS ---
 import { messageOf } from '@/app/forms/messages'
+import { i18n } from '@/i18n/i18n'
 import { publishEvent } from '@/logic/datasource/events'
 import { HttpError } from '@/logic/errors/httpError'
 import {
@@ -81,7 +82,10 @@ export async function publishSigned(
     const result = await publishEvent(envelope)
     if (result.outcome === 'rejected') {
       throw new PublishFailure(
-        result.reason ? `${REFUSED} Reason: ${result.reason}` : REFUSED,
+        result.reason
+          ? `${i18n.t(REFUSED)} ` +
+              i18n.t('Reason: {{reason}}', { reason: result.reason })
+          : REFUSED,
       )
     }
   } catch (error) {
