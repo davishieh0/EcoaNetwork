@@ -54,7 +54,7 @@ function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
           size="sm"
           className="duration-surface lg:hidden"
         >
-          Menu
+          {t('Menu')}
         </Button>
       </Dialog.Trigger>
 
@@ -88,16 +88,16 @@ function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
                 'gap-6',
               )}
             >
-              <Dialog.Title className="sr-only">Menu</Dialog.Title>
+              <Dialog.Title className="sr-only">{t('Menu')}</Dialog.Title>
               <Wordmark />
               <Dialog.Close asChild>
                 <Button variant="ghost" size="sm">
-                  Close
+                  {t('Close')}
                 </Button>
               </Dialog.Close>
             </Container>
 
-            <Container as="nav" aria-label="Sections">
+            <Container as="nav" aria-label={t('Sections')}>
               <ul className="flex flex-col border-t border-line">
                 {NAV_LINKS.map((link) => (
                   <li key={link.href}>
@@ -113,7 +113,7 @@ function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
                         'hover:text-primary',
                       )}
                     >
-                      {link.label}
+                      {t(link.label)}
                     </a>
                   </li>
                 ))}
@@ -122,10 +122,10 @@ function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
 
             <Container className="flex flex-wrap gap-2 py-6">
               <Button as={Link} to={ROUTES.explore} variant="secondary">
-                Explore
+                {t('Explore')}
               </Button>
               <Button as={Link} to={ROUTES.login} variant="ghost">
-                Login
+                {t('Login')}
               </Button>
             </Container>
 
@@ -151,6 +151,7 @@ function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
  * @returns The top bar.
  */
 export function SiteNav() {
+  const { t } = useTranslation()
   const [surface, setSurface] = useState<'dark' | 'light'>('dark')
   const [active, setActive] = useState('')
 
@@ -233,13 +234,13 @@ export function SiteNav() {
         <a
           href="#top"
           className="flex items-center gap-3 justify-self-start"
-          aria-label="Ecoa — home"
+          aria-label={t('Ecoa — home')}
         >
           <Wordmark symbolClassName={WORDMARK_SYMBOL} />
         </a>
 
         <nav
-          aria-label="Sections"
+          aria-label={t('Sections')}
           // 16px, not the 24px the bar uses elsewhere.
           className="hidden items-center justify-center gap-4 lg:flex xl:gap-6"
         >
@@ -259,7 +260,7 @@ export function SiteNav() {
                   'hover:text-primary focus-visible:text-primary',
                 )}
               >
-                {link.label}
+                {t(link.label)}
                 {isActive ? (
                   // The same hand that underlines "someone else’s" below.
                   <CircleMark
@@ -285,7 +286,7 @@ export function SiteNav() {
             size="sm"
             className="hidden duration-surface lg:inline-flex"
           >
-            Explore
+            {t('Explore')}
           </Button>
           <Button
             as={Link}
@@ -294,7 +295,7 @@ export function SiteNav() {
             size="sm"
             className="hidden duration-surface lg:inline-flex"
           >
-            Login
+            {t('Login')}
           </Button>
           {/* White label, by decision: 2.7:1 where ink is 7.0:1. */}
           <Button
@@ -304,7 +305,7 @@ export function SiteNav() {
             size="sm"
             className="text-white hover:text-white"
           >
-            Register
+            {t('Register')}
           </Button>
 
           {/* Set apart by a rule: a setting, not a destination. */}
