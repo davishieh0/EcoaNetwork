@@ -21,6 +21,7 @@ var ErrNotFound = errors.New("event not found")
 
 // Repository reads and writes the events table.
 type Repository struct {
+	db      sqlc.DBTX
 	queries *sqlc.Queries
 }
 
@@ -28,7 +29,7 @@ type Repository struct {
 // NewRepository returns a repository over db: the pool for a read, or the
 // transaction the projector opened for a write.
 func NewRepository(db sqlc.DBTX) *Repository {
-	return &Repository{queries: sqlc.New(db)}
+	return &Repository{db: db, queries: sqlc.New(db)}
 }
 
 
@@ -108,4 +109,36 @@ func (r *Repository) Holders(ctx context.Context,
 	}
 
 	return holders, nil
+}
+
+
+// HoldersByIDs returns the nodes that hold each event in ids, ordered by
+// received_at ascending then node name.
+func (r *Repository) HoldersByIDs(ctx context.Context,
+                                  ids []string) (map[string][]Holder, error) {
+	out := map[string][]Holder{}
+	if len(ids) == 0 || r.db == nil {
+		return out, nil
+	}
+
+	rows, err := r.db.Query(ctx,
+		`SELECT event_id, node, sequence, received_at
+		 FROM event_holders
+		 WHERE event_id = ANY($1::text[])
+		 ORDER BY received_at NULLS LAST, node`, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var eventID string
+		var h Holder
+		if err := rows.Scan(&eventID, &h.Node, &h.Sequence, &h.ReceivedAt); err != nil {
+			return nil, err
+		}
+		out[eventID] = append(out[eventID], h)
+	}
+
+	return out, rows.Err()
 }

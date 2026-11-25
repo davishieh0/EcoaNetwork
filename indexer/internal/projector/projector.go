@@ -150,7 +150,8 @@ func feedAll(ctx context.Context,
 			last = time.Now()
 
 		case <-check.C:
-			if untilCaughtUp && caughtUp(seen) && time.Since(last) >= settle {
+			if untilCaughtUp && caughtUp(seen, len(followers), time.Since(last)) &&
+				time.Since(last) >= settle {
 				stop()
 				wg.Wait()
 				report(seen)
@@ -228,8 +229,13 @@ func record(seen map[string]*progress, r stream.Received) {
 
 
 // caughtUp reports whether every node heard from has been applied up to
-// the head it last reported.
-func caughtUp(seen map[string]*progress) bool {
+// the head it last reported, waiting briefly for slow nodes when at least
+// one node has reported events.
+func caughtUp(seen map[string]*progress, total int, quiet time.Duration) bool {
+	if len(seen) > 0 && len(seen) < total && quiet < 10*time.Second {
+		return false
+	}
+
 	for _, p := range seen {
 		if p.sequence < p.head {
 			return false

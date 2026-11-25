@@ -20,6 +20,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -28,7 +29,9 @@ import (
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/identity"
 	"github.com/eduardokairalla1/EcoaNetwork/protocol/go/testevent"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 
@@ -56,7 +59,8 @@ func run(args []string) error {
 
 	flags := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	node := flags.String("node", "localhost:50051", "the node to publish to")
-	peers := flags.String("peers", "localhost:50052,localhost:50053",
+	peers := flags.String("peers",
+	                      "localhost:50052,localhost:50053,localhost:50054,localhost:50055",
 	                      "nodes to ask whether a refused event reached them")
 	entity := flags.String("entity", "cnpj:33444555000166",
 	                       "the entity the demo's review is about")
@@ -280,8 +284,11 @@ func holds(addr, id string) (bool, error) {
 	for {
 		e, err := stream.Recv()
 		if err != nil {
-			// the log ended while the stream waits for more: not there
-			return false, nil
+			if errors.Is(err, io.EOF) || status.Code(err) == codes.DeadlineExceeded {
+				// the log ended while the stream waits for more: not there
+				return false, nil
+			}
+			return false, fmt.Errorf("subscribe %s: %w", addr, err)
 		}
 
 		if e.GetEventId() == id {

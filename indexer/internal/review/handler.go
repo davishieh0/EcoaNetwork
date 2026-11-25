@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/claim"
+	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/event"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/label"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/ids"
 	"github.com/eduardokairalla1/EcoaNetwork/indexer/internal/platform/page"
@@ -19,6 +20,7 @@ import (
 // Handler answers the routes of the reviews.
 type Handler struct {
 	repo        *Repository
+	events      *event.Repository
 	moderation  *label.Moderation
 	recognition *claim.Recognition
 	ranking     Ranking
@@ -40,9 +42,20 @@ type derived struct {
 }
 
 
+// nodeHolder is one node observed holding an event, matching GET /events/{id}.
+type nodeHolder struct {
+	Node       string     `json:"node"`
+	Sequence   int64      `json:"sequence"`
+	ReceivedAt *time.Time `json:"receivedAt,omitempty"`
+}
+
+
 // observed is what the indexer observed of a version.
 type observed struct {
 	ReceivedAt *time.Time `json:"receivedAt,omitempty"`
+
+	// the nodes this indexer saw holding this version
+	Nodes []nodeHolder `json:"nodes,omitempty"`
 
 	// the labels that count, by the moderators this indexer follows: another
 	// indexer, following others, shows others
@@ -85,6 +98,48 @@ func NewHandler(repo *Repository,
 
 	return &Handler{repo: repo, moderation: moderation,
 	                recognition: recognition, ranking: ranking}
+}
+
+
+// WithEvents attaches the event repository so review responses include
+// observed.nodes (which nodes this indexer saw holding each version).
+func (h *Handler) WithEvents(events *event.Repository) *Handler {
+	h.events = events
+	return h
+}
+
+
+// holdersOf returns the nodes holding each version's eventId.
+func (h *Handler) holdersOf(r *http.Request,
+                            versions []Version) (map[string][]nodeHolder, error) {
+	if h.events == nil || len(versions) == 0 {
+		return nil, nil
+	}
+
+	ids := make([]string, 0, len(versions))
+	for _, v := range versions {
+		ids = append(ids, v.EventID)
+	}
+
+	raw, err := h.events.HoldersByIDs(r.Context(), ids)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make(map[string][]nodeHolder, len(raw))
+	for id, hs := range raw {
+		nodes := make([]nodeHolder, len(hs))
+		for i, held := range hs {
+			nodes[i] = nodeHolder{
+				Node:       held.Node,
+				Sequence:   held.Sequence,
+				ReceivedAt: utc(held.ReceivedAt),
+			}
+		}
+		out[id] = nodes
+	}
+
+	return out, nil
 }
 
 
@@ -171,6 +226,12 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	holders, err := h.holdersOf(r, versions)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
 	answer := listing{Ranking: h.ranking,
 	                  Items: make([]respond.Item, 0, len(listed))}
 
@@ -181,7 +242,7 @@ func (h *Handler) ListByEntity(w http.ResponseWriter, r *http.Request) {
 			ChainRoot: l.ChainRoot,
 			Head:      true,
 			Edited:    &edited,
-		}, labels[l.ChainRoot], held))
+		}, labels[l.ChainRoot], held, holders[l.Version.EventID]))
 	}
 
 	answer.Next = page.Next(next)
@@ -245,7 +306,14 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	held, err := h.claimsOf(r, append(versions, review.Version))
+	allVersions := append(versions, review.Version)
+	held, err := h.claimsOf(r, allVersions)
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+
+	holders, err := h.holdersOf(r, allVersions)
 	if err != nil {
 		respond.Failed(w, err)
 		return
@@ -253,14 +321,14 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	answer := detail{
 		Review: item(review.Version, derivedOf(review, review.EventID),
-		             applied, held),
+		             applied, held, holders[review.Version.EventID]),
 		Versions: make([]respond.Item, 0, len(versions)),
 	}
 
 	for _, v := range versions {
 		answer.Versions = append(answer.Versions,
 		                         item(v, derivedOf(review, v.EventID), applied,
-		                              held))
+		                              held, holders[v.EventID]))
 	}
 
 	respond.JSON(w, http.StatusOK, answer)
@@ -278,12 +346,13 @@ func derivedOf(review Review, id string) derived {
 }
 
 
-// item is v as the API returns it, with the labels that count on its chain
-// and the claims that count for its author, among held.
+// item is v as the API returns it, with the labels that count on its chain,
+// the claims that count for its author, and the nodes holding it.
 func item(v Version,
           d derived,
           labels []label.Applied,
-          held map[string][]claim.Recognized) respond.Item {
+          held map[string][]claim.Recognized,
+          nodes []nodeHolder) respond.Item {
 	d.Endorsements, d.Disputes = v.Endorsements, v.Disputes
 
 	return respond.Item{
@@ -291,6 +360,7 @@ func item(v Version,
 		Derived:  d,
 		Observed: observed{
 			ReceivedAt: utc(v.ReceivedAt),
+			Nodes:      nodes,
 			Labels:     labels,
 			Claims:     held[claim.AuthorOf(v.Envelope)],
 		},

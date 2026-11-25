@@ -75,13 +75,14 @@ func Handler(pool *pgxpool.Pool,
 	moderation := label.NewModeration(policy, pool)
 	recognition := claim.NewRecognition(verifiers, pool)
 
-	events := event.NewHandler(event.NewRepository(pool), moderation)
+	eventRepo := event.NewRepository(pool)
+	events := event.NewHandler(eventRepo, moderation)
 	entities := entity.NewHandler(entity.NewRepository(pool), moderation,
 	                              recognition)
 	profiles := profile.NewHandler(profile.NewRepository(pool), moderation)
 	keys := identities.NewHandler(identities.NewRepository(pool), recognition)
 	reviews := review.NewHandler(review.NewRepository(pool), moderation,
-	                             recognition, ranking)
+	                             recognition, ranking).WithEvents(eventRepo)
 	responses := response.NewHandler(response.NewRepository(pool),
 	                                 review.NewRepository(pool),
 	                                 moderation,
@@ -89,6 +90,7 @@ func Handler(pool *pgxpool.Pool,
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool))
+	mux.HandleFunc("GET /nodes", nodes(pool))
 	mux.HandleFunc("GET /events/{eventId}", events.Get)
 	mux.HandleFunc("GET /entities", entities.Search)
 	mux.HandleFunc("GET /entities/{entity}", entities.Get)

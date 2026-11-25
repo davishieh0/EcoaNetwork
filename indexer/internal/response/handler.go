@@ -190,12 +190,20 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	reps, err := h.recognition.Representatives(r.Context(), []string{entity})
+	if err != nil {
+		respond.Failed(w, err)
+		return
+	}
+	rep, hasRep := reps[entity]
+
 	answer := listing{
 		Items: make([]respond.Item, 0, len(responses)),
 		Next:  page.Next(next),
 	}
 
 	for _, res := range responses {
+		author := claim.AuthorOf(res.Envelope)
 		answer.Items = append(answer.Items, respond.Item{
 			Envelope: string(res.Envelope),
 			Derived: derived{
@@ -208,9 +216,8 @@ func (h *Handler) ListByReview(w http.ResponseWriter, r *http.Request) {
 			Observed: observed{
 				ReceivedAt: utc(res.ReceivedAt),
 				Labels:     labels[res.EventID],
-				Claims:     held[claim.AuthorOf(res.Envelope)],
-				Official: claim.Official(held[claim.AuthorOf(res.Envelope)],
-				                         entity),
+				Claims:     held[author],
+				Official:   hasRep && rep.Identity == author,
 			},
 		})
 	}
