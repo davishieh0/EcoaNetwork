@@ -24,6 +24,8 @@ const INDENT = ['', '', 'ml-8']
 export function Conversation({
   replies,
   onInspect,
+  onReply,
+  onLabel,
   className,
 }: ConversationProps) {
   const reveal = useReveal()
@@ -87,13 +89,39 @@ export function Conversation({
                 Labeled · {label}
               </Badge>
             ))}
+            {onLabel ? (
+              <button
+                type="button"
+                onClick={() => onLabel(reply.eventId)}
+                className={cn(
+                  'meta cursor-pointer text-muted transition-colors',
+                  'hover:text-warning',
+                  onReply ? '' : 'ml-auto',
+                )}
+              >
+                Label…
+              </button>
+            ) : null}
+            {onReply ? (
+              <button
+                type="button"
+                onClick={() => onReply(reply.eventId)}
+                className={cn(
+                  'meta ml-auto cursor-pointer text-muted transition-colors',
+                  'hover:text-primary',
+                )}
+              >
+                Reply
+              </button>
+            ) : null}
             {onInspect ? (
               <button
                 type="button"
                 onClick={() => onInspect(reply.eventId)}
                 className={cn(
-                  'meta ml-auto cursor-pointer border-b border-signal',
-                  'text-primary hover:text-secondary',
+                  'meta cursor-pointer border-b border-signal text-primary',
+                  'hover:text-secondary',
+                  onReply ? '' : 'ml-auto',
                 )}
               >
                 Inspect ↗

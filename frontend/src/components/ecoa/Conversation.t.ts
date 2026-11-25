@@ -28,5 +28,9 @@ export type ConversationProps = {
   /** In the order of the conversation. */
   replies: Reply[]
   onInspect?: (eventId: string) => void
+  /** Offers to answer a response. */
+  onReply?: (eventId: string) => void
+  /** Offers to label a response, in moderator mode. */
+  onLabel?: (eventId: string) => void
   className?: string
 }
