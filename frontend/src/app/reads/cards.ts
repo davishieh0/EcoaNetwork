@@ -7,6 +7,7 @@ import { dateOf, shortOf } from '@/app/reads/words'
 import type { Reply } from '@/components/ecoa/Conversation.t'
 import type { Review } from '@/components/ecoa/ReviewCard.t'
 import type { Version } from '@/components/ecoa/VersionHistory.t'
+import { i18n } from '@/i18n/i18n'
 import type { ReviewItem } from '@/logic/datasource/entities.t'
 import type { ResponseItem } from '@/logic/datasource/reviews.t'
 import type { Recognized } from '@/logic/datasource/signed.t'
@@ -26,11 +27,11 @@ export function claimMarkOf(
   entity?: string,
 ): Review['authorClaim'] {
   if (claims?.some((c) => c.claimType === 'domain' && c.entity === entity)) {
-    return { label: 'Verified representative', tone: 'valid' }
+    return { label: i18n.t('Verified representative'), tone: 'valid' }
   }
 
   if (claims?.some((c) => c.claimType === 'human')) {
-    return { label: 'Human', tone: 'info' }
+    return { label: i18n.t('Human'), tone: 'info' }
   }
 
   return undefined
@@ -57,7 +58,7 @@ export function cardOf(
     rating: text.rating,
     title: text.title,
     body: text.body,
-    author: names[envelope.author] ?? 'No display name',
+    author: names[envelope.author] ?? i18n.t('No display name'),
     authorId: envelope.author,
     publishedAt: dateOf(envelope.createdAt),
     eventId: envelope.eventId,
@@ -117,7 +118,7 @@ export function repliesOf(
 
   const whose = (eventId: string) => {
     const author = authors.get(eventId)
-    if (!author) return `response ${shortOf(eventId)}`
+    if (!author) return i18n.t('response {{id}}', { id: shortOf(eventId) })
     return names[author] ?? shortOf(author)
   }
 
@@ -141,7 +142,7 @@ function replyOf(
 
   return {
     eventId: envelope.eventId,
-    author: names[envelope.author] ?? 'No display name',
+    author: names[envelope.author] ?? i18n.t('No display name'),
     authorId: envelope.author,
     body: textOf(envelope, 'body') ?? '',
     publishedAt: dateOf(envelope.createdAt),
