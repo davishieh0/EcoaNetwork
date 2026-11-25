@@ -7,6 +7,7 @@
 // --- IMPORTS ---
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import type { PublicProfileProps } from '@/app/account/PublicProfile.t'
 import { usePublicProfile } from '@/app/account/usePublicProfile'
 import { Button } from '@/components/ui/Button'
@@ -32,6 +33,7 @@ const FIELD = cn(
 export function PublicProfile({ handle }: PublicProfileProps) {
   const { did, current, loading, busy, error, notice, publish } =
     usePublicProfile()
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [tried, setTried] = useState(false)
@@ -54,20 +56,22 @@ export function PublicProfile({ handle }: PublicProfileProps) {
   return (
     <section className="flex flex-col gap-4 border-t border-line pt-6">
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-h4">Public profile</h2>
+        <h2 className="font-display text-h4">{t('Public profile')}</h2>
         <p className="text-body-s text-secondary">
-          Signed by your identity and public. Nothing verifies a display
-          name, so readers always see it beside your key.
+          {t(
+            'Signed by your identity and public. Nothing verifies a ' +
+              'display name, so readers always see it beside your key.',
+          )}
         </p>
       </div>
 
       {!did ? (
         <p className="text-body-s text-secondary">
-          This browser has no identity yet.{' '}
+          {t('This browser has no identity yet.')}{' '}
           <Link to={ROUTES.identity} className="border-b border-signal">
-            Create it
+            {t('Create it')}
           </Link>{' '}
-          first.
+          {t('first.')}
         </p>
       ) : (
         <form
@@ -81,7 +85,7 @@ export function PublicProfile({ handle }: PublicProfileProps) {
           <p className="font-mono text-mono-s break-all text-muted">{did}</p>
           <label className="flex flex-col gap-1">
             <span className="meta text-muted">
-              Display name · {characters(name)}/{NAME_MAX}
+              {t('Display name')} · {characters(name)}/{NAME_MAX}
             </span>
             <input
               value={name}
@@ -90,13 +94,13 @@ export function PublicProfile({ handle }: PublicProfileProps) {
             />
             {problems.displayName ? (
               <span className="text-body-s text-danger">
-                {problems.displayName}
+                {t(problems.displayName)}
               </span>
             ) : null}
           </label>
           <label className="flex flex-col gap-1">
             <span className="meta text-muted">
-              Bio · {characters(bio)}/{BIO_MAX}
+              {t('Bio')} · {characters(bio)}/{BIO_MAX}
             </span>
             <textarea
               value={bio}
@@ -105,7 +109,7 @@ export function PublicProfile({ handle }: PublicProfileProps) {
               className={FIELD}
             />
             {problems.bio ? (
-              <span className="text-body-s text-danger">{problems.bio}</span>
+              <span className="text-body-s text-danger">{t(problems.bio)}</span>
             ) : null}
           </label>
           <FormAlert>{error}</FormAlert>
@@ -113,7 +117,7 @@ export function PublicProfile({ handle }: PublicProfileProps) {
             <FormAlert tone="valid">{notice}</FormAlert>
           ) : null}
           <Button type="submit" variant="secondary" pending={busy}>
-            {busy ? 'Signing and sending' : 'Publish the profile'}
+            {busy ? t('Signing and sending') : t('Publish the profile')}
           </Button>
         </form>
       )}
