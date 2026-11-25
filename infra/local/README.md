@@ -38,7 +38,6 @@ Every port is published on `127.0.0.1`, reachable from this machine only.
 | `frontend` | 8080 | The built site; nginx passes `/api` on to the backend named in `BACKEND_ORIGIN`, so the site and the API share one origin, as Vite's proxy does in development |
 | `backend` | 8000 (`BACKEND_PORT`) | The gateway API |
 | `indexer-serve` | 8081 | The indexer's read API, `/entities/...`, `/reviews/...` |
-| `indexer-2-serve` | 8082 | The second index's read API, with `--profile second-index` |
 | `indexer-project` | — | Follows the three nodes and writes the projections |
 | `node-1`, `node-2`, `node-3` | gRPC 50051, 50052, 50053; libp2p 4001, 4002, 4003 | The network, each node dialing the other two |
 | `postgres` | 5432 | The backend's and the indexer's databases |
@@ -97,22 +96,13 @@ docker compose run --rm indexer-project rebuild
 docker compose start indexer-project indexer-serve
 ```
 
-Step 10, a second index over the same logs with another ranking: its own
-database and projector, ranking by endorsements, its API on `:8082` beside
-the first one's on `:8081`. The same entity's reviews come back in another
-order, and each answer names its `ranking`:
+Step 10, the same events under another ranking: restart the indexer's API
+ranking by endorsements. Nothing is rebuilt; the same entity's reviews come
+back in another order, and each answer names its `ranking`:
 
 ```bash
-docker compose --profile second-index up -d
-curl -s 'localhost:8081/entities/<entity>/reviews'
-curl -s 'localhost:8082/entities/<entity>/reviews'
-```
-
-Its database, `ecoa_indexer_2`, is created with the others when the
-Postgres volume is first made; on an older volume, create it once:
-
-```bash
-docker compose exec postgres psql -U postgres -c 'CREATE DATABASE ecoa_indexer_2 OWNER indexer'
+RANKING=endorsed docker compose up -d indexer-serve
+docker compose up -d indexer-serve     # back to newest
 ```
 
 ## The nodes

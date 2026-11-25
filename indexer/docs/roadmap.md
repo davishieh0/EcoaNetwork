@@ -153,13 +153,11 @@ deterministic tables from the logs. In the order to build it:
    tests that a rebuild reproduces the deterministic tables, that two
    indexers fed other orders agree, that applying twice changes nothing, and
    that a crash midway loses and doubles nothing. Checked live too: a
-   rebuild of 1712 events reproduced the 15 tables, and a second indexer
-   built from the same nodes agreed on all of them. Building beside the live
+   rebuild of 1712 events reproduced the 15 tables. Building beside the live
    tables and switching comes later.
 8. ~~**Ranking, for the demonstration's step 10.**~~ Done: `RANKING`
-   (`newest`, `endorsed`), the cursor carrying the score; `infra/local`'s
-   `second-index` profile runs a second indexer, backend and site over the
-   same nodes.
+   (`newest`, `endorsed`), the cursor carrying the score, read by `serve`
+   only, so switching it is a restart.
 
 **Raised along the way, outside the indexer:**
 

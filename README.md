@@ -51,7 +51,7 @@ node.
 | [`indexer/`](indexer/) | Follows the nodes' logs, projects them into tables, answers the read API | Go · Postgres · sqlc · goose |
 | [`backend/`](backend/) | The gateway: accounts, publishing to a node, reads from the indexer | Python · FastAPI · Postgres · Cognito |
 | [`frontend/`](frontend/) | The web client; holds the key and signs in the browser | React · TypeScript · Vite · Tailwind |
-| [`infra/local/`](infra/local/) | The whole project on one machine: Postgres, three nodes, indexer, backend, frontend, a DNS zone for domain claims, and a second index on demand | Docker Compose |
+| [`infra/local/`](infra/local/) | The whole project on one machine: Postgres, three nodes, indexer, backend, frontend, and a DNS zone for domain claims | Docker Compose |
 | [`infra/cloud/`](infra/cloud/) | The AWS resources behind the platform (Cognito) | Terraform · LocalStack |
 | [`docs/`](docs/) | The design: protocol, identity, entities, reputation, MVP, roadmap, decisions | — |
 | [`brand/`](brand/) | Logo, banner, favicons and the [guidelines](brand/guidelines.md) | — |
@@ -79,7 +79,7 @@ read, seed the network with sixty entities and a few hundred signed reviews:
 [`infra/local/README.md`](infra/local/README.md) has the ports, the data
 folders, verifying a domain against the local DNS zone, and the commands of
 the demonstration: a tampered event, a foreign edit, a rebuild of the index,
-and a second index with another ranking.
+and the index under another ranking.
 
 To work on one service, run only what it needs from Compose and the service
 itself from its folder, as its README shows.

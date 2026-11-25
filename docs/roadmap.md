@@ -22,7 +22,7 @@ As of 2026-11-24. The acceptance criteria, one by one, are in [mvp.md](./mvp.md#
 | 6. Gateway | Done: publish with failover, whole envelopes on reads | rate limiting |
 | 7. Client | Done, including the inspection view, fresh identities, and replace, withdraw and responses | signature checks under ZIP-215 (WebCrypto checks under RFC 8032 until `protocol/ts`) |
 | 8. Domain verification | Done, DNS over DoH or a configured server | the `.well-known` fallback |
-| 9. Seeding and the demonstration | Done: the generator, the second indexer with another ranking | importing the real Receita dump, rehearsing |
+| 9. Seeding and the demonstration | Done: the generator, the ranking as a setting | importing the real Receita dump, rehearsing |
 | 10. Cuttable social features | Done: profiles, labels, moderators chosen by the reader | reports (`moderation.report_created` is not projected) |
 | 11. Self-hosting | Started: a container image, operator docs in `node/README.md` | a published image, a public bootstrap node, metrics, a status dashboard |
 | Academic track | Related work written | the metrics below are not collected yet beyond logs (the indexer logs progress and rebuild time; a rebuild of 1712 events took about 5 s); legal policy |
@@ -145,7 +145,7 @@ Can start as soon as step 3 is done; doesn't wait for networking.
 4. Full-text search.
 5. Rebuild from log, as a first-class operation rather than a script someone wrote once.
 
-**Done when:** dropping the index and rebuilding reproduces the deterministic half exactly, and two indexer instances fed the same log agree on all of it. This is also where the second-indexer demo comes from — same binary, two config files.
+**Done when:** dropping the index and rebuilding reproduces the deterministic half exactly, and two indexer instances fed the same log agree on all of it. This is also where the ranking demo comes from — the same index, another setting.
 
 ---
 
@@ -195,10 +195,10 @@ After the client, because it needs a client to publish the claim and an indexer 
 
 1. Import entities from public Receita Federal data.
 2. Synthetic review generator producing properly-signed events across them.
-3. Second indexer instance with a different ranking configuration.
+3. A ranking configuration other than the default, to switch to.
 4. Rehearse the ten steps in [mvp.md](./mvp.md#the-demonstration).
 
-**Why this is a step and not an afterthought:** a demonstration with four reviews reads as a toy regardless of what's underneath it, and the second indexer — the step that shows *why* the project is built this way — costs one config file and is the easiest thing to forget.
+**Why this is a step and not an afterthought:** a demonstration with four reviews reads as a toy regardless of what's underneath it, and the ranking switch — the step that shows *why* the project is built this way — costs one setting and is the easiest thing to forget.
 
 ---
 
