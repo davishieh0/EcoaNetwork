@@ -75,6 +75,8 @@ Resolving per field rather than per event matters: a proposal that fixes a wrong
 
 **Seed the entities instead of arbitrating them.** The most effective thing an indexer can do here isn't a better conflict rule — it's making conflicts rare. Brazilian company data is public and bulk-downloadable from the Receita Federal, so an indexer can seed `cnpj:` entities with correct names and categories before anyone edits anything. Seeded values enter as ordinary tier-2 proposals authored by the indexer operator's own identity, competing under the same rules as everyone else's rather than as a privileged back door. Most entities then arrive already correct, and the edit-conflict path becomes the exception it should be instead of the default path every entity travels.
 
+**v1, as built:** `indexer/cmd/seed` reads the Receita Federal's CSV layout (`Estabelecimentos` and `Empresas`, active establishments only) and publishes each entity's name, category (mapped from its CNAE) and a short description as an `entity.updated` signed by an operator key, through a node like anyone's event. The repository carries a synthetic sample in that layout; the real monthly dump is passed by path ([decisions.md §16.12](./decisions.md#1612-the-seeded-dataset-is-synthetic-in-the-receitas-layout--call)). Until weights exist, the first proposal of each field holds, so seeded values win by arriving first, which is exactly what seeding is for.
+
 Worth keeping the stakes in proportion: entity metadata is a company's name and category, not the review text. It deserves a rule that is deterministic and hard to vandalize. It does not deserve to be over-built.
 
 ## Claim conflicts
@@ -88,11 +90,15 @@ A genuine conflict — two recognized claims on the same entity — is rare and 
 3. **Same tier, same verifier: the earlier claim holds.** A newer claim never silently displaces an incumbent; the incumbent has to be revoked.
 4. **Only when precedence genuinely cannot separate them** does the entity fall back to tier 2, with edits from both sides competing as proposals until a claim is revoked or one side gains a stronger form of evidence.
 
+**v1, as built** (`projection.ResolveFields`): one recognized holder is the representative; among several, exactly one self-verifiable holder wins (rule 1); anything else falls back to tier 2. Rule 3 is not applied yet, so two identities a domain verifies at once leave the entity with no representative until one record or claim goes — the safe failure, since it grants nothing.
+
 ## Official responses
 
 The same claim that grants tier-1 edit authority is what makes a `review.response_created` *official*. A response is publishable by anyone — it's a new statement by its own author, not a change to the review — so "official" is not a permission, it's a display fact: this response came from an identity holding a recognized claim for the entity being reviewed.
 
 Two things follow. A client that shows an "official response" badge is asserting something about a claim it recognized, so it must apply the same recognition rules as tier 1 — a self-signed `cnpj` claim buys a company nothing here either. And an unbadged response from the company's marketing intern is not blocked, hidden, or invalid; it's simply an ordinary reply from an ordinary identity, which is the correct outcome.
+
+**v1, as built:** the indexer marks a response `official` when its author holds a recognized `domain` claim on the entity the review is about, and the client badges it "Official response". The same claim keeps that identity's own reviews of the entity out of the rating summary — shown, marked, not counted.
 
 ## Verified-representative edits are authoritative, not unaccountable
 

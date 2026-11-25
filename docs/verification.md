@@ -71,6 +71,8 @@ Plain DNS is unauthenticated. An indexer resolving `_ecoa-verify.example.com` th
 
 An indexer's DNS view is therefore one of its trust dependencies, in the same category as its verifier list. Two indexers can honestly disagree about whether a domain claim verifies, which the [determinism boundary](./architecture.md#what-must-be-identical-across-indexers-and-what-must-not-be) already accounts for.
 
+**v1, as built** (`indexer/internal/claim`): `indexer project` looks up only self-signed claims on a `domain:` entity, over DNS-over-HTTPS to a resolver set in `DOH_URL` (Cloudflare's by default), or over plain DNS to a server set in `DNS_SERVER` — how the local network checks its `.test` zone. It records whether the resolver validated DNSSEC, and does not yet require it. A pass holds 30 days before the next lookup; a failure is looked up again after 30 seconds, so a record published after the claim counts within a minute. The lookup is observed state (`claim_checks`), never replayed by a rebuild. The `.well-known` fallback is not built.
+
 #### An expiring domain transfers authority
 
 Domain control is a lease, not a property. When `example.com` lapses and someone else registers it, the new owner can publish the TXT record, self-sign a claim, and become the verified representative of `domain:example.com` — with tier-1 authority to rewrite the entity's metadata and to post official-looking responses under every historical review of that company.
@@ -79,8 +81,8 @@ This is inherent to proving control of a domain and is not solvable here; ACME a
 
 The mitigation is presentational, and it belongs to whoever runs an indexer:
 
-- Show **since when** a representative has been verified, not merely that they are.
-- Treat a **change of verified representative** for an entity as a visible event rather than a silent swap, especially when the previous claim lapsed rather than being revoked.
+- Show **since when** a representative has been verified, not merely that they are. (v1 does: `verified_since` resets when a lookup fails, and the entity page shows it.)
+- Treat a **change of verified representative** for an entity as a visible event rather than a silent swap, especially when the previous claim lapsed rather than being revoked. (Not built in v1.)
 - Remember that a bad edit is never destructive: every previous value is retained, and an indexer can fall back to it ([docs/entities.md](./entities.md#verified-representative-edits-are-authoritative-not-unaccountable)).
 
 ### `cnpj` — delegated, bootstraps from `domain`
@@ -117,6 +119,8 @@ Whether the verifier retains the address at all is a policy choice with a conseq
 
 A CAPTCHA (or similar low-friction challenge) at first publication, issued by the gateway/API acting as verifier. Cheap to ship, gives a small weight bump above a completely fresh key without requiring an email.
 
+**v1, as built:** the challenge is a proof of work (ALTCHA) the gateway hands out and the browser solves, so no third party sees the user — a hosted CAPTCHA would ([decisions.md §16.4](./decisions.md#164-claims-the-indexer-checks-domains-itself-the-gateway-issues-human-claims-behind-altcha--call)). The user asks for it on the Verification screen rather than at first publication. Each challenge is accepted once; the gateway then signs a `human` claim about the asking `did:key` with its verifier key (`HUMAN_VERIFIER_SEED`), valid two years, and publishes it. It counts at an indexer that lists that key in `VERIFIERS_FILE`. Since v1 weighs nothing yet, a `human` claim shows as a mark beside the author and changes no score.
+
 ### `purchase` — delegated, deferred
 
 Out of scope for v1 (see [docs/mvp.md](./mvp.md)). Sketch for later: the claim targets a specific review event (`targetReview`, not just `subject`), evidence is a manually-reviewed receipt/document upload, and eventually a merchant could run its own verifier identity and issue these claims directly for real transactions — no protocol change needed, just a new verifier a client can choose to trust.
@@ -124,6 +128,8 @@ Out of scope for v1 (see [docs/mvp.md](./mvp.md)). Sketch for later: the claim t
 ## Where this runs
 
 The actual checks (sending an email, looking up DNS, reviewing a document) are **not a node responsibility** — the node only ever validates signature and schema for any event, including claims. Issuance is a separate, ordinary service (part of the API, or a dedicated verifier service) that talks to the user's client over normal HTTPS, and at the end just publishes a signed event like any other.
+
+In v1 the gateway issues `human` claims and the indexer checks `domain` claims; the two flows are drawn in [diagrams.md §15](./diagrams/diagrams.md#15-claims-as-v1-issues-and-recognizes-them).
 
 ## Revocation
 

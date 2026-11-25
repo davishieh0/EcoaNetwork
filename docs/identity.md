@@ -22,7 +22,9 @@ Web account  →  associated with  →  Cryptographic identity
 
 Its job is syncing preferences, holding an encrypted backup blob on the user's behalf, and enabling multi-device notifications. If the site disappears, the cryptographic identity is still valid on any other compatible client.
 
-Note the precise limit of "aiding recovery": an account can *store* something the user already encrypted, and it can never reconstruct a key it was never given. A user who loses their key and their backup cannot be restored by any amount of account access, and no support process can change that. (v1 doesn't ship this account layer at all — see [docs/mvp.md](./mvp.md#out-of-scope-for-v1).)
+Note the precise limit of "aiding recovery": an account can *store* something the user already encrypted, and it can never reconstruct a key it was never given. A user who loses their key and their backup cannot be restored by any amount of account access, and no support process can change that.
+
+**v1, as built:** the official gateway has accounts (email and password, through Cognito), which it asks for before writing so it can refuse abuse it can attribute. They hold no key and no backup, and nothing ties an account to a `did:key`: the backup is a file the user keeps ([below](#recovery-and-multi-device)).
 
 ## Roles
 
@@ -35,7 +37,7 @@ There are two independent axes — **content roles** (who's publishing/interacti
 | Role | Requires | Can do | Who vouches for it |
 |---|---|---|---|
 | Visitor | Nothing — no keypair | Read, search, browse public profiles | N/A — not even a protocol concept, just a UI state |
-| Pseudonymous identity | An Ed25519 keypair (+ optional `profile.updated`) | Publish reviews, respond, report | The signature alone |
+| Pseudonymous identity | An Ed25519 keypair (+ optional `profile.updated`) | Publish reviews, respond, report | The signature alone (a gateway may ask for an account before forwarding, as v1's does) |
 | Verified identity | One or more **recognized** `verification.claim_created` events — issued by a verifier the consumer trusts, or self-verifiable and actually checked | Same as pseudonymous, with weight in reputation and voting scaled to the strongest claim held | The consumer's own recognition — see *Claims, not tiers* below |
 | Company representative | A recognized claim proving control of the entity's own identifier. In v1 that means `domain`; `cnpj` is deferred | Post official responses, update public entity info for **that identifier** | Same recognition mechanism, applied to entity control — see [docs/entities.md](./entities.md#1-verified-representative--authoritative-by-default) |
 | Moderator | No protocol requirement — any key can publish `moderation.label_created` | Label events (spam, off-policy, illegal, etc. — deliberately *not* "disputed", which is a community vote and a different system) | The client/indexer's own "moderators I follow" list — trust is asserted by the consumer, not granted by the protocol |
@@ -69,13 +71,13 @@ See [docs/architecture.md](./architecture.md#multiple-operators) for how these c
 
 ## Key storage (client-dependent)
 
-Where and how the private key is stored depends entirely on which client is holding it — a browser, a mobile app, a desktop app, and a CLI all have different platform primitives for this, and that choice hasn't been made yet (see [docs/mvp.md](./mvp.md)). What's universal, regardless of platform:
+Where and how the private key is stored depends entirely on which client is holding it — a browser, a mobile app, a desktop app, and a CLI all have different platform primitives for this. What's universal, regardless of platform:
 
 - The key is generated and stays on the user's device. It is never sent to a gateway, API, or any server.
 - Prefer whatever the platform's non-exportable key primitive is, if it has one — so application code can request a signature but never extract the raw private key bytes.
 - Never log the key, never put it in a general-purpose storage location shared with other app data without encrypting it first.
 
-As an illustration of what this looks like for one possible client — a browser-based web frontend — the platform's Web Crypto API can generate a non-extractable `CryptoKey` (`extractable: false`) and hold it in IndexedDB, origin-isolated by the same-origin policy. This is one concrete option, not a commitment to building a web frontend a particular way.
+**v1's web client** does exactly this: the Web Crypto API makes an Ed25519 `CryptoKey` kept non-extractable (`extractable: false`) in IndexedDB, origin-isolated by the same-origin policy. The identity is created on purpose, not on first use; with a password, the key is exportable for the instant it takes to seal a backup, then kept non-extractable ([below](#recovery-and-multi-device), and [decisions.md §16.8](./decisions.md#168-the-identity-is-made-on-purpose-with-its-backup-made-at-that-moment--call)).
 
 ### What "non-extractable" does *not* protect against
 
@@ -89,6 +91,8 @@ Mitigations, platform-agnostic in principle even though the exact mechanism vari
 - For a web client specifically: a strict CSP (`script-src 'self'`, no inline scripts, no third-party analytics/widgets on pages that touch identity) meaningfully shrinks the attack surface.
 - Optional, longer-term, also web-specific: isolate signing into its own subdomain with a much smaller attack surface than the main app.
 
+**v1, as built:** a review is signed only after the user previews exactly what will be signed; a vote, a response, an edit or a label is signed when the user presses the action that names it, without showing the envelope. Every string from the network renders as text (React escapes it; nothing uses raw markup). **No Content-Security-Policy is set yet** on the site's nginx — the cheapest of these mitigations, and an open item.
+
 ## Recovery and multi-device
 
 A non-extractable key can't be exported, which leaves two ways to survive a lost or stolen device:
@@ -97,6 +101,8 @@ A non-extractable key can't be exported, which leaves two ways to survive a lost
 2. **Encrypted backup** — an exportable seed, always encrypted before it leaves the device (password or recovery key). Simpler to reason about, and it covers loss, but it covers nothing about compromise: whoever gets the seed gets the identity. It also shifts the responsibility, and the attack surface, onto the user.
 
 These aren't really alternatives — a root/device identity still wants its root key backed up. The section below specifies the first; the second is a client concern with no protocol surface.
+
+**v1, as built:** the second, made at the only moment a non-extractable key can be backed up — its creation. The key is generated exportable, its PKCS #8 bytes sealed with the user's password (PBKDF2-SHA-256, 600 000 rounds; AES-GCM with the `did:key` as additional data) into a file the browser downloads, and the key is then kept non-extractable. Another browser restores it from the file and the password, and checks the key against the `did:key` before keeping it. An identity made without a password, or before this existed, has no backup, and the client says so.
 
 ### Key rotation
 
@@ -155,7 +161,7 @@ A useful side effect of `author` remaining the identity: swapping device keys ne
 ```
 Client                    Gateway                  Node
 ├─ builds event           ├─ checks size/shape     ├─ recomputes eventId
-├─ shows exact content    ├─ rate limits           ├─ validates schema
+├─ shows exact content    ├─ rate limits (not v1)  ├─ validates schema
 ├─ signs locally          └─ forwards              ├─ verifies signature
 └─ never sends the                                 ├─ resolves references
    private key                                     ├─ applies admission policy
@@ -181,6 +187,8 @@ The protocol already permits the mitigation: **an identity is free, and nothing 
 
 Two things follow for any client. It should make publishing under a fresh identity a visible, one-tap option rather than something a user has to understand the protocol to discover; and it should say plainly, at that moment, what is being traded. What a client must *not* do is silently reuse the default identity for everything and let a user discover the linkage after the fact.
 
+**v1, as built:** the review's preview offers "Publish under a fresh identity", saying what it costs — no claims, no backup, editable only from this browser. The fresh key is kept in the browser beside the main one, so its author can still edit or withdraw that review.
+
 ### And the network layer knows more than the protocol does
 
 Everything above is about linkability *between events*. There is a second, larger exposure that no amount of key hygiene touches: **publishing reveals an IP address.**
@@ -198,11 +206,15 @@ What v1 can honestly do:
 - **Real network anonymity is out of scope.** Tor or a comparable transport is the only genuine answer, and pretending otherwise would be worse than admitting it. A client that supports a proxy at all should make it reachable rather than hidden.
 - **Fresh identity, fresh session.** A client offering throwaway identities should say that changing the key does not change the address, and encourage the two to be separated.
 
+**v1, as built:** the preview says, before publishing, that the gateway and the node see the address, that a fresh key does not change it, and that a published review stays on others' nodes. The gateway logs nothing of an event's content or id, but its HTTP server keeps an ordinary access log — address, time, `POST /api/events` — which a production deployment should drop or salt, since the time alone correlates it with the node's receive time.
+
 ## Anti-abuse (Sybil resistance)
 
 A valid signature only proves *a* key signed something — it says nothing about whether that key is trustworthy. Mitigations, roughly in order of when they'd land:
 
 **Early:** reputation weighted primarily by the recognized claims an identity holds and secondarily by observed age (see *Roles* above), API rate limiting, size/frequency limits, CAPTCHA on public gateways, duplicate-content detection, local peer blocking.
+
+**v1, as built:** per-node admission (100 events per author per hour), the 16 KB ceiling, accounts at the gateway, and a proof-of-work check behind the `human` claim. Weighting by claims and age, gateway rate limiting and duplicate-content detection are not built yet.
 
 **Later:** lightweight proof-of-work for high-volume posting, community invites, external attestations, social-graph-based reputation, coordinated-campaign detection.
 
