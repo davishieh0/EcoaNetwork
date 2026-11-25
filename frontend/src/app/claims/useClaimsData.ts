@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { messageOf } from '@/app/forms/messages'
 import { failureOf, publishSigned } from '@/app/reads/publish'
 import { useRead } from '@/app/reads/useRead'
+import { i18n } from '@/i18n/i18n'
 import { issueHumanClaim } from '@/logic/datasource/claims'
 import { getIdentity } from '@/logic/datasource/identities'
 import { normalizeEntity } from '@/logic/protocol/entity'
@@ -97,7 +98,11 @@ export function useClaimsData() {
       try {
         const result = await issueHumanClaim(did, payload)
         if (result.outcome === 'rejected') {
-          setError(`The network refused the claim: ${result.reason ?? ''}`)
+          setError(
+            i18n.t('The network refused the claim: {{reason}}', {
+              reason: result.reason ?? '',
+            }),
+          )
           return
         }
 
