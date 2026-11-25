@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { AuthShell } from '@/app/auth/AuthShell'
 import { PasswordStrength } from '@/app/auth/PasswordStrength'
@@ -39,6 +40,7 @@ const FIELD_OF: FieldOf<RegisterErrors> = {
  * @returns The register screen.
  */
 export function Register() {
+  const { t } = useTranslation()
   const { submit } = useRegisterData()
   const [handle, setHandle] = useState('')
   const [email, setEmail] = useState('')
@@ -90,9 +92,9 @@ export function Register() {
       lede={LEDE}
       footer={
         <>
-          Already have an account?{' '}
+          {t('Already have an account?')}{' '}
           <Link to={ROUTES.login} className="text-primary underline">
-            Sign in
+            {t('Sign in')}
           </Link>
         </>
       }
@@ -152,7 +154,7 @@ export function Register() {
         />
 
         <Button type="submit" size="lg" pending={submit.pending}>
-          {submit.pending ? 'Creating account' : 'Create account'}
+          {submit.pending ? t('Creating account') : t('Create account')}
         </Button>
       </form>
     </AuthShell>
