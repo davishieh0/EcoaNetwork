@@ -33,6 +33,9 @@ src/
 | `datasource/` | The requesters. `http.ts` holds the one generic `request` over `fetch` and the session renewal; every other file (`auth.ts`, …) holds one function per backend route, built on it. **The only layer that does I/O.** |
 | `errors/` | What a failure is: `HttpError`, the one error a request fails with, and `envelope.ts`, which reads the backend's error envelope into it. Knows the backend's error format, never how to word it for a person. |
 | `session/` | Who is signed in: a store the screens subscribe to with `useSession`. Asks `datasource/` and keeps the answer; sends no request of its own. |
+| `moderation/` | Whose labels this reader follows: a store kept in `localStorage` (`ecoa.moderation`), sent as `?moderators=` on every read. Sends no request of its own. |
+
+Inside `protocol/`, the identity lives in `identity.ts` (the keys in IndexedDB: the main identity, fresh ones under `fresh:<did>`), its backup in `backup.ts` (PBKDF2 and AES-GCM, sealed to the `did:key`), signing in `envelope.ts`, checking an envelope in `verify.ts` (WebCrypto, RFC 8032, until `protocol/ts` brings ZIP-215), reading one in `signed.ts`, and the payloads with rules of their own in `review.ts`, `profile.ts` and `entity.ts`.
 
 ## site/ vs app/
 
@@ -57,7 +60,14 @@ app/
   navigation/       moving between screens: what each screen accepts from
                     the one before is typed in RouteStates, on both ends
   reads/            reading the network: explore/, entity/, review/, and
-                    the hooks and mappings they share
+                    the hooks and mappings they share — publish.ts, the one
+                    sign-and-send every action on a page goes through
+  write/            the review composer and its signed preview
+  identity/         creating or restoring this browser's identity
+                    (IdentitySetup, also shown wherever signing needs one)
+  claims/           verification: the human check and the domain record
+  moderation/       whose labels to follow, and labeling as a moderator
+  dashboard/
   auth/
     AuthShell.tsx   shared by the auth screens
     rules.ts        what the backend accepts, and what a field says when
@@ -66,7 +76,7 @@ app/
     login/          Login.tsx, Login.t.ts, useLoginData.ts
     register/
     …
-  account/
+  account/          the account, and the public profile it signs
   layout/           the chrome and the guards
 ```
 
