@@ -115,6 +115,56 @@ As the rest of the frontend is today.
   show no name until `/profiles?ids=` says which asked key each profile
   answers.
 
+## Acting, verifying, and what the index adds
+
+Built after the read screens, on 2026-11-24:
+
+- **On a review**, its author edits it (a `review.replaced`, checked as a
+  new review is, without the entity) or withdraws it (a `review.withdrawn`
+  with a reason from the protocol's list); anyone else endorses or disputes
+  the current version; everyone signed in responds, to the review or to a
+  response. Each is signed in the browser (`app/reads/publish.ts`), and the
+  page reads again until the index shows it (`expect` in `useReviewData`),
+  keeping what is on screen meanwhile. Acting asks for a complete account,
+  as writing does; whether the review is yours is this browser's key, read
+  without making one (`peekIdentity`).
+- **Verification** (`/app/claims`): the human claim through an ALTCHA proof
+  of work the gateway checks and signs, and the domain claim, signed by the
+  browser once the screen has shown the TXT record to publish. The badges
+  follow: *Verified representative* and *Human* beside an author, *Official
+  response* on the representative's answers, the representative on the
+  entity page.
+- **The summary** of an entity's ratings (`RatingSummary`), and the
+  ranking each index names: the entity page says which. The search filters
+  by category.
+- **The gateway is set at run time**: the site's nginx reads
+  `BACKEND_ORIGIN`, so one build serves any gateway.
+
+## Moderation and identity
+
+Built on 2026-11-24, for the MVP's stages 4 and 5:
+
+- **Whose labels a reader follows** (`/app/moderation`): the index's list,
+  or their own, kept in this browser (`logic/moderation`); every read sends
+  it as `?moderators=` when it is their own, so the same label hides a review
+  for a reader who follows its moderator and nothing for one who does not.
+  **Moderator mode** shows *Label…* on reviews and responses
+  (`moderation.label_created`, the protocol's vocabulary and a note) and
+  *Revoke* on one's own labels.
+- **The public profile** (in the account): display name and bio, a
+  `profile.updated` signed in the browser.
+- **The identity is made on purpose** (`/app/identity`, and in place on the
+  write and verification screens): with a password, the key is exportable
+  for an instant, sealed into a backup file (PBKDF2-SHA-256, 600 000
+  rounds; AES-GCM bound to the did:key), and kept non-extractable; without
+  one, it is non-extractable from the start. Another browser restores it
+  from the file and the password, checking the key against the did:key.
+  Identities made before this have no backup.
+- **A fresh identity per review**, one tap at publishing, kept in this
+  browser so its author can edit or withdraw that review, never backed up;
+  and, at the same moment, the note that the gateway and the node see the
+  author's IP address.
+
 ## Where it lives
 
 ```
