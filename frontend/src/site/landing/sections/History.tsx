@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { VersionStack } from '@/components/ecoa/VersionStack'
 import { Container } from '@/components/ui/Container'
@@ -19,6 +20,7 @@ import { useReveal } from '@/components/ui/useReveal'
  * @returns The History section.
  */
 export function History() {
+  const { t } = useTranslation()
   const reveal = useReveal()
   const reduceMotion = useReducedMotion()
 
@@ -32,12 +34,12 @@ export function History() {
           )}
         >
           <SectionHeading
-            eyebrow="See its history"
-            title="An edit never happens in secret."
-            lede={
+            eyebrow={t('See its history')}
+            title={t('An edit never happens in secret.')}
+            lede={t(
               'When someone changes a review, the old one does not vanish. ' +
-              'Both versions stay, and you can see what changed and when.'
-            }
+                'Both versions stay, and you can see what changed and when.',
+            )}
           />
 
           <motion.div {...reveal(0.18)} className="justify-self-end">
@@ -92,9 +94,9 @@ export function History() {
                   >
                     {/* Ink, not the brand blue: 2.7:1 on paper. */}
                     <h3 className="text-h4 font-semibold text-primary">
-                      {entry.title}
+                      {t(entry.title)}
                     </h3>
-                    <span className="meta text-muted">{entry.at}</span>
+                    <span className="meta text-muted">{t(entry.at)}</span>
                   </div>
 
                   <p
@@ -102,7 +104,7 @@ export function History() {
                       'reading-measure text-body-m text-secondary text-pretty',
                     )}
                   >
-                    {entry.note}
+                    {t(entry.note)}
                   </p>
 
                   {/* For the reader who wants the machine name. */}
@@ -122,8 +124,10 @@ export function History() {
             'text-primary text-pretty',
           )}
         >
-          A platform that lets an edit disappear is asking you to trust its
-          memory. Ecoa asks you to trust arithmetic instead.
+          {t(
+            'A platform that lets an edit disappear is asking you to trust ' +
+              'its memory. Ecoa asks you to trust arithmetic instead.',
+          )}
         </motion.p>
       </Container>
     </Section>
