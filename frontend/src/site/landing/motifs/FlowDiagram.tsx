@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { FlowDiagramProps } from '@/site/landing/motifs/FlowDiagram.t'
 
@@ -25,6 +26,7 @@ const OBSERVERS = [
  * @returns The diagram at that step.
  */
 export function FlowDiagram({ step }: FlowDiagramProps) {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
 
   /**
@@ -65,7 +67,9 @@ export function FlowDiagram({ step }: FlowDiagramProps) {
     <svg
       viewBox="0 0 320 320"
       role="img"
-      aria-label={`Step ${step + 1} of 4 of the publishing flow`}
+      aria-label={t('Step {{n}} of 4 of the publishing flow', {
+        n: step + 1,
+      })}
       className="h-auto w-full overflow-visible"
     >
       {/* 01 — the person. */}
