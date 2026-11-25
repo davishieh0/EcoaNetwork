@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { CircleMark } from '@/components/ecoa/CircleMark'
 import { ProblemGlyph } from '@/site/landing/motifs/ProblemGlyph'
@@ -20,18 +21,19 @@ import { useReveal } from '@/components/ui/useReveal'
  * @returns The Problem section.
  */
 export function Problem() {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
     <Section id="why-ecoa" surface="light">
       <Container className="flex flex-col gap-20">
         <SectionHeading
-          eyebrow="Why this needs to exist"
+          eyebrow={t('Why this needs to exist')}
           title={
             <>
-              A review you{' '}
+              {t('A review you')}{' '}
               <span className="relative inline-block">
-                cannot check
+                {t('cannot check')}
                 {/* The same hand as the hero, on this section's phrase. */}
                 <CircleMark
                   className={cn(
@@ -40,14 +42,14 @@ export function Problem() {
                   delay={0.25}
                 />
               </span>{' '}
-              is just a rumour with stars.
+              {t('is just a rumour with stars.')}
             </>
           }
-          lede={
+          lede={t(
             'Reviews already decide what people buy, eat and trust. The ' +
-            'problem is not that they exist. It is that almost none of them ' +
-            'can be verified by the person reading them.'
-          }
+              'problem is not that they exist. It is that almost none of ' +
+              'them can be verified by the person reading them.',
+          )}
         />
 
         <ol className="flex flex-col border-t border-line">
@@ -70,10 +72,10 @@ export function Problem() {
               </span>
               <ProblemGlyph kind={problem.glyph} />
               <h3 className="text-h4 font-semibold text-pretty md:pt-1">
-                {problem.title}
+                {t(problem.title)}
               </h3>
               <p className="text-body-m text-secondary text-pretty md:pt-1.5">
-                {problem.body}
+                {t(problem.body)}
               </p>
             </motion.li>
           ))}
@@ -81,7 +83,7 @@ export function Problem() {
 
         <div className="flex flex-col gap-6">
           <motion.h3 {...reveal()} className="meta text-muted">
-            The same question, answered twice
+            {t('The same question, answered twice')}
           </motion.h3>
 
           {/* Paired rows make it an argument, not two lists. */}
@@ -93,10 +95,10 @@ export function Problem() {
                     scope="col"
                     className="meta w-[14rem] px-4 py-4 text-muted"
                   >
-                    <span className="sr-only">Dimension</span>
+                    <span className="sr-only">{t('Dimension')}</span>
                   </th>
                   <th scope="col" className="meta px-4 py-4 text-secondary">
-                    Traditional platform
+                    {t('Traditional platform')}
                   </th>
                   {/* The hero's blue arrives as a fill. */}
                   <th
@@ -118,7 +120,7 @@ export function Problem() {
                       scope="row"
                       className="meta px-4 py-5 font-medium text-muted"
                     >
-                      {row.aspect}
+                      {t(row.aspect)}
                     </th>
                     <td
                       className={cn(
@@ -128,7 +130,7 @@ export function Problem() {
                       <span aria-hidden="true" className="mr-2 text-muted">
                         ○
                       </span>
-                      {row.traditional}
+                      {t(row.traditional)}
                     </td>
                     <td
                       className={cn(
@@ -140,7 +142,7 @@ export function Problem() {
                       <span aria-hidden="true" className="mr-2 text-primary">
                         &#9632;
                       </span>
-                      {row.ecoa}
+                      {t(row.ecoa)}
                     </td>
                   </motion.tr>
                 ))}

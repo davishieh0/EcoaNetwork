@@ -6,6 +6,7 @@
 import { motion } from 'motion/react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { messageOf } from '@/app/forms/messages'
 import { LoadMore } from '@/app/reads/LoadMore'
 import { Placeholder } from '@/app/reads/Placeholder'
@@ -54,6 +55,7 @@ export function Explore() {
     loadMore,
   } = useExploreData()
   const rise = useRise()
+  const { t } = useTranslation()
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -61,32 +63,34 @@ export function Explore() {
   }
 
   const status = loading
-    ? 'Searching…'
+    ? t('Searching…')
     : error
       ? messageOf(error)
       : items.length === 0
         ? query || category
-          ? 'Nothing on the network matches this search.'
-          : 'Nothing on the network is named yet.'
+          ? t('Nothing on the network matches this search.')
+          : t('Nothing on the network is named yet.')
         : query
-          ? `Entities named “${query}”`
-          : 'Recently named on the network'
+          ? t('Entities named “{{query}}”', { query })
+          : t('Recently named on the network')
 
   return (
     <Container className="max-w-4xl pt-28 pb-16">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <motion.h1 {...rise()} className="font-display text-h1">
-            Explore
+            {t('Explore')}
           </motion.h1>
           <motion.p {...rise(0.06)} className="text-secondary">
-            Find a business, a website or a product, and read what people
-            signed about it.
+            {t(
+              'Find a business, a website or a product, and read what ' +
+                'people signed about it.',
+            )}
           </motion.p>
         </div>
         <motion.div {...rise(0.12)}>
           <Button as={Link} to={ROUTES.write} variant="secondary">
-            Write a review
+            {t('Write a review')}
           </Button>
         </motion.div>
       </header>
@@ -98,7 +102,7 @@ export function Explore() {
         className="mt-8 flex gap-2"
       >
         <label className="flex flex-1 flex-col gap-2">
-          <span className="sr-only">Search by name</span>
+          <span className="sr-only">{t('Search by name')}</span>
           <input
             // a new search in the address resets what the box shows
             key={query}
@@ -106,14 +110,14 @@ export function Explore() {
             type="search"
             defaultValue={query}
             maxLength={120}
-            placeholder="Business, website, or product name"
+            placeholder={t('Business, website, or product name')}
             className={cn(
               'w-full border border-structural bg-surface p-3',
               'transition-colors duration-interface focus:border-strong',
             )}
           />
         </label>
-        <Button type="submit">Search</Button>
+        <Button type="submit">{t('Search')}</Button>
       </motion.form>
 
       <motion.div {...rise(0.22)} className="mt-3 flex flex-wrap gap-2">
@@ -131,7 +135,7 @@ export function Explore() {
                 : 'border-structural text-secondary hover:text-primary',
             )}
           >
-            {kind ? categoryOf(kind) : 'All'}
+            {kind ? categoryOf(kind) : t('All')}
           </button>
         ))}
       </motion.div>
@@ -166,7 +170,7 @@ export function Explore() {
                   <span className="font-mono text-mono-s text-secondary">
                     {entity.observed.name
                       ? identifierOf(entity.entity)
-                      : 'Not named yet'}
+                      : t('Not named yet')}
                   </span>
                 </span>
                 {/* slides in as the pointer arrives */}

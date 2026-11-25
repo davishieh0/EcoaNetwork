@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { WithdrawReason } from '@/app/reads/review/ReviewPage.t'
 import type { WithdrawReviewProps } from '@/app/reads/review/WithdrawReview.t'
 import { Button } from '@/components/ui/Button'
@@ -33,19 +34,22 @@ export function WithdrawReview({
   onWithdraw,
   onCancel,
 }: WithdrawReviewProps) {
+  const { t } = useTranslation()
   const [reason, setReason] = useState<WithdrawReason | ''>('')
 
   return (
     <section
-      aria-label="Withdraw your review"
+      aria-label={t('Withdraw your review')}
       className="flex flex-col gap-4 border border-danger bg-surface p-6"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-h4">Withdraw your review?</h2>
+        <h2 className="font-display text-h4">{t('Withdraw your review?')}</h2>
         <p className="text-body-s text-secondary">
-          Every version stops being shown here. The signed events stay on
-          the network’s logs, as everything signed does, and anyone can
-          still inspect them. This cannot be undone.
+          {t(
+            'Every version stops being shown here. The signed events stay ' +
+              'on the network’s logs, as everything signed does, and anyone ' +
+              'can still inspect them. This cannot be undone.',
+          )}
         </p>
       </div>
 
@@ -58,14 +62,14 @@ export function WithdrawReview({
 
       <div className="flex flex-wrap justify-end gap-3">
         <Button variant="ghost" type="button" onClick={onCancel}>
-          Keep it
+          {t('Keep it')}
         </Button>
         <Button
           type="button"
           pending={busy}
           onClick={() => void onWithdraw(reason || null)}
         >
-          {busy ? 'Signing and sending' : 'Withdraw'}
+          {busy ? t('Signing and sending') : t('Withdraw')}
         </Button>
       </div>
     </section>

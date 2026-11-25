@@ -5,9 +5,12 @@
 
 // --- IMPORTS ---
 import 'altcha'
+import 'altcha/i18n/pt-br'
 import type {} from 'altcha/types/react'
-import { useEffect, useRef } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { HumanCheckProps } from '@/app/claims/HumanCheck.t'
+import { currentLanguage } from '@/i18n/i18n'
 import { HUMAN_CHALLENGE_URL } from '@/logic/datasource/claims'
 
 // --- CODE ---
@@ -19,7 +22,11 @@ import { HUMAN_CHALLENGE_URL } from '@/logic/datasource/claims'
  */
 export function HumanCheck({ onSolved }: HumanCheckProps) {
   const widget = useRef<HTMLElement>(null)
+  // the widget speaks pt-BR when the interface does, English otherwise
+  useTranslation()
+  const language = currentLanguage() === 'pt-BR' ? 'pt-br' : undefined
 
+  // a new language makes a new widget: listen to that one
   useEffect(() => {
     const element = widget.current
     if (!element) return
@@ -33,15 +40,18 @@ export function HumanCheck({ onSolved }: HumanCheckProps) {
 
     element.addEventListener('statechange', changed)
     return () => element.removeEventListener('statechange', changed)
-  }, [onSolved])
+  }, [onSolved, language])
 
   return (
-    <altcha-widget
-      ref={widget}
-      challenge={HUMAN_CHALLENGE_URL}
-      type="checkbox"
-      display="standard"
-      name="altcha"
-    />
+    <Fragment key={language ?? 'en'}>
+      <altcha-widget
+        ref={widget}
+        language={language}
+        challenge={HUMAN_CHALLENGE_URL}
+        type="checkbox"
+        display="standard"
+        name="altcha"
+      />
+    </Fragment>
   )
 }

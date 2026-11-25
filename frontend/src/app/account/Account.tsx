@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { DeleteAccount } from '@/app/account/DeleteAccount'
 import { PublicProfile } from '@/app/account/PublicProfile'
@@ -21,6 +22,7 @@ import { useRise } from '@/components/ui/useRise'
  * @returns The account screen, or nothing until the account is known.
  */
 export function Account() {
+  const { t } = useTranslation()
   const { account, signOut, remove } = useAccountData()
   const rise = useRise()
 
@@ -39,7 +41,7 @@ export function Account() {
         <div className="flex w-full max-w-md flex-col gap-10">
           <header className="flex flex-col gap-3">
             <motion.p {...rise()} className="meta text-muted">
-              Account
+              {t('Account')}
             </motion.p>
 
             <motion.h1
@@ -66,7 +68,7 @@ export function Account() {
                   'sm:gap-6',
                 )}
               >
-                <dt className="meta shrink-0 text-muted">{detail.label}</dt>
+                <dt className="meta shrink-0 text-muted">{t(detail.label)}</dt>
                 <dd
                   className={cn(
                     'min-w-0 break-all text-primary sm:text-right',
@@ -91,7 +93,7 @@ export function Account() {
               pending={signOut.pending}
               onClick={() => void signOut.run()}
             >
-              {signOut.pending ? 'Signing out' : 'Sign out'}
+              {signOut.pending ? t('Signing out') : t('Sign out')}
             </Button>
           </motion.div>
 
@@ -100,10 +102,12 @@ export function Account() {
             className="flex flex-col gap-4 border-t border-line pt-8"
           >
             <div className="flex flex-col gap-1">
-              <h2 className="meta text-danger">Delete account</h2>
+              <h2 className="meta text-danger">{t('Delete account')}</h2>
               <p className="text-body-s text-secondary text-pretty">
-                Removes the account, frees the handle and ends every session.
-                There is no undo.
+                {t(
+                  'Removes the account, frees the handle and ends every ' +
+                    'session. There is no undo.',
+                )}
               </p>
             </div>
 

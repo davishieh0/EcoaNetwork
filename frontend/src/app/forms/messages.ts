@@ -3,6 +3,7 @@
  */
 
 // --- IMPORTS ---
+import { i18n } from '@/i18n/i18n'
 import { HttpError } from '@/logic/errors/httpError'
 
 // --- GLOBALS ---
@@ -50,12 +51,14 @@ const UNAVAILABLE = 'Something on our side is not answering. Try again soon.'
  * @returns The message to show.
  */
 export function messageOf(error: unknown) {
-  if (!(error instanceof HttpError)) return UNAVAILABLE
+  if (!(error instanceof HttpError)) return i18n.t(UNAVAILABLE)
 
   // a request the form should have caught: say so plainly
   if (error.code === 'request_validation_error') {
-    return 'Some of the details are not valid. Check them and try again.'
+    return i18n.t(
+      'Some of the details are not valid. Check them and try again.',
+    )
   }
 
-  return MESSAGES[error.code] ?? UNAVAILABLE
+  return i18n.t(MESSAGES[error.code] ?? UNAVAILABLE)
 }

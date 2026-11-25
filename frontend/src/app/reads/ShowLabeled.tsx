@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { ShowLabeledProps } from '@/app/reads/ShowLabeled.t'
 
 // --- CODE ---
@@ -15,6 +16,7 @@ import type { ShowLabeledProps } from '@/app/reads/ShowLabeled.t'
  * @returns The toggle.
  */
 export function ShowLabeled({ checked, onChange }: ShowLabeledProps) {
+  const { t } = useTranslation()
   const [wanted, setWanted] = useState(checked)
   const [seen, setSeen] = useState(checked)
 
@@ -34,7 +36,7 @@ export function ShowLabeled({ checked, onChange }: ShowLabeledProps) {
           onChange(event.target.checked)
         }}
       />
-      Show what moderation hides
+      {t('Show what moderation hides')}
     </label>
   )
 }

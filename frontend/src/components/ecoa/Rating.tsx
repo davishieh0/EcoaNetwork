@@ -3,8 +3,10 @@
  */
 
 // --- IMPORTS ---
+import { useTranslation } from 'react-i18next'
 import type { RatingProps } from '@/components/ecoa/Rating.t'
 import { cn } from '@/components/ui/cn'
+import { decimal } from '@/i18n/format'
 
 // --- CODE ---
 /**
@@ -14,6 +16,8 @@ import { cn } from '@/components/ui/cn'
  * @returns The stars and their numeric reading.
  */
 export function Rating({ value, className }: RatingProps) {
+  // subscribes to the language, so the decimal follows it
+  useTranslation()
   const rounded = Math.round(value)
 
   return (
@@ -22,7 +26,7 @@ export function Rating({ value, className }: RatingProps) {
         {'★'.repeat(rounded)}
         <span className="text-muted">{'☆'.repeat(5 - rounded)}</span>
       </span>
-      <span className="meta text-secondary">{value.toFixed(1)} / 5</span>
+      <span className="meta text-secondary">{decimal(value)} / 5</span>
     </p>
   )
 }

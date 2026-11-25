@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { AuthShell } from '@/app/auth/AuthShell'
 import { CODE_LENGTH, EMAIL, INVALID } from '@/app/auth/rules'
@@ -35,6 +36,7 @@ const FIELD_OF = {
  * @returns The verification screen.
  */
 export function VerifyEmail() {
+  const { t } = useTranslation()
   const { confirm, resend, state } = useVerifyData()
   // a sign-in that just sent a code counts as the first ask
   const newCode = useResend(resend, Boolean(state.sent))
@@ -95,19 +97,28 @@ export function VerifyEmail() {
       title={state.unverified ? TITLE_UNVERIFIED : 'Check your inbox.'}
       lede={
         !knownEmail
-          ? `Enter the address you signed up with and the ${CODE_LENGTH}-` +
-            'digit code we sent to it.'
+          ? t(
+              'Enter the address you signed up with and the {{length}}-' +
+                'digit code we sent to it.',
+              { length: CODE_LENGTH },
+            )
           : state.unverified && !state.sent
-            ? `${email} is not confirmed yet. Ask for a new code below, ` +
-              'then enter it here.'
-            : `We sent a ${CODE_LENGTH}-digit code to ${email}. Enter it to ` +
-              'finish creating your account.'
+            ? t(
+                '{{email}} is not confirmed yet. Ask for a new code below, ' +
+                  'then enter it here.',
+                { email },
+              )
+            : t(
+                'We sent a {{length}}-digit code to {{email}}. Enter it to ' +
+                  'finish creating your account.',
+                { length: CODE_LENGTH, email },
+              )
       }
       footer={
         <>
-          Wrong address?{' '}
+          {t('Wrong address?')}{' '}
           <Link to={ROUTES.register} className="text-primary underline">
-            Start again
+            {t('Start again')}
           </Link>
         </>
       }
@@ -144,7 +155,7 @@ export function VerifyEmail() {
 
         <div className="flex flex-col gap-3">
           <Button type="submit" size="lg" pending={confirm.pending}>
-            {confirm.pending ? 'Confirming' : 'Confirm email'}
+            {confirm.pending ? t('Confirming') : t('Confirm email')}
           </Button>
 
           <Button
@@ -159,8 +170,10 @@ export function VerifyEmail() {
         </div>
 
         <p className="text-body-s text-muted text-pretty">
-          Nothing arrived? Check spam before asking for another. A new code
-          retires the one before it.
+          {t(
+            'Nothing arrived? Check spam before asking for another. A new ' +
+              'code retires the one before it.',
+          )}
         </p>
       </form>
     </AuthShell>

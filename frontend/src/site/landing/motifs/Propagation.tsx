@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { PropagationProps } from '@/site/landing/motifs/Propagation.t'
 import { cn } from '@/components/ui/cn'
@@ -39,6 +40,7 @@ const NODES = [
  * @returns The graph, as inline SVG.
  */
 export function Propagation({ className, runKey = 0 }: PropagationProps) {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
 
   /**
@@ -80,7 +82,10 @@ export function Propagation({ className, runKey = 0 }: PropagationProps) {
       className={cn('h-auto w-full overflow-visible', className)}
     >
       <title id="propagation-title">
-        A signed event published at one node and observed by seven others
+        {t(
+          'A signed event published at one node and observed by seven ' +
+            'others',
+        )}
       </title>
 
       <g>

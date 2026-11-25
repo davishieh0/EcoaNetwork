@@ -6,9 +6,11 @@
 import { useId, useRef } from 'react'
 import type { ChangeEvent, ClipboardEvent, KeyboardEvent } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { CodeFieldProps } from '@/components/ui/CodeField.t'
 import { cn } from '@/components/ui/cn'
+import { known } from '@/i18n/i18n'
 
 // --- CODE ---
 /**
@@ -42,6 +44,7 @@ export function CodeField({
   hint,
   autoFocus,
 }: CodeFieldProps) {
+  const { t } = useTranslation()
   const id = useId()
   const reduceMotion = useReducedMotion()
   const boxes = useRef<(HTMLInputElement | null)[]>([])
@@ -120,12 +123,12 @@ export function CodeField({
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor={`${id}-0`} className="meta text-secondary">
-        {label}
+        {known(t, label)}
       </label>
 
       <div
         role="group"
-        aria-label={label}
+        aria-label={known(t, label)}
         aria-describedby={noteId}
         className="flex gap-2"
       >
@@ -143,7 +146,10 @@ export function CodeField({
                 inputMode="numeric"
                 autoComplete={index === 0 ? 'one-time-code' : 'off'}
                 autoFocus={autoFocus && index === 0}
-                aria-label={`Digit ${index + 1} of ${length}`}
+                aria-label={t('Digit {{n}} of {{total}}', {
+                  n: index + 1,
+                  total: length,
+                })}
                 aria-invalid={error ? true : undefined}
                 onChange={(event) => write(index, typedInto(digit, event))}
                 onKeyDown={(event) => onKeyDown(index, event)}
@@ -203,7 +209,7 @@ export function CodeField({
               error ? 'text-danger' : 'text-muted',
             )}
           >
-            {note}
+            {known(t, note)}
           </motion.p>
         ) : null}
       </AnimatePresence>

@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { RespondProps } from '@/app/reads/review/Respond.t'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
@@ -23,6 +24,7 @@ export function Respond({
   onRespond,
   onCancel,
 }: RespondProps) {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const [tried, setTried] = useState(false)
   const box = useRef<HTMLTextAreaElement>(null)
@@ -39,7 +41,7 @@ export function Respond({
 
   return (
     <form
-      aria-label="Respond"
+      aria-label={t('Respond')}
       className="mt-6 flex flex-col gap-3"
       onSubmit={async (event) => {
         event.preventDefault()
@@ -53,7 +55,9 @@ export function Respond({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="meta text-muted">
-          {answering ? `↳ Replying to ${answering}` : 'Respond to the review'}
+          {answering
+            ? `↳ ${t('Replying to {{who}}', { who: answering })}`
+            : t('Respond to the review')}
           {' · '}
           {characters(text)}/{BODY_MAX}
         </span>
@@ -63,7 +67,7 @@ export function Respond({
             onClick={onCancel}
             className="meta cursor-pointer text-muted hover:text-primary"
           >
-            Reply to the review instead
+            {t('Reply to the review instead')}
           </button>
         ) : null}
       </div>
@@ -72,17 +76,17 @@ export function Respond({
         value={text}
         onChange={(event) => setText(event.target.value)}
         rows={3}
-        placeholder="Your response is signed by you, and public."
+        placeholder={t('Your response is signed by you, and public.')}
         className={cn(
           'w-full border border-structural bg-surface p-3',
           'transition-colors duration-interface focus:border-strong',
           problem ? 'border-danger' : '',
         )}
       />
-      {problem ? <p className="text-body-s text-danger">{problem}</p> : null}
+      {problem ? <p className="text-body-s text-danger">{t(problem)}</p> : null}
       <div className="flex justify-end">
         <Button type="submit" pending={busy}>
-          {busy ? 'Signing and sending' : 'Respond'}
+          {busy ? t('Signing and sending') : t('Respond')}
         </Button>
       </div>
     </form>

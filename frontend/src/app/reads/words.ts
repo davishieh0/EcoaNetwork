@@ -3,6 +3,8 @@
  */
 
 // --- IMPORTS ---
+import { dateLocale } from '@/i18n/format'
+import { i18n } from '@/i18n/i18n'
 import type { Entity } from '@/logic/datasource/entities.t'
 
 // --- GLOBALS ---
@@ -13,13 +15,13 @@ const KINDS: Record<string, string> = {
   entity: 'Entity',
 }
 
-const DATE = new Intl.DateTimeFormat('en', {
+const DATE: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
-})
+}
 
-const DATE_TIME = new Intl.DateTimeFormat('en', {
+const DATE_TIME: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
@@ -27,7 +29,7 @@ const DATE_TIME = new Intl.DateTimeFormat('en', {
   minute: '2-digit',
   second: '2-digit',
   timeZoneName: 'short',
-})
+}
 
 // --- CODE ---
 /**
@@ -37,7 +39,7 @@ const DATE_TIME = new Intl.DateTimeFormat('en', {
  * @returns The kind, in words.
  */
 export function kindOf(entity: string): string {
-  return KINDS[entity.slice(0, entity.indexOf(':'))] ?? 'Entity'
+  return i18n.t(KINDS[entity.slice(0, entity.indexOf(':'))] ?? 'Entity')
 }
 
 /**
@@ -78,7 +80,7 @@ export function nameOf(entity: Entity): string {
  */
 export function categoryOf(category: string): string {
   const words = category.replace(/-/g, ' ')
-  return words.charAt(0).toUpperCase() + words.slice(1)
+  return i18n.t(words.charAt(0).toUpperCase() + words.slice(1))
 }
 
 /**
@@ -88,7 +90,7 @@ export function categoryOf(category: string): string {
  * @returns The day, such as "23 Nov 2026".
  */
 export function dateOf(iso: string): string {
-  return DATE.format(new Date(iso))
+  return new Intl.DateTimeFormat(dateLocale(), DATE).format(new Date(iso))
 }
 
 /**
@@ -98,7 +100,7 @@ export function dateOf(iso: string): string {
  * @returns The date and time, with the zone.
  */
 export function momentOf(iso: string): string {
-  return DATE_TIME.format(new Date(iso))
+  return new Intl.DateTimeFormat(dateLocale(), DATE_TIME).format(new Date(iso))
 }
 
 /**

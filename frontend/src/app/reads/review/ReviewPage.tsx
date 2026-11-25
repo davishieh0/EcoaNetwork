@@ -6,6 +6,7 @@
 // --- IMPORTS ---
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { messageOf } from '@/app/forms/messages'
 import { cardOf, repliesOf, versionsOf } from '@/app/reads/cards'
 import { LoadMore } from '@/app/reads/LoadMore'
@@ -30,6 +31,7 @@ import { Container } from '@/components/ui/Container'
 import { useReveal } from '@/components/ui/useReveal'
 import { useRise } from '@/components/ui/useRise'
 import { HttpError } from '@/logic/errors/httpError'
+import { known } from '@/i18n/i18n'
 import { useModeration } from '@/logic/moderation/moderation'
 import { readEnvelope, reviewTextOf } from '@/logic/protocol/signed'
 import { ROUTES } from '@/routes'
@@ -91,6 +93,7 @@ export function ReviewPage() {
   const answering = answered
     ? (names[answered.authorId] ?? shortOf(answered.authorId))
     : null
+  const { t } = useTranslation()
   const rise = useRise()
   const reveal = useReveal()
   const reduceMotion = useReducedMotion()
@@ -110,14 +113,14 @@ export function ReviewPage() {
   } as const
 
   const conversation = pending
-    ? 'Nobody has responded yet.'
+    ? t('Nobody has responded yet.')
     : responses.error
       ? messageOf(responses.error)
       : responses.loading
-        ? 'Reading the conversation…'
+        ? t('Reading the conversation…')
         : responses.items.length === 0
-          ? 'Nobody has responded yet.'
-          : 'In the order it happened'
+          ? t('Nobody has responded yet.')
+          : t('In the order it happened')
 
   return (
     <Container className="max-w-3xl pt-28 pb-16">
@@ -134,13 +137,13 @@ export function ReviewPage() {
             to={ROUTES.explore}
             className="text-muted transition-colors hover:text-primary"
           >
-            ← Explore
+            ← {t('Explore')}
           </Link>
         )}
       </motion.p>
 
       <motion.h1 {...rise(0.06)} className="mt-4 font-display text-h2">
-        Review
+        {t('Review')}
       </motion.h1>
 
       {review.loading && !pending ? (
@@ -154,10 +157,10 @@ export function ReviewPage() {
           {...rise(0.1)}
           className="mt-6 border border-structural bg-surface p-6"
         >
-          <h2 className="font-display text-h4">{gone.title}</h2>
-          <p className="reading-measure mt-2 text-secondary">{gone.body}</p>
+          <h2 className="font-display text-h4">{t(gone.title)}</h2>
+          <p className="reading-measure mt-2 text-secondary">{t(gone.body)}</p>
           <p className="meta mt-4 break-all text-muted">
-            Event /{' '}
+            {t('Event')} /{' '}
             <span className="font-mono normal-case">{eventId}</span>
           </p>
           {status === 410 ? (
@@ -169,7 +172,7 @@ export function ReviewPage() {
                 'text-primary transition-colors hover:text-secondary'
               }
             >
-              Inspect the signed event ↗
+              {t('Inspect the signed event ↗')}
             </button>
           ) : null}
         </motion.section>
@@ -190,9 +193,11 @@ export function ReviewPage() {
                     'mt-6 border-l-2 border-info bg-info-wash px-4 py-3'
                   }
                 >
-                  Published. The index has not caught up with it yet, so this
-                  is the review as your browser signed it; it is read again in
-                  a moment.
+                  {t(
+                    'Published. The index has not caught up with it yet, so ' +
+                      'this is the review as your browser signed it; it is ' +
+                      'read again in a moment.',
+                  )}
                 </p>
               </motion.div>
             ) : null}
@@ -204,8 +209,10 @@ export function ReviewPage() {
               role="note"
               className="mt-6 border-l-2 border-info bg-info-wash px-4 py-3"
             >
-              The link points to an earlier version. Below is the current
-              one; the version linked is marked in the history.
+              {t(
+                'The link points to an earlier version. Below is the ' +
+                  'current one; the version linked is marked in the history.',
+              )}
             </motion.p>
           ) : null}
 
@@ -274,8 +281,8 @@ export function ReviewPage() {
                   <LabelForm
                     what={
                       actions.labeling === headId
-                        ? 'this review'
-                        : 'this response'
+                        ? t('this review')
+                        : t('this response')
                     }
                     busy={actions.busy}
                     onLabel={actions.label}
@@ -294,7 +301,7 @@ export function ReviewPage() {
                   className="flex flex-wrap items-center gap-3"
                 >
                   <span className="meta text-muted">
-                    Your label · {applied.label}
+                    {t('Your label')} · {applied.label}
                   </span>
                   <button
                     type="button"
@@ -304,7 +311,7 @@ export function ReviewPage() {
                       'meta cursor-pointer text-secondary hover:text-primary'
                     }
                   >
-                    Revoke
+                    {t('Revoke')}
                   </button>
                 </li>
               ))}
@@ -315,7 +322,8 @@ export function ReviewPage() {
             text={
               actions.error ??
               (following
-                ? `${actions.notice ?? 'Published.'} Waiting for the index…`
+                ? `${known(t, actions.notice ?? 'Published.')} ` +
+                  t('Waiting for the index…')
                 : (actions.notice ?? ''))
             }
             failed={!!actions.error}
@@ -326,17 +334,17 @@ export function ReviewPage() {
               to={ROUTES.identity}
               className="meta mt-1 inline-block border-b border-signal"
             >
-              Create or restore your identity →
+              {t('Create or restore your identity →')}
             </Link>
           ) : null}
 
           {versions.length > 1 ? (
             <motion.section {...reveal()} className="mt-12">
               <h2 className="font-display text-h4">
-                History · {versions.length} versions
+                {t('History · {{n}} versions', { n: versions.length })}
               </h2>
               <p className="meta mt-1 text-muted">
-                An edit adds a version; none is erased.
+                {t('An edit adds a version; none is erased.')}
               </p>
               <VersionHistory
                 versions={versions}
@@ -348,7 +356,7 @@ export function ReviewPage() {
 
           <motion.section {...reveal()} className="mt-12">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="font-display text-h4">Conversation</h2>
+              <h2 className="font-display text-h4">{t('Conversation')}</h2>
               <ShowLabeled checked={labeled} onChange={showLabeled} />
             </div>
             <Status

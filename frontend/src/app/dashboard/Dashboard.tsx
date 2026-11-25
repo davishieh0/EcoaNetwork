@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { motion } from 'motion/react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import type { Shortcut } from '@/app/dashboard/Dashboard.t'
 import { useDashboardData } from '@/app/dashboard/useDashboardData'
@@ -51,11 +52,12 @@ const TILE = cn(
  * @returns The tile.
  */
 function Tile({ title, body, to }: Shortcut) {
+  const { t } = useTranslation()
   const content = (
     <>
       <span className="flex items-baseline justify-between gap-4">
         <span className="font-display text-h4 font-semibold tracking-heading">
-          {title}
+          {t(title)}
         </span>
         {to ? (
           <span
@@ -70,11 +72,11 @@ function Tile({ title, body, to }: Shortcut) {
           </span>
         ) : null}
       </span>
-      <span className="text-body-s text-secondary text-pretty">{body}</span>
+      <span className="text-body-s text-secondary text-pretty">{t(body)}</span>
       {to ? null : (
         <span className="mt-auto pt-2">
           <Badge tone="neutral" className="whitespace-nowrap">
-            Coming soon
+            {t('Coming soon')}
           </Badge>
         </span>
       )}
@@ -104,6 +106,7 @@ function Tile({ title, body, to }: Shortcut) {
  * @returns The dashboard, or nothing until the account is known.
  */
 export function Dashboard() {
+  const { t } = useTranslation()
   const { account } = useDashboardData()
   const rise = useRise()
 
@@ -116,7 +119,7 @@ export function Dashboard() {
         <div className="flex w-full max-w-3xl flex-col gap-10">
           <header className="flex flex-col gap-3">
             <motion.p {...rise()} className="meta text-muted">
-              Home
+              {t('Home')}
             </motion.p>
 
             <motion.h1
@@ -126,15 +129,17 @@ export function Dashboard() {
                 'text-balance break-words',
               )}
             >
-              Welcome, @{account.handle}.
+              {t('Welcome, @{{handle}}.', { handle: account.handle })}
             </motion.h1>
 
             <motion.p
               {...rise(0.12)}
               className="text-body-m text-secondary text-pretty"
             >
-              Your reviews and replies will live here. For now, this is where
-              signing in lands.
+              {t(
+                'Your reviews and replies will live here. For now, this is ' +
+                  'where signing in lands.',
+              )}
             </motion.p>
           </header>
 

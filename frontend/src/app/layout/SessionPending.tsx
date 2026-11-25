@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { Container } from '@/components/ui/Container'
 
@@ -14,6 +15,7 @@ import { Container } from '@/components/ui/Container'
  * @returns The placeholder.
  */
 export function SessionPending() {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
 
   return (
@@ -31,7 +33,7 @@ export function SessionPending() {
             }
           />
         </div>
-        <span className="sr-only">Checking your session</span>
+        <span className="sr-only">{t('Checking your session')}</span>
       </Container>
     </section>
   )

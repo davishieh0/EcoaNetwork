@@ -6,6 +6,7 @@
 // --- IMPORTS ---
 import { useEffect, useRef } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { Seal } from '@/app/write/Seal'
 import type {
@@ -58,6 +59,8 @@ function Segment({
   mono?: boolean
   breakAll?: boolean
 }) {
+  const { t } = useTranslation()
+
   return (
     <div
       className={cn(
@@ -65,7 +68,7 @@ function Segment({
         'last:border-b-0',
       )}
     >
-      <dt className="meta text-muted">{label}</dt>
+      <dt className="meta text-muted">{t(label)}</dt>
       <dd
         className={cn(
           'min-w-0 text-primary',
@@ -121,6 +124,7 @@ function statusOf(phase: SignedPhase): string {
  * @returns The block.
  */
 export function SignedPreview({ phase, onEdit }: SignedPreviewProps) {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
   const block = useRef<HTMLElement>(null)
 
@@ -163,10 +167,10 @@ export function SignedPreview({ phase, onEdit }: SignedPreviewProps) {
               id="signed-preview"
               className="font-display text-h3 font-semibold tracking-heading"
             >
-              What gets signed
+              {t('What gets signed')}
             </h2>
             <p className="meta text-muted" aria-live="polite">
-              {statusOf(phase)}
+              {t(statusOf(phase))}
             </p>
           </div>
           <Seal ready sealed={sealed} />
@@ -175,19 +179,25 @@ export function SignedPreview({ phase, onEdit }: SignedPreviewProps) {
         <dl className="flex flex-col px-6 pt-4 pb-2">
           <Segment label="Event type" value="review.created" mono />
           <Segment label="Entity" value={phase.payload.entity} mono />
-          <Segment label="Rating" value={`${phase.payload.rating} of 5`} mono />
+          <Segment
+            label="Rating"
+            value={t('{{n}} of 5', { n: phase.payload.rating })}
+            mono
+          />
           {phase.payload.title ? (
             <Segment label="Title" value={phase.payload.title} />
           ) : null}
           <Segment
             label="Body"
-            value={`${characters(phase.payload.body)} characters`}
+            value={t('{{n}} characters', {
+              n: characters(phase.payload.body),
+            })}
             mono
           />
           {phase.payload.lang ? (
             <Segment
               label="Language"
-              value={LANGUAGES[phase.payload.lang] ?? phase.payload.lang}
+              value={t(LANGUAGES[phase.payload.lang] ?? phase.payload.lang)}
             />
           ) : null}
           <Segment label="Created at" value={phase.createdAt} mono />
@@ -238,8 +248,11 @@ export function SignedPreview({ phase, onEdit }: SignedPreviewProps) {
           )}
         >
           <p className="max-w-md text-body-s text-secondary text-pretty">
-            Once published, this stays on the network. You can publish a new
-            version or withdraw it later, but the original is never erased.
+            {t(
+              'Once published, this stays on the network. You can publish a ' +
+                'new version or withdraw it later, but the original is never ' +
+                'erased.',
+            )}
           </p>
           {phase.name === 'checked' ? (
             <Button
@@ -248,7 +261,7 @@ export function SignedPreview({ phase, onEdit }: SignedPreviewProps) {
               size="sm"
               onClick={onEdit}
             >
-              Edit review
+              {t('Edit review')}
             </Button>
           ) : null}
         </div>

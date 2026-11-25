@@ -6,6 +6,7 @@
 import { cn } from '@/components/ui/cn'
 import { motion } from 'motion/react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { CircleMark } from '@/components/ecoa/CircleMark'
 import { Button } from '@/components/ui/Button'
@@ -21,6 +22,7 @@ import { useReveal } from '@/components/ui/useReveal'
  * @returns The FinalCta section.
  */
 export function FinalCta() {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
@@ -33,11 +35,11 @@ export function FinalCta() {
             'uppercase text-balance',
           )}
         >
-          Every experience
+          {t('Every experience')}
           <br />
-          leaves an{' '}
+          {t('leaves an')}{' '}
           <span className="relative inline-block">
-            echo
+            {t('echo')}
             <CircleMark
               className="absolute -inset-x-6 -inset-y-5 -z-10 overflow-visible"
               delay={0.2}
@@ -52,7 +54,7 @@ export function FinalCta() {
             'font-display text-h2 font-medium tracking-heading text-secondary',
           )}
         >
-          What will yours say?
+          {t('What will yours say?')}
         </motion.p>
 
         <motion.div
@@ -60,18 +62,18 @@ export function FinalCta() {
           className="flex flex-wrap items-center justify-center gap-3"
         >
           <Button as={Link} to={ROUTES.explore} size="lg">
-            Explore Ecoa
+            {t('Explore Ecoa')}
           </Button>
           <Button as={Link} to={ROUTES.register} variant="secondary" size="lg">
-            Create identity
+            {t('Create identity')}
           </Button>
           <Button as={Link} to={ROUTES.write} variant="ghost" size="lg">
-            Write a review
+            {t('Write a review')}
           </Button>
         </motion.div>
 
         <motion.p {...reveal(0.26)} className="meta text-muted">
-          Reading needs no account
+          {t('Reading needs no account')}
         </motion.p>
       </Container>
     </Section>

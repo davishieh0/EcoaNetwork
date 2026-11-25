@@ -3,6 +3,7 @@
  */
 
 // --- IMPORTS ---
+import { useTranslation } from 'react-i18next'
 import type { ReviewCardProps } from '@/components/ecoa/ReviewCard.t'
 import { Badge } from '@/components/ui/Badge'
 import { Rating } from '@/components/ecoa/Rating'
@@ -22,6 +23,7 @@ export function ReviewCard({
   actions,
   className,
 }: ReviewCardProps) {
+  const { t } = useTranslation()
   // which version, when the card knows it
   const version =
     typeof review.edited === 'number' ? ` · v${review.edited}` : ''
@@ -92,12 +94,13 @@ export function ReviewCard({
         {review.edited ? (
           // Foundation: an edit publishes a new version, it never overwrites.
           <Badge tone="neutral" glyph="■">
-            Replaced{version}
+            {t('Replaced')}
+            {version}
           </Badge>
         ) : null}
         {review.labels?.map((label) => (
           <Badge key={label} tone="warning" glyph="●">
-            Labeled · {label}
+            {t('Labeled')} · {label}
           </Badge>
         ))}
         {review.endorsements !== undefined ? (
@@ -114,13 +117,15 @@ export function ReviewCard({
         )}
       >
         <p className="meta break-all text-muted">
-          Event /{' '}
+          {t('Event')} /{' '}
           <span className="font-mono text-mono-s normal-case">
             {review.eventId}
           </span>
           {review.observedBy !== undefined
-            ? ` · Observed by / ${String(review.observedBy).padStart(2, '0')}` +
-              ' nodes'
+            ? ' · ' +
+              t('Observed by / {{n}} nodes', {
+                n: String(review.observedBy).padStart(2, '0'),
+              })
             : null}
         </p>
         {actions}
@@ -135,7 +140,7 @@ export function ReviewCard({
               'hover:text-secondary',
             )}
           >
-            Inspect event ↗
+            {t('Inspect event ↗')}
           </button>
         ) : null}
       </footer>

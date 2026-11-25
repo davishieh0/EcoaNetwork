@@ -7,9 +7,11 @@ import { cn } from '@/components/ui/cn'
 import * as Dialog from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { EventInspectorProps } from '@/components/ecoa/EventInspector.t'
 import { Badge } from '@/components/ui/Badge'
+import { known } from '@/i18n/i18n'
 
 // --- GLOBALS ---
 // never colour alone: each state has a glyph and a label
@@ -70,6 +72,7 @@ export function EventInspector({
   event,
   error,
 }: EventInspectorProps) {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
 
   return (
@@ -111,22 +114,24 @@ export function EventInspector({
                     'font-display text-h3 font-semibold tracking-heading',
                   )}
                 >
-                  Signed event
+                  {t('Signed event')}
                 </Dialog.Title>
                 <Dialog.Description className="text-body-s text-secondary">
-                  Everything a stranger needs to check this review, without
-                  asking Ecoa for permission.
+                  {t(
+                    'Everything a stranger needs to check this review, ' +
+                      'without asking Ecoa for permission.',
+                  )}
                 </Dialog.Description>
               </div>
               <Dialog.Close
-                aria-label="Close event inspector"
+                aria-label={t('Close event inspector')}
                 className={cn(
                   'meta cursor-pointer border border-structural px-3 py-2',
                   'text-secondary transition-colors duration-interface',
                   'hover:text-primary',
                 )}
               >
-                Close
+                {t('Close')}
               </Dialog.Close>
             </header>
 
@@ -136,7 +141,7 @@ export function EventInspector({
               </p>
             ) : !event ? (
               <p role="status" className="meta px-6 py-5 text-muted">
-                Reading the event…
+                {t('Reading the event…')}
               </p>
             ) : (
               <motion.div
@@ -147,7 +152,10 @@ export function EventInspector({
               >
                 <dl className="flex flex-col">
                   {event.rows.map((row) => (
-                    <Row key={`${row.label}:${row.value}`} label={row.label}>
+                    <Row
+                      key={`${row.label}:${row.value}`}
+                      label={known(t, row.label)}
+                    >
                       {row.value}
                     </Row>
                   ))}
@@ -180,7 +188,7 @@ export function EventInspector({
                           tone={CHECKS[event.check.state].tone}
                           glyph={CHECKS[event.check.state].glyph}
                         >
-                          {CHECKS[event.check.state].label}
+                          {t(CHECKS[event.check.state].label)}
                         </Badge>
                       </motion.span>
                     ) : null}
@@ -191,17 +199,17 @@ export function EventInspector({
                       tone={badge.tone}
                       glyph={badge.glyph}
                     >
-                      {badge.label}
+                      {known(t, badge.label)}
                     </Badge>
                   ))}
                   {event.check?.state === 'invalid' ? (
                     <p className="w-full text-body-s text-danger">
-                      {event.check.reason}
+                      {known(t, event.check.reason)}
                     </p>
                   ) : null}
                   {event.check?.state === 'unchecked' ? (
                     <p className="w-full text-body-s text-secondary">
-                      {event.check.reason}
+                      {known(t, event.check.reason)}
                     </p>
                   ) : null}
                 </div>
@@ -214,13 +222,13 @@ export function EventInspector({
                     )}
                   >
                     {event.notes.map((note) => (
-                      <li key={note}>{note}</li>
+                      <li key={note}>{known(t, note)}</li>
                     ))}
                   </ul>
                 ) : null}
 
                 <div className="flex flex-col gap-3 px-6 py-5">
-                  <p className="meta text-muted">Raw envelope</p>
+                  <p className="meta text-muted">{t('Raw envelope')}</p>
                   <pre
                     className={cn(
                       'overflow-x-auto border border-line bg-surface-sunken',
@@ -230,8 +238,11 @@ export function EventInspector({
                     {readable(event.raw)}
                   </pre>
                   <p className="text-body-s text-muted">
-                    Formatted for reading. The signature covers its canonical
-                    form (JCS), which any copy of it gives back.
+                    {t(
+                      'Formatted for reading. The signature covers its ' +
+                        'canonical form (JCS), which any copy of it gives ' +
+                        'back.',
+                    )}
                   </p>
                 </div>
               </motion.div>

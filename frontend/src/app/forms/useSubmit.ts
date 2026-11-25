@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { messageOf } from '@/app/forms/messages'
 import type { Submit } from '@/app/forms/useSubmit.t'
@@ -19,6 +20,8 @@ import { HttpError } from '@/logic/errors/httpError'
 export function useSubmit<A extends unknown[]>(
   action: (...args: A) => Promise<void>,
 ): Submit<A> {
+  // the message is worded at render, in the current language
+  useTranslation()
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<unknown>(null)
 

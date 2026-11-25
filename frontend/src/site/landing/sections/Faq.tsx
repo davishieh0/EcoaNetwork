@@ -6,6 +6,7 @@
 import { cn } from '@/components/ui/cn'
 import * as Accordion from '@radix-ui/react-accordion'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { Container } from '@/components/ui/Container'
 import { Section, SectionHeading } from '@/site/landing/Section'
@@ -19,6 +20,7 @@ import { useReveal } from '@/components/ui/useReveal'
  * @returns The Faq section.
  */
 export function Faq() {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
@@ -29,8 +31,8 @@ export function Faq() {
         )}
       >
         <SectionHeading
-          eyebrow="FAQ"
-          title="Short answers."
+          eyebrow={t('FAQ')}
+          title={t('Short answers.')}
           className="gap-4"
         />
 
@@ -60,7 +62,7 @@ export function Faq() {
                       {String(index + 1).padStart(2, '0')}
                     </span>
                     <span className="flex-1 text-h4 font-semibold text-pretty">
-                      {item.question}
+                      {t(item.question)}
                     </span>
                     {/* One identity that moves, not two that alternate. */}
                     <span
@@ -88,7 +90,7 @@ export function Faq() {
                       'text-pretty',
                     )}
                   >
-                    {item.answer}
+                    {t(item.answer)}
                   </p>
                 </Accordion.Content>
               </Accordion.Item>

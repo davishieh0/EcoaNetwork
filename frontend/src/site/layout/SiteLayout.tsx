@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { cn } from '@/components/ui/cn'
 import { Outlet } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import type { SiteLayoutProps } from '@/site/layout/SiteLayout.t'
 import { SiteFooter } from '@/site/layout/SiteFooter'
@@ -18,6 +19,8 @@ import { SiteNav } from '@/site/layout/SiteNav'
  * @returns The chrome, with the matched route rendered inside it.
  */
 export function SiteLayout({ nav = true }: SiteLayoutProps) {
+  const { t } = useTranslation()
+
   return (
     <>
       {nav ? (
@@ -30,7 +33,7 @@ export function SiteLayout({ nav = true }: SiteLayoutProps) {
               'focus:translate-y-0',
             )}
           >
-            Skip to content
+            {t('Skip to content')}
           </a>
 
           <SiteNav />

@@ -5,9 +5,11 @@
 // --- IMPORTS ---
 import { useId, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { FieldProps } from '@/components/ui/Field.t'
 import { cn } from '@/components/ui/cn'
+import { known } from '@/i18n/i18n'
 
 // --- CODE ---
 /**
@@ -25,6 +27,7 @@ export function Field({
   revealPassword = false,
   ...props
 }: FieldProps) {
+  const { t } = useTranslation()
   const generated = useId()
   const [visible, setVisible] = useState(false)
   const canReveal = revealPassword && props.type === 'password'
@@ -36,12 +39,13 @@ export function Field({
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       <label htmlFor={id} className="meta text-secondary">
-        {label}
+        {known(t, label)}
       </label>
 
       <div className="relative flex flex-col">
         <input
           {...props}
+          placeholder={props.placeholder && known(t, props.placeholder)}
           id={id}
           type={canReveal && visible ? 'text' : props.type}
           aria-describedby={noteId}
@@ -57,7 +61,9 @@ export function Field({
         {canReveal ? (
           <button
             type="button"
-            aria-label={`${visible ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+            aria-label={t(visible ? 'Hide {{field}}' : 'Show {{field}}', {
+              field: known(t, label).toLowerCase(),
+            })}
             aria-controls={id}
             disabled={props.disabled}
             onClick={() => setVisible((current) => !current)}
@@ -107,7 +113,7 @@ export function Field({
               error ? 'text-danger' : 'text-muted',
             )}
           >
-            {note}
+            {known(t, note)}
           </motion.p>
         ) : null}
       </AnimatePresence>

@@ -4,9 +4,11 @@
 
 // --- IMPORTS ---
 import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import type { TooltipProps } from '@/components/ui/Tooltip.t'
 import { cn } from '@/components/ui/cn'
+import { known } from '@/i18n/i18n'
 
 // --- GLOBALS ---
 type TooltipState = 'closed' | 'hover' | 'focus' | 'pinned'
@@ -19,6 +21,7 @@ type TooltipState = 'closed' | 'hover' | 'focus' | 'pinned'
  * @returns The tooltip.
  */
 export function Tooltip({ label, children }: TooltipProps) {
+  const { t } = useTranslation()
   const id = useId()
   const [state, setState] = useState<TooltipState>('closed')
   const open = state !== 'closed'
@@ -35,7 +38,7 @@ export function Tooltip({ label, children }: TooltipProps) {
     >
       <button
         type="button"
-        aria-label={label}
+        aria-label={known(t, label)}
         aria-describedby={open ? id : undefined}
         aria-expanded={open}
         onClick={() =>
@@ -71,7 +74,7 @@ export function Tooltip({ label, children }: TooltipProps) {
           'text-secondary normal-case tracking-normal text-pretty',
         )}
       >
-        {children}
+        {typeof children === 'string' ? known(t, children) : children}
       </span>
     </span>
   )

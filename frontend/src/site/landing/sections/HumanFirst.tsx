@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { cn } from '@/components/ui/cn'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { CircleMark } from '@/components/ecoa/CircleMark'
 import { Rating } from '@/components/ecoa/Rating'
@@ -20,6 +21,7 @@ import { useReveal } from '@/components/ui/useReveal'
  * @returns The HumanFirst section.
  */
 export function HumanFirst() {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
@@ -32,24 +34,26 @@ export function HumanFirst() {
             'tracking-display text-balance',
           )}
         >
-          Your experience shouldn&rsquo;t disappear inside{' '}
+          {t('Your experience shouldn’t disappear inside')}{' '}
           <span className="relative inline-block">
-            someone else&rsquo;s
+            {t('someone else’s')}
             <CircleMark
               variant="underline"
               className="absolute -bottom-2 left-0 h-3 w-full overflow-visible"
               delay={0.25}
             />
           </span>{' '}
-          database.
+          {t('database.')}
         </motion.blockquote>
 
         <motion.p
           {...reveal(0.1)}
           className="reading-measure text-body-l text-secondary text-pretty"
         >
-          Everything above exists so that this part can be ordinary: a person
-          writes what happened, and it stays theirs.
+          {t(
+            'Everything above exists so that this part can be ordinary: a ' +
+              'person writes what happened, and it stays theirs.',
+          )}
         </motion.p>
 
         <ul
@@ -65,7 +69,7 @@ export function HumanFirst() {
               className="flex flex-col gap-5 bg-surface p-8"
             >
               <div className="flex flex-col gap-1">
-                <span className="meta text-muted">{review.kind}</span>
+                <span className="meta text-muted">{t(review.kind)}</span>
                 <span
                   className={cn(
                     'font-display text-h4 font-semibold tracking-heading',
@@ -79,7 +83,7 @@ export function HumanFirst() {
 
               {/* Human content: no tracking, no mono. */}
               <p className="flex-1 text-body-m text-secondary text-pretty">
-                {review.body}
+                {t(review.body)}
               </p>
 
               <span className="meta text-muted">{review.author}</span>

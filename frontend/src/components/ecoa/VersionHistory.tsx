@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import type { VersionHistoryProps } from '@/components/ecoa/VersionHistory.t'
 import { Rating } from '@/components/ecoa/Rating'
 import { Badge } from '@/components/ui/Badge'
@@ -22,6 +23,7 @@ export function VersionHistory({
   onInspect,
   className,
 }: VersionHistoryProps) {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
@@ -41,12 +43,12 @@ export function VersionHistory({
             </span>
             {version.current ? (
               <Badge tone="signal" glyph="●">
-                Current
+                {t('Current')}
               </Badge>
             ) : null}
             {version.asked && !version.current ? (
               <Badge tone="info" glyph="◆">
-                The version linked
+                {t('The version linked')}
               </Badge>
             ) : null}
             <span className="meta text-muted">{version.publishedAt}</span>
@@ -69,7 +71,7 @@ export function VersionHistory({
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <span className="meta text-muted">
               ▲ {version.endorsements} · ▼ {version.disputes}
-              {version.current ? '' : ' on this version'}
+              {version.current ? '' : ' ' + t('on this version')}
             </span>
             {onInspect ? (
               <button

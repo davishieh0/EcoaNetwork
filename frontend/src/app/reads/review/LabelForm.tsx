@@ -5,6 +5,7 @@
 
 // --- IMPORTS ---
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { LabelFormProps } from '@/app/reads/review/LabelForm.t'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
@@ -38,13 +39,14 @@ export function LabelForm({
   onLabel,
   onCancel,
 }: LabelFormProps) {
+  const { t } = useTranslation()
   const [label, setLabel] = useState<string>('spam')
   const [note, setNote] = useState('')
   const tooLong = characters(note) > NOTE_MAX
 
   return (
     <form
-      aria-label={`Label ${what}`}
+      aria-label={t('Label {{what}}', { what: t(what) })}
       className="flex flex-col gap-4 border border-warning bg-surface p-5"
       onSubmit={(event) => {
         event.preventDefault()
@@ -52,14 +54,18 @@ export function LabelForm({
       }}
     >
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-h4">Label {what}</h2>
+        <h2 className="font-display text-h4">
+          {t('Label {{what}}', { what: t(what) })}
+        </h2>
         <p className="text-body-s text-secondary">
-          Signed by you. It counts for the readers who follow you; the event
-          stays on the network either way.
+          {t(
+            'Signed by you. It counts for the readers who follow you; the ' +
+              'event stays on the network either way.',
+          )}
         </p>
       </div>
 
-      <div role="radiogroup" aria-label="Label" className="grid gap-2">
+      <div role="radiogroup" aria-label={t('Label')} className="grid gap-2">
         {LABELS.map((option) => (
           <button
             key={option.value}
@@ -76,14 +82,14 @@ export function LabelForm({
             )}
           >
             <span className="font-mono text-mono-s">{option.value}</span>
-            <span className="text-body-s text-muted">{option.effect}</span>
+            <span className="text-body-s text-muted">{t(option.effect)}</span>
           </button>
         ))}
       </div>
 
       <label className="flex flex-col gap-1">
         <span className="meta text-muted">
-          Note, optional · {characters(note)}/{NOTE_MAX}
+          {t('Note, optional')} · {characters(note)}/{NOTE_MAX}
         </span>
         <input
           value={note}
@@ -97,10 +103,10 @@ export function LabelForm({
 
       <div className="flex flex-wrap justify-end gap-3">
         <Button variant="ghost" type="button" onClick={onCancel}>
-          Cancel
+          {t('Cancel')}
         </Button>
         <Button type="submit" pending={busy} disabled={tooLong}>
-          {busy ? 'Signing and sending' : 'Publish the label'}
+          {busy ? t('Signing and sending') : t('Publish the label')}
         </Button>
       </div>
     </form>

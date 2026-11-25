@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { cn } from '@/components/ui/cn'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { ClaimGlyph } from '@/components/ecoa/ClaimGlyph'
 import { Badge } from '@/components/ui/Badge'
@@ -20,19 +21,20 @@ import { useReveal } from '@/components/ui/useReveal'
  * @returns The Trust section.
  */
 export function Trust() {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
     <Section id="trust">
       <Container className="flex flex-col gap-16">
         <SectionHeading
-          eyebrow="Understand trust"
-          title="There is no blue tick, and that is the feature."
-          lede={
+          eyebrow={t('Understand trust')}
+          title={t('There is no blue tick, and that is the feature.')}
+          lede={t(
             'Ecoa never certifies a person. It shows which specific claim ' +
-            'someone made, who checked it, and what that check does not ' +
-            'cover.'
-          }
+              'someone made, who checked it, and what that check does not ' +
+              'cover.',
+          )}
         />
 
         <ul className="grid grid-cols-1 border-t border-line md:grid-cols-2">
@@ -51,29 +53,29 @@ export function Trust() {
                 )}
               >
                 <Badge tone={claim.tone} glyph="◆">
-                  {claim.label}
+                  {t(claim.label)}
                 </Badge>
                 <ClaimGlyph kind={claim.glyph} />
               </div>
 
               <dl className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1">
-                  <dt className="meta text-muted">Asserts</dt>
+                  <dt className="meta text-muted">{t('Asserts')}</dt>
                   <dd className="text-body-m text-primary text-pretty">
-                    {claim.asserts}
+                    {t(claim.asserts)}
                   </dd>
                 </div>
                 <div className="flex flex-col gap-1">
-                  <dt className="meta text-muted">Checked by</dt>
+                  <dt className="meta text-muted">{t('Checked by')}</dt>
                   <dd className="text-body-s text-secondary text-pretty">
-                    {claim.checkedBy}
+                    {t(claim.checkedBy)}
                   </dd>
                 </div>
                 <div className="flex flex-col gap-1">
                   {/* The line a single badge always leaves out. */}
-                  <dt className="meta text-muted">Does not mean</dt>
+                  <dt className="meta text-muted">{t('Does not mean')}</dt>
                   <dd className="text-body-s text-secondary text-pretty">
-                    {claim.doesNotMean}
+                    {t(claim.doesNotMean)}
                   </dd>
                 </div>
               </dl>

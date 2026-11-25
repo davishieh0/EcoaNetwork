@@ -15,6 +15,7 @@ import type {
   Expectation,
   WithdrawReason,
 } from '@/app/reads/review/ReviewPage.t'
+import { i18n } from '@/i18n/i18n'
 import type { ReviewItem } from '@/logic/datasource/entities.t'
 import type { VersionText } from '@/logic/protocol/review.t'
 import { readEnvelope } from '@/logic/protocol/signed'
@@ -159,7 +160,11 @@ export function useReviewActions(
 
     return run('moderation.label_created', payload, (id) => {
       setLabeling(null)
-      setNotice(`Labeled ${labelName}. It counts for whoever follows you.`)
+      setNotice(
+        i18n.t('Labeled {{label}}. It counts for whoever follows you.', {
+          label: labelName,
+        }),
+      )
       // shown marked, hidden from the list, or removed: any of them shows
       // the index has it, for a reader who follows this moderator
       expect((seen) => {

@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { cn } from '@/components/ui/cn'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { Propagation } from '@/site/landing/motifs/Propagation'
 import { Container } from '@/components/ui/Container'
@@ -19,14 +20,15 @@ import { useReveal } from '@/components/ui/useReveal'
  * @returns The Network section.
  */
 export function Network() {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
     <Section id="network">
       <Container className="flex flex-col gap-16">
         <SectionHeading
-          eyebrow="Understand the network"
-          title="No server gets to be the authority."
+          eyebrow={t('Understand the network')}
+          title={t('No server gets to be the authority.')}
         />
 
         <div
@@ -49,7 +51,7 @@ export function Network() {
                   )}
                 />
                 <p className="text-body-l text-secondary text-pretty">
-                  {point}
+                  {t(point)}
                 </p>
               </motion.li>
             ))}
@@ -63,7 +65,7 @@ export function Network() {
             <dl className="grid grid-cols-3 border-t border-line">
               {NETWORK_FACTS.map((fact) => (
                 <div key={fact.label} className="flex flex-col gap-2 py-5">
-                  <dt className="sr-only">{fact.label}</dt>
+                  <dt className="sr-only">{t(fact.label)}</dt>
                   <dd
                     className={cn(
                       'font-display text-h2 font-semibold tracking-display',
@@ -73,7 +75,7 @@ export function Network() {
                     {fact.value}
                   </dd>
                   <p aria-hidden="true" className="meta text-muted">
-                    {fact.label}
+                    {t(fact.label)}
                   </p>
                 </div>
               ))}

@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { AuthShell } from '@/app/auth/AuthShell'
 import { CODE_LENGTH, EMAIL, INVALID } from '@/app/auth/rules'
@@ -27,6 +28,7 @@ const LEDE =
  * @returns The forgot-password screen.
  */
 export function ForgotPassword() {
+  const { t } = useTranslation()
   const { submit, state } = useForgotPasswordData()
   const [email, setEmail] = useState(state.email ?? '')
   const [error, setError] = useState('')
@@ -56,9 +58,9 @@ export function ForgotPassword() {
       lede={LEDE}
       footer={
         <>
-          Remembered it?{' '}
+          {t('Remembered it?')}{' '}
           <Link to={ROUTES.login} className="text-primary underline">
-            Sign in
+            {t('Sign in')}
           </Link>
         </>
       }
@@ -80,7 +82,7 @@ export function ForgotPassword() {
         />
 
         <Button type="submit" size="lg" pending={submit.pending}>
-          {submit.pending ? 'Sending code' : 'Send reset code'}
+          {submit.pending ? t('Sending code') : t('Send reset code')}
         </Button>
       </form>
     </AuthShell>

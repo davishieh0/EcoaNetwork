@@ -7,6 +7,7 @@
 // --- IMPORTS ---
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
@@ -42,6 +43,8 @@ function Option({
   body: string
   onChoose: () => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <button
       type="button"
@@ -56,8 +59,8 @@ function Option({
           : 'border-structural hover:border-strong',
       )}
     >
-      <span className="font-display text-h4">{title}</span>
-      <span className="text-body-s text-secondary">{body}</span>
+      <span className="font-display text-h4">{t(title)}</span>
+      <span className="text-body-s text-secondary">{t(body)}</span>
     </button>
   )
 }
@@ -68,6 +71,7 @@ function Option({
  * @returns The screen.
  */
 export function Moderation() {
+  const { t } = useTranslation()
   const { choice } = useModeration()
   const rise = useRise()
   const [typed, setTyped] = useState('')
@@ -90,18 +94,20 @@ export function Moderation() {
   return (
     <Container className="max-w-3xl pt-28 pb-16">
       <motion.h1 {...rise()} className="font-display text-h1">
-        Moderation
+        {t('Moderation')}
       </motion.h1>
       <motion.p {...rise(0.06)} className="reading-measure text-secondary">
-        Anyone can label a review as spam, harassment or illegal. A label
-        counts for the readers who follow its moderator, and for nobody else:
-        nothing leaves the network, it is how you read it.
+        {t(
+          'Anyone can label a review as spam, harassment or illegal. A ' +
+            'label counts for the readers who follow its moderator, and for ' +
+            'nobody else: nothing leaves the network, it is how you read it.',
+        )}
       </motion.p>
 
       <motion.section
         {...rise(0.12)}
         role="radiogroup"
-        aria-label="Whose labels you follow"
+        aria-label={t('Whose labels you follow')}
         className="mt-8 grid gap-3 sm:grid-cols-2"
       >
         <Option
@@ -120,11 +126,11 @@ export function Moderation() {
 
       {choice.follow === 'own' ? (
         <motion.section {...rise(0.18)} className={cn(CARD, 'mt-6')}>
-          <h2 className="font-display text-h4">Moderators you follow</h2>
+          <h2 className="font-display text-h4">{t('Moderators you follow')}</h2>
 
           {choice.moderators.length === 0 ? (
             <p className="meta text-muted">
-              Nobody: every review shows, whatever its labels.
+              {t('Nobody: every review shows, whatever its labels.')}
             </p>
           ) : (
             <ul className="flex flex-col gap-2">
@@ -136,7 +142,7 @@ export function Moderation() {
                   <span className="font-mono text-mono-s break-all">
                     {did}
                     {did === me ? (
-                      <span className="meta ml-2 text-muted">(you)</span>
+                      <span className="meta ml-2 text-muted">{t('(you)')}</span>
                     ) : null}
                   </span>
                   <button
@@ -150,7 +156,7 @@ export function Moderation() {
                       'meta cursor-pointer text-muted hover:text-danger'
                     }
                   >
-                    Remove
+                    {t('Remove')}
                   </button>
                 </li>
               ))}
@@ -168,25 +174,25 @@ export function Moderation() {
               value={typed}
               onChange={(event) => setTyped(event.target.value)}
               placeholder="did:key:z6Mk…"
-              aria-label="A moderator's did:key"
+              aria-label={t("A moderator's did:key")}
               className={cn(
                 'flex-1 border border-structural bg-canvas p-3 font-mono',
                 'text-mono-s focus:border-strong',
               )}
             />
             <Button type="submit" disabled={!valid || full}>
-              Follow
+              {t('Follow')}
             </Button>
           </form>
           {candidate && !valid ? (
             <p className="text-body-s text-danger">
-              That is not a did:key.
+              {t('That is not a did:key.')}
             </p>
           ) : null}
           {me && !choice.moderators.includes(me) ? (
             <div>
               <Button variant="ghost" size="sm" onClick={() => add(me)}>
-                Follow yourself, to see your own labels count
+                {t('Follow yourself, to see your own labels count')}
               </Button>
             </div>
           ) : null}
@@ -195,28 +201,30 @@ export function Moderation() {
 
       <motion.section {...rise(0.24)} className={cn(CARD, 'mt-6')}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-h4">Moderator mode</h2>
+          <h2 className="font-display text-h4">{t('Moderator mode')}</h2>
           {choice.moderating ? (
             <Badge tone="signal" glyph="●">
-              On
+              {t('On')}
             </Badge>
           ) : null}
         </div>
         <p className="text-body-s text-secondary">
-          Shows an action to label reviews and responses, signed by your
-          identity. Your labels count for whoever follows you.
+          {t(
+            'Shows an action to label reviews and responses, signed by ' +
+              'your identity. Your labels count for whoever follows you.',
+          )}
         </p>
         <div>
           <Button
             variant={choice.moderating ? 'secondary' : 'primary'}
             onClick={() => setModeration({ moderating: !choice.moderating })}
           >
-            {choice.moderating ? 'Turn off' : 'Turn on'}
+            {choice.moderating ? t('Turn off') : t('Turn on')}
           </Button>
         </div>
         {me ? (
           <p className="meta text-muted">
-            You label as{' '}
+            {t('You label as')}{' '}
             <span className="font-mono normal-case break-all">{me}</span>
           </p>
         ) : null}

@@ -5,6 +5,7 @@
 
 // --- IMPORTS ---
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { IdentitySetupProps } from '@/app/identity/IdentitySetup.t'
 import { Button } from '@/components/ui/Button'
 import { FormAlert } from '@/components/ui/FormAlert'
@@ -49,6 +50,7 @@ function download(text: string, did: string) {
  * @returns The setup.
  */
 export function IdentitySetup({ onDone }: IdentitySetupProps) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<'create' | 'restore'>('create')
   const [password, setPassword] = useState('')
   const [again, setAgain] = useState('')
@@ -99,15 +101,17 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
 
   return (
     <section
-      aria-label="Your identity"
+      aria-label={t('Your identity')}
       className="flex flex-col gap-5 border border-structural bg-surface p-6"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-h3">Your identity</h2>
+        <h2 className="font-display text-h3">{t('Your identity')}</h2>
         <p className="text-body-s text-secondary">
-          Everything you publish is signed by a key made in this browser. It
-          never leaves it: not to Ecoa, not to anyone. Keep a backup, or the
-          identity ends with this browser’s data.
+          {t(
+            'Everything you publish is signed by a key made in this ' +
+              'browser. It never leaves it: not to Ecoa, not to anyone. ' +
+              'Keep a backup, or the identity ends with this browser’s data.',
+          )}
         </p>
       </div>
 
@@ -129,7 +133,7 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
                 : 'border-structural text-secondary hover:text-primary',
             )}
           >
-            {name === 'create' ? 'Create' : 'Restore from a backup'}
+            {name === 'create' ? t('Create') : t('Restore from a backup')}
           </button>
         ))}
       </div>
@@ -143,7 +147,7 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
           }}
         >
           <label className="flex flex-col gap-1">
-            <span className="meta text-muted">Backup password</span>
+            <span className="meta text-muted">{t('Backup password')}</span>
             <input
               type="password"
               value={password}
@@ -153,12 +157,14 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
             />
             {password && weak ? (
               <span className="text-body-s text-danger">
-                At least {MIN_PASSWORD} characters.
+                {t('At least {{n}} characters.', { n: MIN_PASSWORD })}
               </span>
             ) : null}
           </label>
           <label className="flex flex-col gap-1">
-            <span className="meta text-muted">The same password again</span>
+            <span className="meta text-muted">
+              {t('The same password again')}
+            </span>
             <input
               type="password"
               value={again}
@@ -168,17 +174,20 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
             />
             {again && mismatch ? (
               <span className="text-body-s text-danger">
-                The two passwords differ.
+                {t('The two passwords differ.')}
               </span>
             ) : null}
           </label>
           <p className="text-body-s text-muted">
-            The backup is a file sealed with this password. Nobody can open
-            it without the password, Ecoa included, and nobody can reset it.
+            {t(
+              'The backup is a file sealed with this password. Nobody can ' +
+                'open it without the password, Ecoa included, and nobody can ' +
+                'reset it.',
+            )}
           </p>
           <FormAlert>{error}</FormAlert>
           <Button type="submit" pending={busy} disabled={weak || mismatch}>
-            {busy ? 'Making the key' : 'Create and download the backup'}
+            {busy ? t('Making the key') : t('Create and download the backup')}
           </Button>
           <button
             type="button"
@@ -189,7 +198,7 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
               'hover:text-primary',
             )}
           >
-            Create without a backup — lost with this browser’s data
+            {t('Create without a backup — lost with this browser’s data')}
           </button>
         </form>
       ) : (
@@ -201,7 +210,7 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
           }}
         >
           <label className="flex flex-col gap-1">
-            <span className="meta text-muted">Backup file</span>
+            <span className="meta text-muted">{t('Backup file')}</span>
             <input
               type="file"
               accept="application/json,.json"
@@ -210,7 +219,7 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="meta text-muted">Its password</span>
+            <span className="meta text-muted">{t('Its password')}</span>
             <input
               type="password"
               value={password}
@@ -221,7 +230,7 @@ export function IdentitySetup({ onDone }: IdentitySetupProps) {
           </label>
           <FormAlert>{error}</FormAlert>
           <Button type="submit" pending={busy} disabled={!file || !password}>
-            {busy ? 'Opening the backup' : 'Restore the identity'}
+            {busy ? t('Opening the backup') : t('Restore the identity')}
           </Button>
         </form>
       )}

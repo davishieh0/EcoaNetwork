@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { messageOf } from '@/app/forms/messages'
 import { useRouteState } from '@/app/navigation/navigation'
 import type { WritePhase, WriteState } from '@/app/write/Write.t'
+import { i18n } from '@/i18n/i18n'
 import { publishEvent } from '@/logic/datasource/events'
 import { HttpError } from '@/logic/errors/httpError'
 import {
@@ -64,7 +65,9 @@ function failureOf(error: unknown): string {
  * @returns The message to show.
  */
 function refusalOf(reason: string | null): string {
-  return reason ? `${REFUSED} Reason: ${reason}` : REFUSED
+  return reason
+    ? `${i18n.t(REFUSED)} ${i18n.t('Reason: {{reason}}', { reason })}`
+    : REFUSED
 }
 
 /**

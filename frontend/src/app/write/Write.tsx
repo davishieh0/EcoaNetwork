@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { IdentitySetup } from '@/app/identity/IdentitySetup'
 import { Composer } from '@/app/write/Composer'
@@ -27,6 +28,7 @@ const FADE =
  * @returns The screen, or nothing until the account is known.
  */
 export function Write() {
+  const { t } = useTranslation()
   const data = useWriteData()
   const rise = useRise()
 
@@ -59,7 +61,7 @@ export function Write() {
               'tracking-display',
             )}
           >
-            Write a review.
+            {t('Write a review.')}
           </motion.h1>
 
           {/* signing needs an identity: made here, with its backup, first */}

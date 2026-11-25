@@ -5,6 +5,7 @@
 
 // --- IMPORTS ---
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import type { ReviewActionsProps } from '@/app/reads/review/ReviewActions.t'
 import { cn } from '@/components/ui/cn'
 import { ROUTES } from '@/routes'
@@ -32,12 +33,14 @@ export function ReviewActions({
   onVote,
   onLabel,
 }: ReviewActionsProps) {
+  const { t } = useTranslation()
+
   if (!sessionKnown) return null
 
   if (!canAct) {
     return (
       <Link to={ROUTES.login} className={ACTION}>
-        Sign in to vote or respond
+        {t('Sign in to vote or respond')}
       </Link>
     )
   }
@@ -52,7 +55,7 @@ export function ReviewActions({
             disabled={busy}
             onClick={onEdit}
           >
-            Edit
+            {t('Edit')}
           </button>
           <button
             type="button"
@@ -60,7 +63,7 @@ export function ReviewActions({
             disabled={busy}
             onClick={onWithdraw}
           >
-            Withdraw
+            {t('Withdraw')}
           </button>
         </>
       ) : (
@@ -71,7 +74,7 @@ export function ReviewActions({
             disabled={busy}
             onClick={() => onVote('endorsed')}
           >
-            ▲ Endorse
+            ▲ {t('Endorse')}
           </button>
           <button
             type="button"
@@ -79,7 +82,7 @@ export function ReviewActions({
             disabled={busy}
             onClick={() => onVote('disputed')}
           >
-            ▼ Dispute
+            ▼ {t('Dispute')}
           </button>
         </>
       )}
@@ -90,7 +93,7 @@ export function ReviewActions({
           disabled={busy}
           onClick={onLabel}
         >
-          Label…
+          {t('Label…')}
         </button>
       ) : null}
     </span>
