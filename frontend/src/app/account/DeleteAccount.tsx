@@ -7,6 +7,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { DeleteAccountProps } from '@/app/account/DeleteAccount.t'
 import { placeFailure } from '@/app/forms/placeFailure'
@@ -32,6 +33,7 @@ const DANGER = cn(
  * @returns The trigger and the dialog.
  */
 export function DeleteAccount({ handle, remove }: DeleteAccountProps) {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
   const [password, setPassword] = useState('')
@@ -82,7 +84,7 @@ export function DeleteAccount({ handle, remove }: DeleteAccountProps) {
     <Dialog.Root open={open} onOpenChange={toggle}>
       <Dialog.Trigger asChild>
         <Button variant="secondary" className={DANGER}>
-          Delete account
+          {t('Delete account')}
         </Button>
       </Dialog.Trigger>
 
@@ -118,12 +120,15 @@ export function DeleteAccount({ handle, remove }: DeleteAccountProps) {
                       'font-display text-h3 font-semibold tracking-heading',
                     )}
                   >
-                    Delete @{handle}?
+                    {t('Delete @{{handle}}?', { handle })}
                   </Dialog.Title>
 
                   <Dialog.Description className="text-body-m text-secondary">
-                    This cannot be undone. The account, its handle and every
-                    session go now, and the handle becomes free for anyone.
+                    {t(
+                      'This cannot be undone. The account, its handle and ' +
+                        'every session go now, and the handle becomes free ' +
+                        'for anyone.',
+                    )}
                   </Dialog.Description>
                 </div>
 
@@ -156,7 +161,7 @@ export function DeleteAccount({ handle, remove }: DeleteAccountProps) {
                         className="sm:flex-1"
                         disabled={remove.pending}
                       >
-                        Keep account
+                        {t('Keep account')}
                       </Button>
                     </Dialog.Close>
 
@@ -166,7 +171,7 @@ export function DeleteAccount({ handle, remove }: DeleteAccountProps) {
                       className={cn(DANGER, 'sm:flex-1')}
                       pending={remove.pending}
                     >
-                      {remove.pending ? 'Deleting' : 'Delete for good'}
+                      {remove.pending ? t('Deleting') : t('Delete for good')}
                     </Button>
                   </div>
                 </form>
