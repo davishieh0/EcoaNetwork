@@ -5,23 +5,35 @@
 // --- IMPORTS ---
 import { cn } from '@/components/ui/cn'
 import * as Dialog from '@radix-ui/react-dialog'
-import { motion, useReducedMotion } from 'motion/react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import type { ReactNode } from 'react'
 
 import type { EventInspectorProps } from '@/components/ecoa/EventInspector.t'
 import { Badge } from '@/components/ui/Badge'
 
 // --- GLOBALS ---
-/** The Event Inspector — the Protocol Layer, on demand. */
-const RAW_EVENT = `{
-  "id": "8f2c9e14a41b7d3f",
-  "kind": "review.created",
-  "pubkey": "did:key:z6Mkf5rGMoatrSj1f4CyvuHBeXJELe9RPd",
-  "created_at": 1786790, 
-  "entity": "ent:marés-bakery.pt",
-  "content": { "rating": 4, "body": "…" },
-  "sig": "3045022100c7f1…a9e2"
-}`
+// never colour alone: each state has a glyph and a label
+const CHECKS = {
+  checking: { tone: 'neutral', glyph: '●', label: 'Checking the signature…' },
+  valid: { tone: 'valid', glyph: '◆', label: 'Signature valid' },
+  invalid: { tone: 'danger', glyph: '■', label: 'Signature does not hold' },
+  unchecked: { tone: 'warning', glyph: '●', label: 'Not checked here' },
+} as const
+
+/**
+ * Shows an envelope formatted for reading; the string as stored when it
+ * does not parse.
+ *
+ * @param raw - The envelope, as the network stored it.
+ * @returns The text to show.
+ */
+function readable(raw: string): string {
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2)
+  } catch {
+    return raw
+  }
+}
 
 // --- CODE ---
 /**
@@ -48,11 +60,16 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 /**
  * Renders the drawer holding a review's signed event.
  *
- * @param props - Whether the drawer is open, and the handler that
- * changes it.
+ * @param props - Whether the drawer is open, the handler that changes it,
+ * and the event, or why it could not be read.
  * @returns The drawer.
  */
-export function EventInspector({ open, onOpenChange }: EventInspectorProps) {
+export function EventInspector({
+  open,
+  onOpenChange,
+  event,
+  error,
+}: EventInspectorProps) {
   const reduceMotion = useReducedMotion()
 
   return (
@@ -113,46 +130,112 @@ export function EventInspector({ open, onOpenChange }: EventInspectorProps) {
               </Dialog.Close>
             </header>
 
-            <dl className="flex flex-col">
-              <Row label="Event ID">8f2c9e14a41b7d3f</Row>
-              <Row label="Kind">review.created</Row>
-              <Row label="Author">
-                did:key:z6Mkf5rGMoatrSj1f4CyvuHBeXJELe9RPd
-              </Row>
-              <Row label="Entity">ent:marés-bakery.pt</Row>
-              <Row label="Version">2 of 2 · replaces 4d10…8c22</Row>
-              <Row label="Signature">3045022100c7f1…a9e2</Row>
-            </dl>
-
-            <div
-              className={cn(
-                'flex flex-wrap items-center gap-2 border-b border-line px-6',
-                'py-5',
-              )}
-            >
-              {/* Never colour alone: each state has a glyph and a label. */}
-              <Badge tone="valid" glyph="◆">
-                Signature valid
-              </Badge>
-              <Badge tone="valid" glyph="◆">
-                Domain verified
-              </Badge>
-              <Badge tone="neutral" glyph="●">
-                Observed by 06 nodes
-              </Badge>
-            </div>
-
-            <div className="flex flex-col gap-3 px-6 py-5">
-              <p className="meta text-muted">Raw envelope</p>
-              <pre
-                className={cn(
-                  'overflow-x-auto border border-line bg-surface-sunken p-4',
-                  'font-mono text-mono-s text-secondary',
-                )}
+            {error ? (
+              <p role="alert" className="px-6 py-5 text-danger">
+                {error}
+              </p>
+            ) : !event ? (
+              <p role="status" className="meta px-6 py-5 text-muted">
+                Reading the event…
+              </p>
+            ) : (
+              <motion.div
+                // the event fades in where "Reading the event…" was
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: reduceMotion ? 0 : 0.25 }}
               >
-                {RAW_EVENT}
-              </pre>
-            </div>
+                <dl className="flex flex-col">
+                  {event.rows.map((row) => (
+                    <Row key={row.label} label={row.label}>
+                      {row.value}
+                    </Row>
+                  ))}
+                </dl>
+
+                <div
+                  className={cn(
+                    'flex flex-wrap items-center gap-2 border-b border-line',
+                    'px-6 py-5',
+                  )}
+                >
+                  {/* the verdict pops in when the check is done */}
+                  <AnimatePresence mode="wait" initial={false}>
+                    {event.check ? (
+                      <motion.span
+                        key={event.check.state}
+                        className="inline-flex"
+                        initial={
+                          reduceMotion ? false : { opacity: 0, scale: 0.85 }
+                        }
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={reduceMotion ? undefined : { opacity: 0 }}
+                        transition={
+                          reduceMotion
+                            ? { duration: 0 }
+                            : { type: 'spring', stiffness: 420, damping: 22 }
+                        }
+                      >
+                        <Badge
+                          tone={CHECKS[event.check.state].tone}
+                          glyph={CHECKS[event.check.state].glyph}
+                        >
+                          {CHECKS[event.check.state].label}
+                        </Badge>
+                      </motion.span>
+                    ) : null}
+                  </AnimatePresence>
+                  {event.badges?.map((badge) => (
+                    <Badge
+                      key={badge.label}
+                      tone={badge.tone}
+                      glyph={badge.glyph}
+                    >
+                      {badge.label}
+                    </Badge>
+                  ))}
+                  {event.check?.state === 'invalid' ? (
+                    <p className="w-full text-body-s text-danger">
+                      {event.check.reason}
+                    </p>
+                  ) : null}
+                  {event.check?.state === 'unchecked' ? (
+                    <p className="w-full text-body-s text-secondary">
+                      {event.check.reason}
+                    </p>
+                  ) : null}
+                </div>
+
+                {event.notes?.length ? (
+                  <ul
+                    className={cn(
+                      'flex flex-col gap-1 border-b border-line px-6 py-4',
+                      'text-body-s text-secondary',
+                    )}
+                  >
+                    {event.notes.map((note) => (
+                      <li key={note}>{note}</li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                <div className="flex flex-col gap-3 px-6 py-5">
+                  <p className="meta text-muted">Raw envelope</p>
+                  <pre
+                    className={cn(
+                      'overflow-x-auto border border-line bg-surface-sunken',
+                      'p-4 font-mono text-mono-s text-secondary',
+                    )}
+                  >
+                    {readable(event.raw)}
+                  </pre>
+                  <p className="text-body-s text-muted">
+                    Formatted for reading. The signature covers its canonical
+                    form (JCS), which any copy of it gives back.
+                  </p>
+                </div>
+              </motion.div>
+            )}
           </motion.aside>
         </Dialog.Content>
       </Dialog.Portal>

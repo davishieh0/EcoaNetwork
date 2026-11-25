@@ -91,3 +91,58 @@ export function base64url(bytes: Uint8Array): string {
     .replace(/\//g, '_')
     .replace(/=+$/, '')
 }
+
+/**
+ * Decodes base58btc text, without the multibase prefix.
+ *
+ * @param text - The text to decode.
+ * @returns The bytes, or null when a character is not base58.
+ */
+export function fromBase58btc(text: string): Uint8Array | null {
+  // the number the text spells, as bytes, least significant first
+  const bytes: number[] = []
+
+  for (const character of text) {
+    let carry = BASE58.indexOf(character)
+    if (carry < 0) return null
+
+    for (let index = 0; index < bytes.length; index++) {
+      carry += bytes[index] * 58
+      bytes[index] = carry & 0xff
+      carry >>= 8
+    }
+
+    while (carry > 0) {
+      bytes.push(carry & 0xff)
+      carry >>= 8
+    }
+  }
+
+  // each leading first character is a zero byte of its own
+  for (const character of text) {
+    if (character !== BASE58[0]) break
+    bytes.push(0)
+  }
+
+  return new Uint8Array(bytes.reverse())
+}
+
+/**
+ * Decodes base64url text, with or without padding.
+ *
+ * @param text - The text to decode.
+ * @returns The bytes, or null when it is not base64url.
+ */
+export function fromBase64url(text: string): Uint8Array | null {
+  if (!/^[A-Za-z0-9_-]*={0,2}$/.test(text)) return null
+
+  const standard = text.replace(/-/g, '+').replace(/_/g, '/')
+
+  try {
+    return Uint8Array.from(atob(standard), (character) =>
+      character.charCodeAt(0),
+    )
+  } catch {
+    return null
+  }
+}

@@ -45,6 +45,26 @@ function renew() {
 }
 
 /**
+ * Builds a route from its segments, each escaped, and the query parameters
+ * that were given.
+ *
+ * @param segments - The route's segments, such as 'entities' and an id.
+ * @param params - The query parameters, undefined for those not given.
+ * @returns The path, with its query when there is one.
+ */
+export function route(
+  segments: string[],
+  params: Record<string, string | undefined> = {},
+): string {
+  const path = '/' + segments.map(encodeURIComponent).join('/')
+  const given = Object.entries(params).filter(
+    (entry): entry is [string, string] => entry[1] !== undefined,
+  )
+
+  return given.length ? `${path}?${new URLSearchParams(given)}` : path
+}
+
+/**
  * Calls the backend, with the session cookies.
  *
  * @param path - The route under the API prefix, e.g. `/auth/me`.

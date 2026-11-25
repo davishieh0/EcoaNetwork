@@ -10,6 +10,11 @@ import type { Envelope } from '@/logic/protocol/envelope.t'
 import type { ReviewPayload } from '@/logic/protocol/review.t'
 
 // --- GLOBALS ---
+/** What the write screen accepts: the entity to review, when it is known. */
+export type WriteState = {
+  entity?: string
+}
+
 /** What the node did with an event it took. */
 export type Published = Exclude<PublishResult['outcome'], 'rejected'>
 

@@ -1,10 +1,11 @@
 /**
- * The events API: where a signed envelope goes to the network.
+ * The events API: where a signed envelope goes to the network, and where
+ * one is read back alone, for inspection.
  */
 
 // --- IMPORTS ---
-import type { PublishResult } from '@/logic/datasource/events.t'
-import { BASE } from '@/logic/datasource/http'
+import type { EventItem, PublishResult } from '@/logic/datasource/events.t'
+import { BASE, request, route } from '@/logic/datasource/http'
 import { errorOf } from '@/logic/errors/envelope'
 import type { ErrorEnvelope } from '@/logic/errors/envelope.t'
 import { HttpError } from '@/logic/errors/httpError'
@@ -88,4 +89,15 @@ export async function publishEvent(envelope: Envelope): Promise<PublishResult> {
   }
 
   throw new HttpError(response.status, 'unknown_error', 'Unreadable result.')
+}
+
+/**
+ * Reads one signed event alone, whatever its type, for inspection. A review
+ * its author withdrew is still here: the envelope stays on the logs.
+ *
+ * @param eventId - The eventId.
+ * @returns The event.
+ */
+export function getEvent(eventId: string) {
+  return request<EventItem>(route(['events', eventId]))
 }

@@ -23,7 +23,7 @@ const SHORTCUTS: Shortcut[] = [
   },
   {
     title: 'Explore',
-    body: 'Browse example reviews of businesses, products, and services.',
+    body: 'Find a business, a website or a product, and read its reviews.',
     to: ROUTES.explore,
   },
   {

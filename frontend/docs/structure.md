@@ -56,6 +56,8 @@ app/
                     placeFailure, which shows each under its field
   navigation/       moving between screens: what each screen accepts from
                     the one before is typed in RouteStates, on both ends
+  reads/            reading the network: explore/, entity/, review/, and
+                    the hooks and mappings they share
   auth/
     AuthShell.tsx   shared by the auth screens
     rules.ts        what the backend accepts, and what a field says when
@@ -67,6 +69,11 @@ app/
   account/
   layout/           the chrome and the guards
 ```
+
+## Reading
+
+How the platform shows what the network holds, and the decisions to revisit:
+[reading.md](./reading.md).
 
 ## Naming
 

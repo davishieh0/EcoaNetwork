@@ -129,7 +129,10 @@ deterministic tables from the logs. In the order to build it:
 3. **Loose ends of step 5 and the API.** Unknown event types counted in the
    progress log (they are stored and skipped already); `/health` showing how
    far behind each node the projector is (`head - sequence`, the design's
-   promise). *Small.*
+   promise); `/events/{eventId}` marking the labels that count in
+   `observed.labels`, as the design's label table says ("shown, marked") and
+   the lists already do: today it answers them unmarked, so the inspection
+   view cannot say a moderator labeled the event. *Small.*
 4. **Step 8, the generator and the seeded dataset.** A few hundred signed
    synthetic reviews, and `cnpj:` entities from the Receita Federal's public
    data as `entity.updated` proposals signed by the operator's identity,
@@ -184,17 +187,18 @@ deterministic tables from the logs. In the order to build it:
 
 ## Frontend
 
-1. **`logic/datasource/`:** one function per read route, with the types of
-   its answers.
+1. ~~**`logic/datasource/`:** one function per read route, with the types of
+   its answers.~~ Done: `entities`, `reviews`, `profiles` and `getEvent`.
 2. **Screens:**
-   - entity search
-   - an entity: its rating distribution and its reviews
-   - a review, with its edit history and responses
-   - the inspection view: the raw envelope beside the rendered review
-
-   *Waits on the backend, step 2.*
-3. **Verifying the signature of everything received.** *Waits on
-   `protocol/ts`.*
+   - ~~entity search~~ Done.
+   - an entity: ~~its reviews~~ done; its rating distribution waits on the
+     indexer's step 6
+   - ~~a review, with its edit history and responses~~ Done.
+   - ~~the inspection view: the raw envelope beside the rendered review~~
+     Done; which nodes hold it waits on the indexer's item 1.
+3. **Verifying the signature of everything received.** Done in the
+   inspection view, with WebCrypto (RFC 8032), until `protocol/ts` verifies
+   under ZIP-215 (`frontend/docs/reading.md`, decision 1).
 
 ## What runs in parallel
 
