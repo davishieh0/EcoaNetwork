@@ -4,11 +4,13 @@
 
 // --- IMPORTS ---
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { AuthShellProps } from '@/app/auth/AuthShell.t'
 import { Container } from '@/components/ui/Container'
 import { cn } from '@/components/ui/cn'
 import { useRise } from '@/components/ui/useRise'
+import { known } from '@/i18n/i18n'
 
 // --- CODE ---
 /**
@@ -24,6 +26,7 @@ export function AuthShell({
   children,
   footer,
 }: AuthShellProps) {
+  const { t } = useTranslation()
   const rise = useRise()
 
   return (
@@ -32,7 +35,7 @@ export function AuthShell({
         <div className="flex w-full max-w-md flex-col gap-8">
           <header className="flex flex-col gap-3">
             <motion.p {...rise()} className="meta text-muted">
-              {eyebrow}
+              {known(t, eyebrow)}
             </motion.p>
 
             <motion.h1
@@ -42,21 +45,21 @@ export function AuthShell({
                 'text-balance',
               )}
             >
-              {title}
+              {known(t, title)}
             </motion.h1>
 
             <motion.p
               {...rise(0.12)}
               className="text-body-m text-secondary text-pretty"
             >
-              {lede}
+              {known(t, lede)}
             </motion.p>
           </header>
 
           <motion.div {...rise(0.18)}>{children}</motion.div>
 
           <motion.p {...rise(0.26)} className="text-body-s text-secondary">
-            {footer}
+            {typeof footer === 'string' ? known(t, footer) : footer}
           </motion.p>
         </div>
       </Container>
