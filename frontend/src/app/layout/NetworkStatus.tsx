@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { momentOf } from '@/app/reads/words'
 import { cn } from '@/components/ui/cn'
 import {
@@ -22,6 +23,7 @@ const POLL_MS = 5000
  * @returns The header node badge and popover.
  */
 export function NetworkStatus() {
+  const { t } = useTranslation()
   const [nodes, setNodes] = useState<ObservedNode[]>([])
   const [open, setOpen] = useState(false)
   const container = useRef<HTMLDivElement>(null)
@@ -80,7 +82,7 @@ export function NetworkStatus() {
       <button
         type="button"
         aria-expanded={open}
-        aria-label={`Network nodes: ${nodes.length} observed`}
+        aria-label={t('Network nodes: {{n}} observed', { n: nodes.length })}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           'meta inline-flex cursor-pointer items-center gap-2 border',
@@ -98,14 +100,14 @@ export function NetworkStatus() {
         />
         <span>
           {String(nodes.length).padStart(2, '0')}{' '}
-          {nodes.length === 1 ? 'node' : 'nodes'}
+          {nodes.length === 1 ? t('node') : t('nodes')}
         </span>
       </button>
 
       {open ? (
         <div
           role="region"
-          aria-label="Observed P2P nodes"
+          aria-label={t('Observed P2P nodes')}
           className={cn(
             'absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] border',
             'border-structural bg-canvas p-4 shadow-lg',
@@ -117,9 +119,12 @@ export function NetworkStatus() {
               'border-line pb-2',
             )}
           >
-            <p className="meta text-primary">Observed P2P network</p>
+            <p className="meta text-primary">{t('Observed P2P network')}</p>
             <span className="meta text-muted">
-              {syncedCount}/{nodes.length} in sync
+              {t('{{synced}}/{{total}} in sync', {
+                synced: syncedCount,
+                total: nodes.length,
+              })}
             </span>
           </div>
 
@@ -138,7 +143,7 @@ export function NetworkStatus() {
                     <span className="meta text-muted">
                       {item.lastReceivedAt
                         ? momentOf(item.lastReceivedAt)
-                        : 'Waiting for events'}
+                        : t('Waiting for events')}
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
@@ -151,7 +156,9 @@ export function NetworkStatus() {
                       #{item.sequence} · {item.events} ev
                     </span>
                     <span className="meta text-muted">
-                      {inSync ? '◆ synced' : `● -${maxEvents - item.events}`}
+                      {inSync
+                        ? t('◆ synced')
+                        : `● -${maxEvents - item.events}`}
                     </span>
                   </div>
                 </li>
@@ -160,8 +167,10 @@ export function NetworkStatus() {
           </ul>
 
           <p className="mt-3 border-t border-line pt-2 text-body-s text-muted">
-            Read from the indexer’s own cursors. Reads never query nodes
-            directly.
+            {t(
+              'Read from the indexer’s own cursors. Reads never query nodes ' +
+                'directly.',
+            )}
           </p>
         </div>
       ) : null}
