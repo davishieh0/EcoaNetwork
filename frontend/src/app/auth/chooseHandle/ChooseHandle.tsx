@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { useState } from 'react'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { AuthShell } from '@/app/auth/AuthShell'
 import { HANDLE, INVALID } from '@/app/auth/rules'
@@ -21,6 +22,7 @@ import { FormAlert } from '@/components/ui/FormAlert'
  * @returns The welcome screen.
  */
 export function ChooseHandle() {
+  const { t } = useTranslation()
   const { submit, email } = useChooseHandleData()
   const [handle, setHandle] = useState('')
   const [error, setError] = useState('')
@@ -52,10 +54,11 @@ export function ChooseHandle() {
     <AuthShell
       eyebrow="One last step"
       title="Choose your handle."
-      lede={
-        `You are signed in as ${email}. Pick the name that appears on ` +
-        'everything you publish. It cannot be changed later.'
-      }
+      lede={t(
+        'You are signed in as {{email}}. Pick the name that appears on ' +
+          'everything you publish. It cannot be changed later.',
+        { email },
+      )}
       footer="Reading Ecoa never needs a handle. Writing does."
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
@@ -79,7 +82,7 @@ export function ChooseHandle() {
         />
 
         <Button type="submit" size="lg" pending={submit.pending}>
-          {submit.pending ? 'Claiming handle' : 'Claim handle'}
+          {submit.pending ? t('Claiming handle') : t('Claim handle')}
         </Button>
       </form>
     </AuthShell>
