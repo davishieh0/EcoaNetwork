@@ -5,6 +5,7 @@
 
 // --- IMPORTS ---
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { EditReviewProps } from '@/app/reads/review/EditReview.t'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
@@ -38,6 +39,7 @@ export function EditReview({
   onSave,
   onCancel,
 }: EditReviewProps) {
+  const { t } = useTranslation()
   const [rating, setRating] = useState<Rating | null>(
     RATINGS.includes(current.rating as Rating)
       ? (current.rating as Rating)
@@ -57,7 +59,7 @@ export function EditReview({
 
   return (
     <form
-      aria-label="Edit your review"
+      aria-label={t('Edit your review')}
       className="flex flex-col gap-4 border border-structural bg-surface p-6"
       onSubmit={(event) => {
         event.preventDefault()
@@ -66,16 +68,19 @@ export function EditReview({
       }}
     >
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-h4">Edit your review</h2>
+        <h2 className="font-display text-h4">{t('Edit your review')}</h2>
         <p className="text-body-s text-secondary">
-          The edit is a new version, signed by you. The one before stays in
-          the history, and votes stay with the version they were cast on.
+          {t(
+            'The edit is a new version, signed by you. The one before stays ' +
+              'in the history, and votes stay with the version they were ' +
+              'cast on.',
+          )}
         </p>
       </div>
 
       <div
         role="radiogroup"
-        aria-label="Rating, 1 worst to 5 best"
+        aria-label={t('Rating, 1 worst to 5 best')}
         className="grid grid-cols-5 border border-line"
       >
         {RATINGS.map((value) => (
@@ -98,12 +103,12 @@ export function EditReview({
         ))}
       </div>
       {problems.rating ? (
-        <p className="text-body-s text-danger">{problems.rating}</p>
+        <p className="text-body-s text-danger">{t(problems.rating)}</p>
       ) : null}
 
       <label className="flex flex-col gap-1">
         <span className="meta text-muted">
-          Title · {characters(title)}/{TITLE_MAX}
+          {t('Title')} · {characters(title)}/{TITLE_MAX}
         </span>
         <input
           value={title}
@@ -111,13 +116,13 @@ export function EditReview({
           className={FIELD}
         />
         {problems.title ? (
-          <span className="text-body-s text-danger">{problems.title}</span>
+          <span className="text-body-s text-danger">{t(problems.title)}</span>
         ) : null}
       </label>
 
       <label className="flex flex-col gap-1">
         <span className="meta text-muted">
-          What happened · {characters(body)}/{BODY_MAX}
+          {t('What happened')} · {characters(body)}/{BODY_MAX}
         </span>
         <textarea
           value={body}
@@ -126,16 +131,16 @@ export function EditReview({
           className={FIELD}
         />
         {problems.body ? (
-          <span className="text-body-s text-danger">{problems.body}</span>
+          <span className="text-body-s text-danger">{t(problems.body)}</span>
         ) : null}
       </label>
 
       <div className="flex flex-wrap justify-end gap-3">
         <Button variant="ghost" type="button" onClick={onCancel}>
-          Cancel
+          {t('Cancel')}
         </Button>
         <Button type="submit" pending={busy} disabled={unchanged}>
-          {busy ? 'Signing and sending' : 'Publish the edit'}
+          {busy ? t('Signing and sending') : t('Publish the edit')}
         </Button>
       </div>
     </form>
