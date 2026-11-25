@@ -692,9 +692,9 @@ A `domain` claim is looked up by `indexer project` (DNS-over-HTTPS by default, a
 
 The distribution 1 to 5 and the mean, rounded to two decimals, over the current version of each review, leaving out withdrawn chains, chains a followed moderator hid or removed, and reviews by an identity holding a recognized claim on the same entity — counted apart as `conflicted`, shown and marked. Worked out at answer time, not stored: every input but the review is observed.
 
-### 16.6 Ranking is a setting, and the demonstration's second indexer uses it — **call**
+### 16.6 Ranking is a setting, and the demonstration changes it — **call**
 
-`RANKING=newest` (the original's `createdAt`, so an edit never moves a review) or `endorsed` (the head's endorsements less its disputes, then newest). The cursor carries the score so pages never repeat or skip. Each answer names the ranking it used. Weights wait on reputation, so `endorsed` counts identities, not weight.
+`RANKING=newest` (the original's `createdAt`, so an edit never moves a review) or `endorsed` (the head's endorsements less its disputes, then newest). The cursor carries the score so pages never repeat or skip. Each answer names the ranking it used. Weights wait on reputation, so `endorsed` counts identities, not weight. Only the API reads it, so the demonstration's step 10 changes it with a restart and no rebuild. **Rejected: running a second indexer for that step**, which would show nothing a setting does not: other indexers are a property of the design, and that two instances agree is what the indexer's tests check.
 
 ### 16.7 The MVP's rebuild empties and projects again — **call**
 

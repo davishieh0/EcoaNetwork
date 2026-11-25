@@ -84,7 +84,7 @@ Only presentation, never the record:
 
 A review the community rejects fades in the default view — it doesn't disappear from the network. That's the same non-deletion guarantee the rest of the protocol makes, applied to ranking instead of to content.
 
-**v1, as built:** an indexer's ranking is a setting. `RANKING=newest` lists the newest original first; `endorsed` lists the head with the best score first — its endorsements less its disputes, unweighted — then newest. Each answer names the ranking it used, and the client says it ("as this index ranks them"). The demonstration's step 10 runs two indexers over the same logs, one of each ([decisions.md §16.6](./decisions.md#166-ranking-is-a-setting-and-the-demonstrations-second-indexer-uses-it--call)).
+**v1, as built:** an indexer's ranking is a setting. `RANKING=newest` lists the newest original first; `endorsed` lists the head with the best score first — its endorsements less its disputes, unweighted — then newest. Each answer names the ranking it used, and the client says it ("as this index ranks them"). The demonstration's step 10 switches it on the running index ([decisions.md §16.6](./decisions.md#166-ranking-is-a-setting-and-the-demonstration-changes-it--call)).
 
 ## Anti-brigading (later, not v1)
 
