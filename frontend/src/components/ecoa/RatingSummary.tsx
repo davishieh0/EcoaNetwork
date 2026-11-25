@@ -5,9 +5,11 @@
 
 // --- IMPORTS ---
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import type { RatingSummaryProps } from '@/components/ecoa/RatingSummary.t'
 import { Rating } from '@/components/ecoa/Rating'
 import { cn } from '@/components/ui/cn'
+import { decimal } from '@/i18n/format'
 
 // --- CODE ---
 /**
@@ -23,6 +25,8 @@ export function RatingSummary({
   conflicted,
   className,
 }: RatingSummaryProps) {
+  // subscribes to the language, so the decimal follows it
+  useTranslation()
   const reduceMotion = useReducedMotion()
   const most = Math.max(1, ...distribution)
 
@@ -37,7 +41,7 @@ export function RatingSummary({
     >
       <div className="flex flex-col gap-2">
         <p className="font-display text-display-m leading-none">
-          {mean !== undefined ? mean.toFixed(1) : '—'}
+          {mean !== undefined ? decimal(mean) : '—'}
         </p>
         {mean !== undefined ? <Rating value={mean} /> : null}
         <p className="meta text-muted">
