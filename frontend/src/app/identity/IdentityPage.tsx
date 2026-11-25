@@ -7,6 +7,7 @@
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { IdentitySetup } from '@/app/identity/IdentitySetup'
 import { dateOf } from '@/app/reads/words'
 import { Badge } from '@/components/ui/Badge'
@@ -43,6 +44,7 @@ const NEXT = [
  * @returns The screen.
  */
 export function IdentityPage() {
+  const { t } = useTranslation()
   const rise = useRise()
   const [info, setInfo] = useState<IdentityInfo | null | undefined>(undefined)
   const [fresh, setFresh] = useState(0)
@@ -60,7 +62,7 @@ export function IdentityPage() {
   return (
     <Container className="max-w-3xl pt-28 pb-16">
       <motion.h1 {...rise()} className="font-display text-h1">
-        Identity
+        {t('Identity')}
       </motion.h1>
 
       {info === undefined ? null : info === null ? (
@@ -76,34 +78,46 @@ export function IdentityPage() {
               'p-6',
             )}
           >
-            <p className="meta text-muted">This browser signs as</p>
+            <p className="meta text-muted">{t('This browser signs as')}</p>
             <p className="font-mono text-mono-s break-all">{info.did}</p>
             <div className="flex flex-wrap items-center gap-2">
               {info.backedUp ? (
                 <Badge tone="valid" glyph="◆">
-                  Backed up
+                  {t('Backed up')}
                 </Badge>
               ) : (
                 <Badge tone="warning" glyph="●">
-                  No backup: lost with this browser’s data
+                  {t('No backup: lost with this browser’s data')}
                 </Badge>
               )}
               {info.createdAt ? (
                 <span className="meta text-muted">
-                  since {dateOf(info.createdAt)}
+                  {t('since {{date}}', { date: dateOf(info.createdAt) })}
                 </span>
               ) : null}
               {fresh > 0 ? (
                 <span className="meta text-muted">
-                  · {fresh} fresh {fresh === 1 ? 'identity' : 'identities'}{' '}
-                  for single reviews, never backed up
+                  ·{' '}
+                  {fresh === 1
+                    ? t(
+                        '{{n}} fresh identity for single reviews, never ' +
+                          'backed up',
+                        { n: fresh },
+                      )
+                    : t(
+                        '{{n}} fresh identities for single reviews, never ' +
+                          'backed up',
+                        { n: fresh },
+                      )}
                 </span>
               ) : null}
             </div>
             <p className="text-body-s text-secondary">
-              The private key cannot be read out of this browser, even by
-              this page. Another browser takes it only from the backup file
-              and its password.
+              {t(
+                'The private key cannot be read out of this browser, even ' +
+                  'by this page. Another browser takes it only from the ' +
+                  'backup file and its password.',
+              )}
             </p>
           </motion.section>
 
@@ -117,9 +131,9 @@ export function IdentityPage() {
                     'transition-colors hover:border-strong',
                   )}
                 >
-                  <span className="font-display text-h4">{item.title}</span>
+                  <span className="font-display text-h4">{t(item.title)}</span>
                   <span className="text-body-s text-secondary">
-                    {item.body}
+                    {t(item.body)}
                   </span>
                 </Link>
               </li>
