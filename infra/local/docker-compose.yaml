@@ -20,7 +20,7 @@ x-indexer: &indexer
   image: ecoa-indexer:local
   environment: &indexer-env
     DATABASE_URL: postgres://indexer:${INDEXER_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_indexer?sslmode=disable
-    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051,node-4:50051,node-5:50051
     MODERATORS_FILE: /config/moderators.json
     VERIFIERS_FILE: /config/verifiers.json
     RANKING: ${RANKING:-newest}
@@ -37,10 +37,11 @@ x-backend: &backend
       required: false
   environment: &backend-env
     DATABASE_URL: postgresql+asyncpg://backend:${BACKEND_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_backend
-    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051,node-4:50051,node-5:50051
     # the human verifier's key, for this machine only: anyone with the
     # repository has it (configs/indexer/verifiers.json lists its did:key)
     HUMAN_VERIFIER_SEED: 341203c990162088dd711512907df227606c510bc83404d5f8c38d8c267c728d
+    ALTCHA_HMAC_SECRET: ${ALTCHA_HMAC_SECRET:-ecoa-local-dev-altcha-secret}
     INDEXER_URL: http://indexer-serve:8081
     BIND: 0.0.0.0
     PORT: "8000"
@@ -80,15 +81,15 @@ services:
     volumes:
       - ./configs/dns:/etc/coredns:ro
     ports:
-      - "127.0.0.1:5353:53/udp"
+      - "127.0.0.1:${DNS_PORT:-5353}:53/udp"
 
 
-  # --- cluster of nodes ---
+  # --- cluster of nodes (5 peered libp2p nodes) ---
   node-1:
     <<: *node
     environment:
       <<: *node-env
-      BOOTSTRAP_ADDRS: /dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs
+      BOOTSTRAP_ADDRS: /dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs,/dns4/node-4/tcp/4001/p2p/12D3KooWNHvGYj6AeWAD5UPcYQbEbjUHeMKcigHQFaKFHibofEdp,/dns4/node-5/tcp/4001/p2p/12D3KooWCbcAWoTbziaSX6HYoNyqg6591XeXkXxvgYNBSAZR3BzR
     volumes:
       - ./configs/nodes/node-1.key:/keys/peer.key:ro
       - ./data/node-1:/data
@@ -100,7 +101,7 @@ services:
     <<: *node
     environment:
       <<: *node-env
-      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs,/dns4/node-4/tcp/4001/p2p/12D3KooWNHvGYj6AeWAD5UPcYQbEbjUHeMKcigHQFaKFHibofEdp,/dns4/node-5/tcp/4001/p2p/12D3KooWCbcAWoTbziaSX6HYoNyqg6591XeXkXxvgYNBSAZR3BzR
     volumes:
       - ./configs/nodes/node-2.key:/keys/peer.key:ro
       - ./data/node-2:/data
@@ -112,13 +113,37 @@ services:
     <<: *node
     environment:
       <<: *node-env
-      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7,/dns4/node-4/tcp/4001/p2p/12D3KooWNHvGYj6AeWAD5UPcYQbEbjUHeMKcigHQFaKFHibofEdp,/dns4/node-5/tcp/4001/p2p/12D3KooWCbcAWoTbziaSX6HYoNyqg6591XeXkXxvgYNBSAZR3BzR
     volumes:
       - ./configs/nodes/node-3.key:/keys/peer.key:ro
       - ./data/node-3:/data
     ports:
       - "127.0.0.1:4003:4001"
       - "127.0.0.1:50053:50051"
+
+  node-4:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs,/dns4/node-5/tcp/4001/p2p/12D3KooWCbcAWoTbziaSX6HYoNyqg6591XeXkXxvgYNBSAZR3BzR
+    volumes:
+      - ./configs/nodes/node-4.key:/keys/peer.key:ro
+      - ./data/node-4:/data
+    ports:
+      - "127.0.0.1:4004:4001"
+      - "127.0.0.1:50054:50051"
+
+  node-5:
+    <<: *node
+    environment:
+      <<: *node-env
+      BOOTSTRAP_ADDRS: /dns4/node-1/tcp/4001/p2p/12D3KooWScQpy5eMWGnq9bTa1w2b2S5zQRtvGc9e6HHW2BRtzPH4,/dns4/node-2/tcp/4001/p2p/12D3KooWBDfuNroD7Nu9mXbrYAm1H4B3eHwtzsw2Z7UBAVrQCNs7,/dns4/node-3/tcp/4001/p2p/12D3KooWHpQ9ZRanrBMfS62s4vYnvueZDLu4WtcsaCRJCGSGHJvs,/dns4/node-4/tcp/4001/p2p/12D3KooWNHvGYj6AeWAD5UPcYQbEbjUHeMKcigHQFaKFHibofEdp
+    volumes:
+      - ./configs/nodes/node-5.key:/keys/peer.key:ro
+      - ./data/node-5:/data
+    ports:
+      - "127.0.0.1:4005:4001"
+      - "127.0.0.1:50055:50051"
 
   # --- the indexer ---
   indexer-migrate:
@@ -187,4 +212,4 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:${FRONTEND_PORT:-8080}:8080"
