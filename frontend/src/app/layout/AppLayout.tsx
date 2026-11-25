@@ -10,6 +10,7 @@ import { Wordmark } from '@/components/ecoa/Wordmark'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
 import { cn } from '@/components/ui/cn'
+import { LanguageSwitch } from '@/i18n/LanguageSwitch'
 import { useSession } from '@/logic/session/session'
 import { ROUTES } from '@/routes'
 
@@ -121,10 +122,14 @@ export function AppLayout() {
 
           <div
             className={cn(
-              'col-start-2 row-start-1 justify-self-end sm:col-start-3',
+              'col-start-2 row-start-1 flex items-center gap-3',
+              'justify-self-end sm:col-start-3',
             )}
           >
             <Identity />
+            {/* Set apart by a rule: a setting, not a destination. */}
+            <span aria-hidden="true" className="h-5 border-l border-line" />
+            <LanguageSwitch />
           </div>
         </Container>
       </header>

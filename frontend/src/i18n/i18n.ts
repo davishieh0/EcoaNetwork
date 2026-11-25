@@ -38,6 +38,31 @@ function storedLanguage(): Language {
 }
 
 /**
+ * Switches the interface to a language and remembers the choice.
+ *
+ * @param language - The language to speak.
+ * @returns Nothing.
+ */
+export function setLanguage(language: Language) {
+  try {
+    localStorage.setItem(STORAGE_KEY, language)
+  } catch {
+    // a browser that keeps nothing still switches, for this visit
+  }
+
+  void i18n.changeLanguage(language)
+}
+
+/**
+ * Tells which language the interface speaks now.
+ *
+ * @returns The current language.
+ */
+export function currentLanguage(): Language {
+  return i18n.language === 'pt-BR' ? 'pt-BR' : 'en'
+}
+
+/**
  * Keeps the document's language, title and description in step.
  *
  * @param language - The language just set.
