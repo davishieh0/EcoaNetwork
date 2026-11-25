@@ -5,6 +5,7 @@
 
 // --- IMPORTS ---
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import type { ReviewState } from '@/app/reads/review/ReviewPage.t'
 import { KINDS, LANGUAGES, RATINGS } from '@/app/write/options'
 import { SignedPreview } from '@/app/write/SignedPreview'
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
 import { Select } from '@/components/ui/Select'
 import { Tooltip } from '@/components/ui/Tooltip'
+import { known } from '@/i18n/i18n'
 import { BODY_MAX, characters, TITLE_MAX } from '@/logic/protocol/review'
 import { ROUTES } from '@/routes'
 
@@ -39,6 +41,7 @@ const NOTES: Record<WritePhase['name'], string> = {
  * @returns The composer, or nothing until the account is known.
  */
 export function Composer({ data }: ComposerProps) {
+  const { t } = useTranslation()
   const {
     account,
     draft,
@@ -83,8 +86,10 @@ export function Composer({ data }: ComposerProps) {
               'font-mono text-mono-s text-muted',
             )}
           >
-            What it is about
-            <Tooltip label={`About ${kind.label}`}>{kind.hint}</Tooltip>
+            {t('What it is about')}
+            <Tooltip label={t('About {{kind}}', { kind: t(kind.label) })}>
+              {kind.hint}
+            </Tooltip>
           </span>
           <fieldset
             disabled={locked}
@@ -104,7 +109,7 @@ export function Composer({ data }: ComposerProps) {
               value={draft.identifier}
               onChange={(event) => update('identifier', event.target.value)}
               placeholder={kind.placeholder}
-              aria-label={kind.label}
+              aria-label={t(kind.label)}
               aria-invalid={problems.identifier ? true : undefined}
               inputMode={draft.kind === 'domain' ? 'url' : 'numeric'}
               autoComplete="off"
@@ -122,17 +127,21 @@ export function Composer({ data }: ComposerProps) {
               problems.identifier ? 'text-danger' : 'text-muted',
             )}
           >
-            {problems.identifier ?? (entity.ok ? `signs as ${entity.id}` : '')}
+            {problems.identifier
+              ? t(problems.identifier)
+              : entity.ok
+                ? t('signs as {{id}}', { id: entity.id })
+                : ''}
           </p>
         </div>
 
         <div className="flex flex-col gap-3 p-6">
           <span className="font-mono text-mono-s text-muted">
-            Rating · 1 worst, 5 best
+            {t('Rating · 1 worst, 5 best')}
           </span>
           <div
             role="radiogroup"
-            aria-label="Rating, 1 worst to 5 best"
+            aria-label={t('Rating, 1 worst to 5 best')}
             className={cn(
               'grid grid-cols-5 border',
               problems.rating ? 'border-danger' : 'border-line',
@@ -160,7 +169,7 @@ export function Composer({ data }: ComposerProps) {
             ))}
           </div>
           <p className="min-h-5 font-mono text-mono-s text-danger">
-            {problems.rating}
+            {problems.rating && t(problems.rating)}
           </p>
         </div>
       </div>
@@ -174,8 +183,8 @@ export function Composer({ data }: ComposerProps) {
           }
           maxLength={TITLE_MAX}
           readOnly={locked}
-          placeholder="A title, if you want one"
-          aria-label="Title (optional)"
+          placeholder={t('A title, if you want one')}
+          aria-label={t('Title (optional)')}
           className={cn(
             'field-sizing-content resize-none bg-transparent font-display',
             'text-h2 font-semibold tracking-heading outline-none',
@@ -184,13 +193,15 @@ export function Composer({ data }: ComposerProps) {
           )}
         />
         {problems.title ? (
-          <p className="font-mono text-mono-s text-danger">{problems.title}</p>
+          <p className="font-mono text-mono-s text-danger">
+            {t(problems.title)}
+          </p>
         ) : null}
         <textarea
           value={draft.body}
           onChange={(event) => update('body', event.target.value)}
-          placeholder="Tell it the way it happened."
-          aria-label="What happened"
+          placeholder={t('Tell it the way it happened.')}
+          aria-label={t('What happened')}
           readOnly={locked}
           rows={3}
           className={cn(
@@ -202,7 +213,9 @@ export function Composer({ data }: ComposerProps) {
           )}
         />
         {problems.body ? (
-          <p className="font-mono text-mono-s text-danger">{problems.body}</p>
+          <p className="font-mono text-mono-s text-danger">
+            {t(problems.body)}
+          </p>
         ) : null}
       </div>
 
@@ -230,7 +243,7 @@ export function Composer({ data }: ComposerProps) {
               onChange={(value) => update('lang', value)}
             />
           </fieldset>
-          <span className="hidden lg:inline">{NOTES[phase.name]}</span>
+          <span className="hidden lg:inline">{t(NOTES[phase.name])}</span>
         </div>
         {phase.name === 'checked' || phase.name === 'publishing' ? (
           <div
@@ -249,35 +262,41 @@ export function Composer({ data }: ComposerProps) {
               />
               <span className="flex flex-col gap-0.5">
                 <span className="text-body-m">
-                  Publish under a fresh identity
+                  {t('Publish under a fresh identity')}
                 </span>
                 <span className="text-body-s text-muted">
-                  A key made for this review alone: readers cannot tell it
-                  comes from you or link it to your other reviews. It carries
-                  none of your claims, and it is never backed up — you can
-                  edit or withdraw it from this browser only.
+                  {t(
+                    'A key made for this review alone: readers cannot tell ' +
+                      'it comes from you or link it to your other reviews. ' +
+                      'It carries none of your claims, and it is never ' +
+                      'backed up — you can edit or withdraw it from this ' +
+                      'browser only.',
+                  )}
                 </span>
               </span>
             </label>
             <p role="note" className="text-body-s text-muted">
-              Pseudonymous is not anonymous: this gateway and the node it
-              hands the review to see your IP address, and a fresh key does
-              not change it. Hiding it takes a network such as Tor, outside
-              Ecoa. Once published, the review is copied to nodes other
-              people run, and stays there even if you withdraw it.
+              {t(
+                'Pseudonymous is not anonymous: this gateway and the node it ' +
+                  'hands the review to see your IP address, and a fresh ' +
+                  'key does not change it. Hiding it takes a network such ' +
+                  'as Tor, outside Ecoa. Once published, the review is ' +
+                  'copied to nodes other people run, and stays there even ' +
+                  'if you withdraw it.',
+              )}
             </p>
           </div>
         ) : null}
         <div className="flex flex-wrap items-center justify-end gap-4">
           {phase.name === 'checked' && phase.error ? (
             <p role="alert" className="text-danger">
-              {phase.error}
+              {known(t, phase.error)}
             </p>
           ) : null}
           {phase.name === 'published' ? (
             <>
               <Button variant="secondary" type="button" onClick={reset}>
-                Write another
+                {t('Write another')}
               </Button>
               {/* what was signed travels along, until the index has it */}
               <Button
@@ -285,18 +304,20 @@ export function Composer({ data }: ComposerProps) {
                 to={ROUTES.review(phase.envelope.eventId)}
                 state={{ published: phase.envelope } satisfies ReviewState}
               >
-                Read it on the network
+                {t('Read it on the network')}
               </Button>
             </>
           ) : phase.name === 'editing' ? (
-            <Button type="submit">Preview</Button>
+            <Button type="submit">{t('Preview')}</Button>
           ) : (
             <Button
               type="button"
               pending={phase.name === 'publishing'}
               onClick={publish}
             >
-              {phase.name === 'publishing' ? 'Signing and sending' : 'Publish'}
+              {phase.name === 'publishing'
+                ? t('Signing and sending')
+                : t('Publish')}
             </Button>
           )}
         </div>
