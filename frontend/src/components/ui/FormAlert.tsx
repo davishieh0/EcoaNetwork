@@ -4,9 +4,11 @@
 
 // --- IMPORTS ---
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { FormAlertProps, FormAlertTone } from '@/components/ui/FormAlert.t'
 import { cn } from '@/components/ui/cn'
+import { known } from '@/i18n/i18n'
 
 // --- GLOBALS ---
 // the colour writes the rule and the text; the panel itself stays neutral
@@ -23,6 +25,7 @@ const TONES: Record<FormAlertTone, string> = {
  * @returns The alert, or nothing.
  */
 export function FormAlert({ children, tone = 'danger' }: FormAlertProps) {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
 
   return (
@@ -42,7 +45,7 @@ export function FormAlert({ children, tone = 'danger' }: FormAlertProps) {
               TONES[tone],
             )}
           >
-            {children}
+            {typeof children === 'string' ? known(t, children) : children}
           </p>
         </motion.div>
       ) : null}
