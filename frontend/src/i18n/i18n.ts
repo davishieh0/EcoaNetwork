@@ -7,7 +7,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
-import type { Language } from '@/i18n/i18n.t'
+import type { Language, Translate } from '@/i18n/i18n.t'
 import app from '@/i18n/locales/pt-BR/app.json'
 import site from '@/i18n/locales/pt-BR/site.json'
 
@@ -60,6 +60,18 @@ export function setLanguage(language: Language) {
  */
 export function currentLanguage(): Language {
   return i18n.language === 'pt-BR' ? 'pt-BR' : 'en'
+}
+
+/**
+ * Translates copy the dictionary knows, and leaves any other text as it is:
+ * text already worded, or carrying what a person typed, is never parsed.
+ *
+ * @param t - The translate function of the calling component.
+ * @param text - English copy, or text that is already final.
+ * @returns The translation, or the text unchanged.
+ */
+export function known(t: Translate, text: string): string {
+  return i18n.exists(text) ? t(text) : text
 }
 
 /**
