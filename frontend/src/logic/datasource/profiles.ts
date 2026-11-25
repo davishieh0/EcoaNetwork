@@ -4,7 +4,7 @@
 
 // --- IMPORTS ---
 import { request, route } from '@/logic/datasource/http'
-import type { Profiles } from '@/logic/datasource/profiles.t'
+import type { ProfileItem, Profiles } from '@/logic/datasource/profiles.t'
 
 // --- CODE ---
 /**
@@ -17,4 +17,14 @@ export function getProfiles(ids: string[], moderators?: string) {
   return request<Profiles>(
     route(['profiles'], { ids: ids.join(','), moderators }),
   )
+}
+
+/**
+ * Reads one identity's current profile.
+ *
+ * @param did - Any did:key of the identity.
+ * @returns The profile, signed.
+ */
+export function getProfile(did: string) {
+  return request<ProfileItem>(route(['profiles', did]))
 }
