@@ -6,11 +6,13 @@
 import { cn } from '@/components/ui/cn'
 import { useState } from 'react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { SealMotif } from '@/site/landing/motifs/SealMotif'
 import { EventInspector } from '@/components/ecoa/EventInspector'
 import type { InspectedEvent } from '@/components/ecoa/EventInspector.t'
 import type { Review } from '@/components/ecoa/ReviewCard.t'
+import { known } from '@/i18n/i18n'
 import { ReviewCard } from '@/components/ecoa/ReviewCard'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
@@ -101,22 +103,46 @@ const UNDERNEATH = [
 export function RealReview() {
   const reveal = useReveal()
   const [inspecting, setInspecting] = useState(false)
+  const { t } = useTranslation()
+
+  // the sample is copy: it speaks the reader's language
+  const review: Review = {
+    ...REVIEW,
+    entityKind: t(REVIEW.entityKind ?? ''),
+    title: t(REVIEW.title ?? ''),
+    body: t(REVIEW.body),
+    authorClaim: REVIEW.authorClaim && {
+      ...REVIEW.authorClaim,
+      label: t(REVIEW.authorClaim.label),
+    },
+  }
+  const event: InspectedEvent = {
+    ...EVENT,
+    rows: EVENT.rows.map((row) => ({
+      label: t(row.label),
+      value: known(t, row.value),
+    })),
+    badges: EVENT.badges?.map((badge) => ({
+      ...badge,
+      label: t(badge.label),
+    })),
+  }
 
   return (
     <Section id="a-real-review" surface="light">
       <Container className="flex flex-col gap-16">
         <SectionHeading
-          eyebrow="See a real review"
-          title="A review is more than a card."
-          lede={
-            'On the left, what you normally get. On the right, the questions ' +
-            'you could never ask about it before.'
-          }
+          eyebrow={t('See a real review')}
+          title={t('A review is more than a card.')}
+          lede={t(
+            'On the left, what you normally get. On the right, the ' +
+              'questions you could never ask about it before.',
+          )}
         />
 
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
           <motion.div {...reveal()} className="flex flex-col gap-8">
-            <ReviewCard review={REVIEW} onInspect={() => setInspecting(true)} />
+            <ReviewCard review={review} onInspect={() => setInspecting(true)} />
             <SealMotif />
           </motion.div>
 
@@ -125,7 +151,7 @@ export function RealReview() {
               {...reveal(0.08)}
               className="meta border-b border-structural pb-4 text-muted"
             >
-              What you can ask about it
+              {t('What you can ask about it')}
             </motion.p>
 
             <dl className="flex flex-col">
@@ -140,13 +166,13 @@ export function RealReview() {
                       'text-body-m font-semibold text-primary text-pretty',
                     )}
                   >
-                    {row.question}
+                    {t(row.question)}
                   </dt>
                   <dd className="text-body-m text-secondary text-pretty">
-                    {row.answer}
+                    {t(row.answer)}
                   </dd>
                   <dd className="font-mono text-mono-s text-muted">
-                    {row.technical}
+                    {t(row.technical)}
                   </dd>
                 </motion.div>
               ))}
@@ -154,7 +180,7 @@ export function RealReview() {
 
             <motion.div {...reveal(0.4)} className="pt-8">
               <Button onClick={() => setInspecting(true)}>
-                See the proof ↗
+                {t('See the proof ↗')}
               </Button>
             </motion.div>
           </div>
@@ -164,7 +190,7 @@ export function RealReview() {
       <EventInspector
         open={inspecting}
         onOpenChange={setInspecting}
-        event={EVENT}
+        event={event}
       />
     </Section>
   )
