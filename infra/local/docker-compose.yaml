@@ -23,7 +23,7 @@ x-indexer: &indexer
     NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
     MODERATORS_FILE: /config/moderators.json
     VERIFIERS_FILE: /config/verifiers.json
-    # domain claims are looked up in the local zone, not the public DNS
+    RANKING: ${RANKING:-newest}
     DNS_SERVER: dns:53
   volumes:
     - ./configs/indexer/moderators.json:/config/moderators.json:ro
