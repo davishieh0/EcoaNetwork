@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { messageOf } from '@/app/forms/messages'
 import { routeTo } from '@/app/navigation/navigation'
 import { cardOf } from '@/app/reads/cards'
@@ -44,6 +45,7 @@ export function EntityPage() {
   const { inspect, inspector } = useInspection()
   const rise = useRise()
   const reduceMotion = useReducedMotion()
+  const { t } = useTranslation()
 
   // what arrives after the header fades in where it will stay
   const arrive = {
@@ -60,18 +62,18 @@ export function EntityPage() {
   const failed = entity.error && !unnamed
 
   const status = reviews.loading
-    ? 'Reading the reviews…'
+    ? t('Reading the reviews…')
     : // the entity's failure is already said above
       reviews.error && !failed
       ? messageOf(reviews.error)
       : reviews.items.length === 0
-      ? 'No reviews yet. Be the first to sign one.'
-      : `Reviews, ${
-          reviews.ranking === 'endorsed'
-            ? 'most endorsed first'
-            : 'newest first'
-        } — as this index ranks them` +
-        (labeled ? ', with what moderation hides marked' : '')
+        ? t('No reviews yet. Be the first to sign one.')
+        : t('Reviews, {{order}} — as this index ranks them', {
+            order:
+              reviews.ranking === 'endorsed'
+                ? t('most endorsed first')
+                : t('newest first'),
+          }) + (labeled ? t(', with what moderation hides marked') : '')
 
   return (
     <Container className="max-w-4xl pt-28 pb-16">
@@ -80,7 +82,7 @@ export function EntityPage() {
           to={ROUTES.explore}
           className="text-muted transition-colors hover:text-primary"
         >
-          ← Explore
+          ← {t('Explore')}
         </Link>
       </motion.p>
 
@@ -121,29 +123,33 @@ export function EntityPage() {
           {entity.data ? (
             <motion.p {...arrive} className="meta text-muted">
               {entity.data.derived.proposals === 1
-                ? '1 proposal for its details'
-                : `${entity.data.derived.proposals} proposals for its details`}
-              {' · anyone can propose, the network weighs them'}
+                ? t('1 proposal for its details')
+                : t('{{n}} proposals for its details', {
+                    n: entity.data.derived.proposals,
+                  })}
+              {' · ' + t('anyone can propose, the network weighs them')}
             </motion.p>
           ) : null}
           {entity.data?.observed.representative ? (
             <motion.p {...arrive} className="flex flex-wrap items-center gap-2">
               <Badge tone="valid" glyph="◆">
-                Verified representative
+                {t('Verified representative')}
               </Badge>
               <span className="font-mono text-mono-s break-all text-secondary">
                 {entity.data.observed.representative.identity}
               </span>
               {entity.data.observed.representative.since ? (
                 <span className="meta text-muted">
-                  since {dateOf(entity.data.observed.representative.since)}
+                  {t('since {{date}}', {
+                    date: dateOf(entity.data.observed.representative.since),
+                  })}
                 </span>
               ) : null}
             </motion.p>
           ) : null}
           {unnamed ? (
             <motion.p {...arrive} className="meta text-muted">
-              Nobody has proposed a name for it yet.
+              {t('Nobody has proposed a name for it yet.')}
             </motion.p>
           ) : null}
         </div>
@@ -153,7 +159,7 @@ export function EntityPage() {
             {...routeTo('write', { entity: entityId })}
             variant="secondary"
           >
-            Write a review
+            {t('Write a review')}
           </Button>
         </motion.div>
       </header>
@@ -209,7 +215,7 @@ export function EntityPage() {
                       'transition-colors hover:text-secondary'
                     }
                   >
-                    Read review →
+                    {t('Read review →')}
                   </Link>
                 }
               />
