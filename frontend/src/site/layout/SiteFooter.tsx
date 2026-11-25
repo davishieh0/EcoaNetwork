@@ -3,6 +3,7 @@
  */
 
 // --- IMPORTS ---
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/components/ui/cn'
 import { Wordmark } from '@/components/ecoa/Wordmark'
 import { Container } from '@/components/ui/Container'
@@ -16,6 +17,8 @@ import { FOOTER_LINKS } from '@/site/layout/nav'
  * @returns The footer.
  */
 export function SiteFooter() {
+  const { t } = useTranslation()
+
   return (
     <footer
       className={cn(
@@ -36,7 +39,7 @@ export function SiteFooter() {
             <a
               href="#top"
               className="flex items-center gap-3"
-              aria-label="Ecoa — home"
+              aria-label={t('Ecoa — home')}
             >
               <Wordmark />
             </a>
@@ -46,17 +49,17 @@ export function SiteFooter() {
                 'text-secondary text-balance',
               )}
             >
-              Every experience leaves an echo.
+              {t('Every experience leaves an echo.')}
             </p>
           </div>
 
           <nav
             className="grid grid-cols-2 gap-10 sm:grid-cols-3"
-            aria-label="Footer"
+            aria-label={t('Footer')}
           >
             {FOOTER_LINKS.map((group) => (
               <div key={group.heading} className="flex flex-col gap-3">
-                <h2 className="meta text-muted">{group.heading}</h2>
+                <h2 className="meta text-muted">{t(group.heading)}</h2>
                 <ul className="flex flex-col gap-2">
                   {group.links.map((link) => (
                     <li key={link.label}>
@@ -67,7 +70,7 @@ export function SiteFooter() {
                           'duration-interface hover:text-primary',
                         )}
                       >
-                        {link.label}
+                        {t(link.label)}
                       </a>
                     </li>
                   ))}
@@ -78,7 +81,7 @@ export function SiteFooter() {
         </div>
 
         <p className="meta border-t border-line pt-6 text-muted">
-          Ecoa / Open network / 2026
+          {t('Ecoa / Open network / 2026')}
         </p>
       </Container>
     </footer>
