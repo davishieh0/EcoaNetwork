@@ -116,6 +116,12 @@ type Node struct {
 	// fetchMu guards fetching
 	fetchMu sync.Mutex
 
+	// syncing holds peers with an active catchUp loop
+	syncing map[peer.ID]bool
+
+	// syncMu guards syncing
+	syncMu sync.Mutex
+
 	// mu serializes events from the revocation check to the store
 	mu sync.Mutex
 }
@@ -146,6 +152,7 @@ func New(ctx context.Context,
 	}
 
 	cfg.Validator = n.validate
+	cfg.DeferConnect = true
 
 	n.host, err = p2p.New(ctx, cfg)
 	if err != nil {
@@ -154,6 +161,7 @@ func New(ctx context.Context,
 
 	n.host.ServeSync(source{s})
 	n.host.OnConnect(func(id peer.ID) { n.syncWith(ctx, id) })
+	n.host.Connect(ctx)
 
 	return n, nil
 }
@@ -185,6 +193,7 @@ func build(ctx context.Context,
 		orphans:    orphans,
 		ctx:        ctx,
 		fetching:   map[string]bool{},
+		syncing:    map[peer.ID]bool{},
 	}
 
 	return n, nil
@@ -311,12 +320,13 @@ func (n *Node) admitted(author string, arrival Arrival) bool {
 }
 
 
-// commit records a rotation or a revocation, then stores the event.
+// commit validates a rotation or revocation, stores the event, then records
+// the identity move in memory only after persistence succeeds.
 func (n *Node) commit(verified event.Event, arrival Arrival) (Outcome, error) {
 	env := verified.Envelope()
 
 	if identity.Moves(env.EventType) {
-		if err := n.identities.Observe(env); err != nil {
+		if err := n.identities.Check(env); err != nil {
 			return report(arrival, Rejected, err)
 		}
 	}
@@ -328,6 +338,12 @@ func (n *Node) commit(verified event.Event, arrival Arrival) (Outcome, error) {
 
 	if err != nil {
 		return report(arrival, Failed, err)
+	}
+
+	if identity.Moves(env.EventType) {
+		if err := n.identities.Observe(env); err != nil {
+			slog.Warn("identity observe after store", "eventId", verified.ID(), "err", err)
+		}
 	}
 
 	slog.Info("stored",
@@ -434,7 +450,22 @@ func (o Outcome) String() string {
 
 
 // syncWith catches up with p and logs why it could not.
+// Only one catchUp loop runs per peer at a time to prevent cursor regressions.
 func (n *Node) syncWith(ctx context.Context, p peer.ID) {
+	n.syncMu.Lock()
+	if n.syncing[p] {
+		n.syncMu.Unlock()
+		return
+	}
+	n.syncing[p] = true
+	n.syncMu.Unlock()
+
+	defer func() {
+		n.syncMu.Lock()
+		delete(n.syncing, p)
+		n.syncMu.Unlock()
+	}()
+
 	if err := n.catchUp(ctx, p); err != nil {
 		slog.Warn("catch up stopped", "peer", p, "reason", err)
 	}

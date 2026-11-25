@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"os"
 	"slices"
+	"sync/atomic"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
@@ -90,6 +91,10 @@ type Config struct {
 
 	// ConnHigh is the connection count that makes the manager start trimming.
 	ConnHigh int
+
+	// DeferConnect skips initial bootstrap dialing in New so the caller can
+	// register ServeSync and OnConnect before calling Connect.
+	DeferConnect bool
 }
 
 
@@ -101,11 +106,18 @@ type Host struct {
 
 	// limiter decides which sync streams get served
 	limiter *syncLimiter
+
+	// dial stores the startup dial configuration for Connect
+	cfg Config
+
+	// meshReady tracks whether Gossipsub has completed at least one heartbeat
+	// with peers on the topic since the last empty state.
+	meshReady atomic.Bool
 }
 
 
-// New builds the peer: host, bootstrap connections, Gossipsub and the
-// subscription. It does not start receiving events; call Run for that.
+// New builds the peer: host and Gossipsub topic. Unless cfg.DeferConnect is
+// true, it also connects to bootstrap peers and starts the redial loop.
 func New(ctx context.Context, cfg Config) (*Host, error) {
 	if cfg.Validator == nil {
 		return nil, errors.New("p2p: Config.Validator is required")
@@ -128,12 +140,6 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 		}
 	}
 
-	connectBootstrap(ctx, h, dialOrder(cfg))
-
-	if cfg.Redial != nil {
-		go keepConnected(ctx, h, max(cfg.ConnLow, 1), cfg.Redial)
-	}
-
 	topic, sub, err := joinTopic(ctx, h, cfg.Network, cfg.Validator)
 	if err != nil {
 		h.Close()
@@ -141,8 +147,23 @@ func New(ctx context.Context, cfg Config) (*Host, error) {
 	}
 
 	limiter := newSyncLimiter(cfg.Sync, time.Now)
+	p := &Host{host: h, topic: topic, sub: sub, limiter: limiter, cfg: cfg}
 
-	return &Host{host: h, topic: topic, sub: sub, limiter: limiter}, nil
+	if !cfg.DeferConnect {
+		p.Connect(ctx)
+	}
+
+	return p, nil
+}
+
+
+// Connect dials known and bootstrap peers and starts the background redial loop.
+func (p *Host) Connect(ctx context.Context) {
+	connectBootstrap(ctx, p.host, dialOrder(p.cfg))
+
+	if p.cfg.Redial != nil {
+		go keepConnected(ctx, p.host, max(p.cfg.ConnLow, 1), p.cfg.Redial)
+	}
 }
 
 
@@ -264,10 +285,22 @@ func rememberIdentified(ctx context.Context,
 
 				identified := e.(event.EvtPeerIdentificationCompleted)
 
+				hasNonLoopback := false
 				for _, a := range identified.ListenAddrs {
-					if dialable(a) {
-						onSeen(a.String() + "/p2p/" + identified.Peer.String())
+					if dialable(a) && !manet.IsIPLoopback(a) {
+						hasNonLoopback = true
+						break
 					}
+				}
+
+				for _, a := range identified.ListenAddrs {
+					if !dialable(a) {
+						continue
+					}
+					if hasNonLoopback && manet.IsIPLoopback(a) {
+						continue
+					}
+					onSeen(a.String() + "/p2p/" + identified.Peer.String())
 				}
 			case <-ctx.Done():
 				return
@@ -343,6 +376,10 @@ func connectBootstrap(ctx context.Context, h host.Host, addrs []string) {
 		info, err := peer.AddrInfoFromString(addr)
 		if err != nil {
 			slog.Warn("bootstrap unusable", "addr", addr, "err", err)
+			continue
+		}
+
+		if info.ID == h.ID() || h.Network().Connectedness(info.ID) == network.Connected {
 			continue
 		}
 

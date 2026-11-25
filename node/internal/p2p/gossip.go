@@ -106,6 +106,12 @@ func (p *Host) ReceiveEvent(ctx context.Context) ([]byte, peer.ID, error) {
 // heartbeat. Publishing in between is silently lost, so waiting for a peer is
 // necessary and not sufficient: one heartbeat has to pass as well.
 func (p *Host) WaitForPeers(ctx context.Context) error {
+	if len(p.topic.ListPeers()) > 0 && p.meshReady.Load() {
+		return nil
+	}
+
+	p.meshReady.Store(false)
+
 	for len(p.topic.ListPeers()) == 0 {
 		select {
 		case <-ctx.Done():
@@ -118,6 +124,7 @@ func (p *Host) WaitForPeers(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	case <-time.After(pubsub.GossipSubHeartbeatInterval):
+		p.meshReady.Store(true)
 		return nil
 	}
 }

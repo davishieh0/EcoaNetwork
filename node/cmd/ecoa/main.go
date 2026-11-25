@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/eduardokairalla1/EcoaNetwork/internal/config"
@@ -44,7 +45,7 @@ func run(args []string) error {
 		return err
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	db, err := store.New(cfg.BoltDBPath)
