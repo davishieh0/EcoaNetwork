@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { AuthShell } from '@/app/auth/AuthShell'
 import { PasswordStrength } from '@/app/auth/PasswordStrength'
@@ -42,6 +43,7 @@ const FIELD_OF: FieldOf<ResetPasswordErrors> = {
  * @returns The reset screen.
  */
 export function ResetPassword() {
+  const { t } = useTranslation()
   const { change, resend, state } = useResetPasswordData()
   const newCode = useResend(resend)
   const [email, setEmail] = useState(state.email ?? '')
@@ -97,13 +99,16 @@ export function ResetPassword() {
       title="Set a new password."
       lede={
         knownEmail
-          ? `Enter the ${CODE_LENGTH}-digit code we sent to ${email}, then ` +
-            'choose a password you have not used here before.'
+          ? t(
+              'Enter the {{length}}-digit code we sent to {{email}}, then ' +
+                'choose a password you have not used here before.',
+              { length: CODE_LENGTH, email },
+            )
           : 'Enter your address, the code we sent to it, and a new password.'
       }
       footer={
         <Link to={ROUTES.login} className="text-primary underline">
-          Back to sign in
+          {t('Back to sign in')}
         </Link>
       }
     >
@@ -179,7 +184,7 @@ export function ResetPassword() {
         />
 
         <Button type="submit" size="lg" pending={change.pending}>
-          {change.pending ? 'Changing password' : 'Change password'}
+          {change.pending ? t('Changing password') : t('Change password')}
         </Button>
       </form>
     </AuthShell>
