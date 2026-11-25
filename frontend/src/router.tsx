@@ -7,6 +7,7 @@ import { createBrowserRouter } from 'react-router'
 
 import { Account } from '@/app/account/Account'
 import { ChooseHandle } from '@/app/auth/chooseHandle/ChooseHandle'
+import { Claims } from '@/app/claims/Claims'
 import { Dashboard } from '@/app/dashboard/Dashboard'
 import { ForgotPassword } from '@/app/auth/forgotPassword/ForgotPassword'
 import { Login } from '@/app/auth/login/Login'
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Dashboard /> },
           { path: 'account', element: <Account /> },
           { path: 'write', element: <Write /> },
+          { path: 'claims', element: <Claims /> },
         ],
       },
     ],
