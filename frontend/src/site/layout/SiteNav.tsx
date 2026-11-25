@@ -7,10 +7,12 @@ import { useEffect, useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
 import { motion, useReducedMotion } from 'motion/react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { CircleMark } from '@/components/ecoa/CircleMark'
 import { Wordmark } from '@/components/ecoa/Wordmark'
 import { Container } from '@/components/ui/Container'
+import { LanguageSwitch } from '@/i18n/LanguageSwitch'
 import { NAV_LINKS } from '@/site/layout/nav'
 import { ROUTES } from '@/routes'
 import { cn } from '@/components/ui/cn'
@@ -26,6 +28,7 @@ const WORDMARK_SYMBOL = 'transition-colors duration-surface ease-standard'
  * @returns The menu trigger, and the panel it opens.
  */
 function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const reduceMotion = useReducedMotion()
 
@@ -124,6 +127,16 @@ function MobileMenu({ surface }: { surface: 'dark' | 'light' }) {
               <Button as={Link} to={ROUTES.login} variant="ghost">
                 Login
               </Button>
+            </Container>
+
+            <Container
+              className={cn(
+                'flex items-center justify-between gap-4 border-t',
+                'border-line py-6',
+              )}
+            >
+              <span className="meta text-muted">{t('Language')}</span>
+              <LanguageSwitch />
             </Container>
           </motion.div>
         </Dialog.Content>
@@ -293,6 +306,16 @@ export function SiteNav() {
           >
             Register
           </Button>
+
+          {/* Set apart by a rule: a setting, not a destination. */}
+          <div
+            className={cn(
+              'hidden items-center border-l border-line pl-3',
+              'lg:flex',
+            )}
+          >
+            <LanguageSwitch />
+          </div>
 
           <MobileMenu surface={surface} />
         </div>
