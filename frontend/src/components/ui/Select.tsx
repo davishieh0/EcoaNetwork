@@ -3,8 +3,10 @@
  */
 
 // --- IMPORTS ---
+import { useTranslation } from 'react-i18next'
 import type { SelectProps } from '@/components/ui/Select.t'
 import { cn } from '@/components/ui/cn'
+import { known } from '@/i18n/i18n'
 
 // --- GLOBALS ---
 const CONTROL = cn(
@@ -29,9 +31,11 @@ export function Select<T extends string>({
   onChange,
   className,
 }: SelectProps<T>) {
+  const { t } = useTranslation()
+
   return (
     <label className="relative flex items-center">
-      <span className="sr-only">{label}</span>
+      <span className="sr-only">{known(t, label)}</span>
       <select
         value={value}
         onChange={(event) => onChange(event.target.value as T)}
@@ -43,7 +47,7 @@ export function Select<T extends string>({
             value={option.value}
             className="bg-surface-raised text-primary"
           >
-            {option.label}
+            {known(t, option.label)}
           </option>
         ))}
       </select>
