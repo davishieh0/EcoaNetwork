@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import type { PasswordStrengthProps } from '@/app/auth/PasswordStrength.t'
 import { PASSWORD_RULES } from '@/app/auth/rules'
@@ -18,6 +19,7 @@ import { cn } from '@/components/ui/cn'
  * @returns The meter, or nothing while the field is empty.
  */
 export function PasswordStrength({ password }: PasswordStrengthProps) {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
   const met = PASSWORD_RULES.map((rule) => rule.test.test(password))
   const score = met.filter(Boolean).length
@@ -75,9 +77,9 @@ export function PasswordStrength({ password }: PasswordStrengthProps) {
                     ) : null}
                   </AnimatePresence>
                 </span>
-                {rule.label}
+                {t(rule.label)}
                 <span className="sr-only">
-                  {met[index] ? ', done' : ', missing'}
+                  {met[index] ? t(', done') : t(', missing')}
                 </span>
               </li>
             ))}
