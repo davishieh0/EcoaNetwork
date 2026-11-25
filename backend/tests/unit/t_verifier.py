@@ -91,6 +91,33 @@ def test_a_check_is_used_once(verifier: HumanVerifier) -> None:
         asyncio.run(verifier.issue(SUBJECT, payload))
 
 
+def test_a_failed_publish_does_not_burn_the_check() -> None:
+    # Arrange
+    class FlakyEvents(FakeEvents):
+        def __init__(self) -> None:
+            super().__init__()
+            self.fail_next = True
+
+        async def publish(self, envelope: bytes) -> PublishResult:
+            if self.fail_next:
+                self.fail_next = False
+                raise RuntimeError('node unavailable')
+            return await super().publish(envelope)
+
+    events = FlakyEvents()
+    verifier = HumanVerifier(SEED, 'secret', 'ecoa-dev', events)  # type: ignore[arg-type]
+    payload = solved(verifier)
+
+    # Act: first attempt fails to publish, second attempt succeeds with same solved check
+    with pytest.raises(RuntimeError):
+        asyncio.run(verifier.issue(SUBJECT, payload))
+    result = asyncio.run(verifier.issue(SUBJECT, payload))
+
+    # Assert
+    assert result.outcome == 'accepted'
+    assert len(events.published) == 1
+
+
 def test_a_check_signed_by_another_gateway_fails(events: FakeEvents) -> None:
     # Arrange: solved against another secret
     other = HumanVerifier(SEED, 'another', 'ecoa-dev', events)  # type: ignore[arg-type]

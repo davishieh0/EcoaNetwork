@@ -52,6 +52,10 @@ class IndexerClient:
 
         :return: The segment, safe to put in a path.
         """
+        if segment == '.':
+            return '%2E'
+        if segment == '..':
+            return '%2E%2E'
         return quote(segment, safe=':@')
 
 
@@ -287,6 +291,17 @@ class IndexerClient:
                                params={'q': q, 'limit': limit, 'after': after,
                                        'category': category,
                                        'moderators': moderators})
+
+
+    async def get_nodes(self) -> IndexerAnswer:
+        """
+        The nodes this indexer follows and their observed log positions.
+
+        :raises IndexerUnavailableError: If the indexer does not answer.
+
+        :return: The indexer's status and body.
+        """
+        return await self._get('nodes')
 
 
     async def close(self) -> None:

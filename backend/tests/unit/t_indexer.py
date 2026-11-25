@@ -149,6 +149,8 @@ def test_an_indexer_that_does_not_answer_raises(failure: Exception) -> None:
     ('did:key:z6Mk', b'did:key:z6Mk'),
     ('domain:a.com.br', b'domain:a.com.br'),
     ('../health', b'..%2Fhealth'),
+    ('..', b'%2E%2E'),
+    ('.', b'%2E'),
     ('a b?c', b'a%20b%3Fc'),
 ])
 def test_an_id_stays_one_segment_whatever_it_holds(

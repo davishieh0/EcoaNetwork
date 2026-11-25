@@ -16,6 +16,7 @@ from src.utils.protocol import sign_event
 from typing import Any
 
 import altcha
+import asyncio
 import json
 import time
 
@@ -110,7 +111,9 @@ class HumanVerifier:
             raise VerifierDisabledError()
 
         signature = self._signature_of(solved)
-        result = altcha.verify_solution(solved, self._secret)
+        result = await asyncio.to_thread(
+            altcha.verify_solution, solved, self._secret
+        )
 
         if not result.verified or signature is None:
             raise InvalidCaptchaError(result.error or 'not verified')
@@ -118,7 +121,6 @@ class HumanVerifier:
         self._forget_expired()
         if signature in self._used:
             raise InvalidCaptchaError('used before')
-        self._used[signature] = time.time() + CHALLENGE_TTL
 
         now = datetime.now(UTC).replace(microsecond=0)
         envelope = sign_event(self._key, self._network,
@@ -132,6 +134,7 @@ class HumanVerifier:
                               })
 
         published = await self._events.publish(envelope)
+        self._used[signature] = time.time() + CHALLENGE_TTL
 
         return HumanClaimResult(
             event_id=json.loads(envelope)['eventId'],

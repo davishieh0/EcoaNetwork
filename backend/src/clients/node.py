@@ -12,7 +12,11 @@ import grpc
 
 # --- GLOBALS ---
 CALL_TIMEOUT = 5
-RETRYABLE = {grpc.StatusCode.UNAVAILABLE, grpc.StatusCode.DEADLINE_EXCEEDED}
+RETRYABLE = {
+    grpc.StatusCode.UNAVAILABLE,
+    grpc.StatusCode.DEADLINE_EXCEEDED,
+    grpc.StatusCode.CANCELLED,
+}
 
 
 # --- CODE ---
