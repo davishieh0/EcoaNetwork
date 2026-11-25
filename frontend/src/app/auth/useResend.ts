@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import { RESEND_WAIT } from '@/app/auth/rules'
 import { useCooldown } from '@/app/auth/useCooldown'
@@ -21,6 +22,7 @@ const SENT = 'A new code is on its way. The previous one no longer works.'
  * @returns The ask, the button's state and label, and what to say above.
  */
 export function useResend(send: Submit<[email: string]>, waiting = false) {
+  const { t } = useTranslation()
   const cooldown = useCooldown(RESEND_WAIT, waiting)
   const [sent, setSent] = useState(false)
 
@@ -43,9 +45,9 @@ export function useResend(send: Submit<[email: string]>, waiting = false) {
     disabled: cooldown.left > 0,
     label:
       cooldown.left > 0
-        ? `Send a new code in ${cooldown.left}s`
-        : 'Send a new code',
-    notice: sent && !send.message ? SENT : '',
+        ? t('Send a new code in {{n}}s', { n: cooldown.left })
+        : t('Send a new code'),
+    notice: sent && !send.message ? t(SENT) : '',
     message: send.message,
   }
 }
