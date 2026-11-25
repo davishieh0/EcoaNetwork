@@ -38,7 +38,7 @@ export function FinalCta() {
           {t('Every experience')}
           <br />
           {t('leaves an')}{' '}
-          <span className="relative inline-block">
+          <span className="relative z-0 inline-block">
             {t('echo')}
             <CircleMark
               className="absolute -inset-x-6 -inset-y-5 -z-10 overflow-visible"

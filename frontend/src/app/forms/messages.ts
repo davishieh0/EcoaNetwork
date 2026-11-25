@@ -39,6 +39,19 @@ const MESSAGES: Record<string, string> = {
   invalid_identity_error: 'That is not an identity.',
   invalid_query_error: 'The search is too long. Use up to 120 characters.',
   invalid_cursor_error: 'The list changed. Load it again from the start.',
+  invalid_captcha_error:
+    'That human check did not verify. Try solving it again.',
+  verifier_disabled_error: 'This gateway does not issue human claims.',
+  invalid_category_error: 'That is not a category the protocol knows.',
+  invalid_moderators_error: 'One of the moderator keys is not a valid did:key.',
+  invalid_labeled_error: 'Invalid moderation filter option.',
+  invalid_limit_error: 'Invalid page size requested.',
+  email_not_verified_error: 'Confirm your email address before signing in.',
+  profile_incomplete_error:
+    'Choose a handle first to finish setting up your account.',
+  auth_provider_error: 'The authentication service is not answering right now.',
+  database_unavailable_error: 'The gateway database is unavailable right now.',
+  internal_error: 'Something went wrong on our side. Try again soon.',
 }
 
 const UNAVAILABLE = 'Something on our side is not answering. Try again soon.'

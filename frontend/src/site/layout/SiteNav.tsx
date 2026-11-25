@@ -254,7 +254,7 @@ export function SiteNav() {
                 aria-current={isActive ? 'true' : undefined}
                 className={cn(
                   // 320ms, matching the bar.
-                  'meta relative py-1',
+                  'meta relative py-1 whitespace-nowrap',
                   'transition-colors duration-surface ease-standard',
                   isActive ? 'text-primary' : 'text-secondary',
                   'hover:text-primary focus-visible:text-primary',

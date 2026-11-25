@@ -34,7 +34,7 @@ export function Section({
       id={id}
       data-surface={surface === 'light' ? 'light' : undefined}
       className={cn(
-        'border-t border-structural py-20 md:py-28',
+        'relative isolate border-t border-structural py-20 md:py-28',
         grid && 'grid-field',
         className,
       )}

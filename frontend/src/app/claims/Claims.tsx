@@ -81,6 +81,7 @@ export function Claims() {
     loading,
     error,
     busy,
+    humanAttempt,
     waitingFor,
     human,
     domain,
@@ -120,122 +121,144 @@ export function Claims() {
         <motion.div {...rise(0.12)} className="mt-8">
           <IdentitySetup onDone={identityReady} />
         </motion.div>
-      ) : null}
-
-      <motion.section {...rise(0.12)} className={cn(CARD, 'mt-8')}>
-        <p className="meta text-muted">{t('This browser’s identity')}</p>
-        <p className="font-mono text-mono-s break-all">
-          {did ?? t('Opening the key…')}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {loading ? (
-            <span className="meta text-muted">{t('Reading your claims…')}</span>
-          ) : claims.length === 0 ? (
-            <span className="meta text-muted">{t('No claim counts yet.')}</span>
-          ) : (
-            claims.map((c) => (
-              <Badge
-                key={c.eventId}
-                tone={c.claimType === 'domain' ? 'valid' : 'info'}
-                glyph="◆"
-              >
-                {c.claimType === 'domain'
-                  ? `${t('Domain')} · ${c.entity?.slice('domain:'.length)}` +
-                    (c.since
-                      ? ` · ${t('since {{date}}', { date: dateOf(c.since) })}`
-                      : '')
-                  : t('Human')}
-              </Badge>
-            ))
-          )}
-        </div>
-      </motion.section>
-
-      <Status text={status} failed={!!error} className="mt-4" />
-
-      <motion.section {...rise(0.18)} className={cn(CARD, 'mt-6')}>
-        <div className="flex flex-col gap-1">
-          <h2 className="font-display text-h4">{t('Human')}</h2>
-          <p className="text-body-s text-secondary">
-            {t(
-              'A small proof of work, solved in this browser. It identifies ' +
-                'nobody: the gateway signs that this key paid the cost, ' +
-                'which counts a little more than a brand-new key.',
-            )}
-          </p>
-        </div>
-        {isHuman ? (
-          <Badge tone="info" glyph="◆">
-            {t('You hold a human claim')}
-          </Badge>
-        ) : did ? (
-          <div aria-busy={busy === 'human'}>
-            <HumanCheck onSolved={(payload) => void human(payload)} />
-          </div>
-        ) : null}
-      </motion.section>
-
-      <motion.section {...rise(0.24)} className={cn(CARD, 'mt-6')}>
-        <div className="flex flex-col gap-1">
-          <h2 className="font-display text-h4">{t('Domain')}</h2>
-          <p className="text-body-s text-secondary">
-            {t(
-              'Prove you control a website by publishing a DNS record. The ' +
-                'index looks it up itself: there is no verifier to trust. A ' +
-                'verified domain makes you its representative: your details ' +
-                'for it hold, and your responses to its reviews are marked ' +
-                'official.',
-            )}
-          </p>
-        </div>
-
-        <label className="flex flex-col gap-1">
-          <span className="meta text-muted">{t('Your domain')}</span>
-          <input
-            value={typed}
-            onChange={(event) => setTyped(event.target.value)}
-            placeholder="example.com"
-            className={FIELD}
-          />
-          {normalized && !normalized.ok ? (
-            <span className="text-body-s text-danger">
-              {t(normalized.reason)}
-            </span>
-          ) : null}
-        </label>
-
-        {name && did ? (
-          <>
-            <p className="text-body-s text-secondary">
-              {t(
-                '1. Add this TXT record to the domain’s DNS. It can stay ' +
-                  'next to others, and it has to stay: the claim is checked ' +
-                  'again.',
-              )}
+      ) : (
+        <>
+          <motion.section {...rise(0.12)} className={cn(CARD, 'mt-8')}>
+            <p className="meta text-muted">{t('This browser’s identity')}</p>
+            <p className="font-mono text-mono-s break-all">
+              {did ?? t('Opening the key…')}
             </p>
-            <Copyable label="Name" value={`_ecoa-verify.${name}`} />
-            <Copyable label="Value" value={`ecoa-identity=${did}`} />
-            <p className="text-body-s text-secondary">
-              {t(
-                '2. Sign the claim. It says this identity holds {{name}} for ' +
-                  'a year, and it counts once the index finds the record.',
-                { name },
+            <div className="flex flex-wrap gap-2">
+              {loading ? (
+                <span className="meta text-muted">
+                  {t('Reading your claims…')}
+                </span>
+              ) : claims.length === 0 ? (
+                <span className="meta text-muted">
+                  {t('No claim counts yet.')}
+                </span>
+              ) : (
+                claims.map((c) => (
+                  <Badge
+                    key={c.eventId}
+                    tone={c.claimType === 'domain' ? 'valid' : 'info'}
+                    glyph="◆"
+                  >
+                    {c.claimType === 'domain'
+                      ? `${t('Domain')} · ` +
+                        `${c.entity?.slice('domain:'.length)}` +
+                        (c.since
+                          ? ` · ${t('since {{date}}', {
+                              date: dateOf(c.since),
+                            })}`
+                          : '')
+                      : t('Human')}
+                  </Badge>
+                ))
               )}
-            </p>
-            <div>
-              <Button
-                type="button"
-                pending={busy === 'domain'}
-                onClick={() => void domain(typed)}
-              >
-                {busy === 'domain'
-                  ? t('Signing and sending')
-                  : t('Sign the claim')}
-              </Button>
             </div>
-          </>
-        ) : null}
-      </motion.section>
+          </motion.section>
+
+          <Status text={status} failed={!!error} className="mt-4" />
+
+          <motion.section {...rise(0.18)} className={cn(CARD, 'mt-6')}>
+            <div className="flex flex-col gap-1">
+              <h2 className="font-display text-h4">{t('Human')}</h2>
+              <p className="text-body-s text-secondary">
+                {t(
+                  'A small proof of work, solved in this browser. It ' +
+                    'identifies nobody: the gateway signs that this key paid ' +
+                    'the cost, which counts a little more than a brand-new ' +
+                    'key.',
+                )}
+              </p>
+            </div>
+            {isHuman ? (
+              <Badge tone="info" glyph="◆">
+                {t('You hold a human claim')}
+              </Badge>
+            ) : did ? (
+              <div
+                aria-busy={busy === 'human'}
+                className="flex flex-col gap-2"
+              >
+                <HumanCheck
+                  key={humanAttempt}
+                  onSolved={(payload) => void human(payload)}
+                />
+                {busy === 'human' ? (
+                  <span className="meta text-muted">
+                    {t('Issuing human claim…')}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+          </motion.section>
+
+          <motion.section {...rise(0.24)} className={cn(CARD, 'mt-6')}>
+            <div className="flex flex-col gap-1">
+              <h2 className="font-display text-h4">{t('Domain')}</h2>
+              <p className="text-body-s text-secondary">
+                {t(
+                  'Prove you control a website by publishing a DNS record. ' +
+                    'The index looks it up itself: there is no verifier to ' +
+                    'trust. A verified domain makes you its representative: ' +
+                    'your details for it hold, and your responses to its ' +
+                    'reviews are marked official.',
+                )}
+              </p>
+            </div>
+
+            <label className="flex flex-col gap-1">
+              <span className="meta text-muted">{t('Your domain')}</span>
+              <input
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                placeholder="example.com"
+                className={FIELD}
+              />
+              {normalized && !normalized.ok ? (
+                <span className="text-body-s text-danger">
+                  {t(normalized.reason)}
+                </span>
+              ) : null}
+            </label>
+
+            {name && did ? (
+              <>
+                <p className="text-body-s text-secondary">
+                  {t(
+                    '1. Add this TXT record to the domain’s DNS. It can stay ' +
+                      'next to others, and it has to stay: the claim is ' +
+                      'checked again.',
+                  )}
+                </p>
+                <Copyable label="Name" value={`_ecoa-verify.${name}`} />
+                <Copyable label="Value" value={`ecoa-identity=${did}`} />
+                <p className="text-body-s text-secondary">
+                  {t(
+                    '2. Sign the claim. It says this identity holds ' +
+                      '{{name}} for a year, and it counts once the index ' +
+                      'finds the record.',
+                    { name },
+                  )}
+                </p>
+                <div>
+                  <Button
+                    type="button"
+                    pending={busy === 'domain'}
+                    onClick={() => void domain(typed)}
+                  >
+                    {busy === 'domain'
+                      ? t('Signing and sending')
+                      : t('Sign the claim')}
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </motion.section>
+        </>
+      )}
     </Container>
   )
 }

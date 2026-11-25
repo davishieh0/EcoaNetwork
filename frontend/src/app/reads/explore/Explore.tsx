@@ -33,6 +33,13 @@ const CATEGORIES = [
   'travel-and-lodging',
   'transport',
   'entertainment',
+  'telecom',
+  'real-estate',
+  'utilities',
+  'government',
+  'manufacturing',
+  'nonprofit',
+  'other',
 ]
 
 // --- CODE ---

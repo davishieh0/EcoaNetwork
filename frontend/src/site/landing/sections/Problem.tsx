@@ -32,7 +32,7 @@ export function Problem() {
           title={
             <>
               {t('A review you')}{' '}
-              <span className="relative inline-block">
+              <span className="relative z-0 inline-block">
                 {t('cannot check')}
                 {/* The same hand as the hero, on this section's phrase. */}
                 <CircleMark

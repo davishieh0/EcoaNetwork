@@ -189,7 +189,7 @@ export const HISTORY = [
 ] as const
 
 export const NETWORK_FACTS = [
-  { value: '03', label: 'Independent nodes' },
+  { value: '05', label: 'Independent nodes' },
   { value: '01', label: 'Protocol' },
   { value: '00', label: 'Definitive servers' },
 ] as const

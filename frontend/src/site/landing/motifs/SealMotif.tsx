@@ -4,8 +4,8 @@
 
 // --- IMPORTS ---
 import { cn } from '@/components/ui/cn'
-import { useState } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { useRef, useState } from 'react'
+import { motion, useInView, useReducedMotion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 
 // --- GLOBALS ---
@@ -28,6 +28,8 @@ export function SealMotif() {
   const reduceMotion = useReducedMotion()
   const [tampered, setTampered] = useState(false)
   const { t } = useTranslation()
+  const svgRef = useRef<SVGSVGElement>(null)
+  const inView = useInView(svgRef, { once: true, amount: 0.6 })
 
   return (
     <figure
@@ -38,6 +40,7 @@ export function SealMotif() {
       <figcaption className="meta text-muted">{t('The seal')}</figcaption>
 
       <svg
+        ref={svgRef}
         viewBox="0 0 220 96"
         aria-hidden="true"
         focusable="false"
@@ -52,16 +55,22 @@ export function SealMotif() {
             height={5}
             fill="var(--ecoa-border-strong)"
             initial={{ width: 0 }}
-            whileInView={{ width: line.width }}
-            viewport={{ once: true, amount: 0.6 }}
+            animate={
+              inView
+                ? {
+                    width:
+                      tampered && index === 1 ? line.width + 26 : line.width,
+                  }
+                : { width: 0 }
+            }
             transition={
               reduceMotion
                 ? { duration: 0 }
-                : { duration: 0.4, delay: index * 0.08, ease: EASE }
-            }
-            animate={
-              // One line shifts when tampered with: the text changed.
-              tampered && index === 1 ? { width: line.width + 26 } : undefined
+                : {
+                    duration: 0.4,
+                    delay: tampered ? 0 : index * 0.08,
+                    ease: EASE,
+                  }
             }
           />
         ))}

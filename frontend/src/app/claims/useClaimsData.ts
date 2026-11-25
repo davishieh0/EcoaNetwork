@@ -46,6 +46,7 @@ export function useClaimsData() {
   const [missing, setMissing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<'human' | 'domain' | null>(null)
+  const [humanAttempt, setHumanAttempt] = useState(0)
   const [waiting, setWaiting] = useState<{
     check: (claims: Recognized[]) => boolean
     tries: number
@@ -103,6 +104,7 @@ export function useClaimsData() {
               reason: result.reason ?? '',
             }),
           )
+          setHumanAttempt((n) => n + 1)
           return
         }
 
@@ -113,6 +115,7 @@ export function useClaimsData() {
         })
       } catch (failure) {
         setError(messageOf(failure))
+        setHumanAttempt((n) => n + 1)
       } finally {
         setBusy(null)
       }
@@ -166,6 +169,7 @@ export function useClaimsData() {
     loading: !missing && (did === null || identity.loading),
     error,
     busy,
+    humanAttempt,
     waitingFor: waiting?.what ?? null,
     human,
     domain,

@@ -19,30 +19,33 @@ export const NAV_LINKS = [
   { label: 'FAQ', href: '#faq' },
 ] as const
 
+const REPO = 'https://github.com/eduardokairalla1/ecoa'
+
 export const FOOTER_LINKS = [
   {
     heading: 'Protocol',
     links: [
-      { label: 'Specification', href: '#' },
-      { label: 'Event types', href: '#' },
-      { label: 'Documentation', href: '#' },
-      { label: 'GitHub', href: '#' },
+      { label: 'Specification', href: `${REPO}/blob/main/docs/protocol.md` },
+      { label: 'Event types', href: `${REPO}/tree/main/protocol/schemas` },
+      { label: 'Documentation', href: `${REPO}/tree/main/docs` },
+      { label: 'GitHub', href: REPO },
     ],
   },
   {
     heading: 'Network',
     links: [
       { label: 'Explore', href: ROUTES.explore },
-      { label: 'Run a node', href: '#' },
-      { label: 'Status', href: '#' },
+      { label: 'Identity', href: ROUTES.identity },
+      { label: 'Moderation', href: ROUTES.moderation },
+      { label: 'Run a node', href: `${REPO}/blob/main/node/README.md` },
     ],
   },
   {
     heading: 'About',
     links: [
-      { label: 'About Ecoa', href: '#' },
-      { label: 'Privacy', href: '#' },
-      { label: 'Terms', href: '#' },
+      { label: 'How it works', href: '/#how-it-works' },
+      { label: 'Trust model', href: '/#trust' },
+      { label: 'FAQ', href: '/#faq' },
     ],
   },
 ] as const

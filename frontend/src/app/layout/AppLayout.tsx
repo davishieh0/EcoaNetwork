@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Link, NavLink, Outlet } from 'react-router'
 import { useTranslation } from 'react-i18next'
 
+import { NetworkStatus } from '@/app/layout/NetworkStatus'
 import { Wordmark } from '@/components/ecoa/Wordmark'
 import { Button } from '@/components/ui/Button'
 import { Container } from '@/components/ui/Container'
@@ -131,6 +132,7 @@ export function AppLayout() {
               'justify-self-end sm:col-start-3',
             )}
           >
+            <NetworkStatus />
             <Identity />
             {/* Set apart by a rule: a setting, not a destination. */}
             <span aria-hidden="true" className="h-5 border-l border-line" />

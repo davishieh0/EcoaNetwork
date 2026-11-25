@@ -24,7 +24,8 @@ export function readEnvelope(raw: string): Envelope {
     typeof (parsed as Envelope).eventId !== 'string' ||
     typeof (parsed as Envelope).author !== 'string' ||
     typeof (parsed as Envelope).eventType !== 'string' ||
-    typeof (parsed as Envelope).payload !== 'object'
+    typeof (parsed as Envelope).payload !== 'object' ||
+    (parsed as Envelope).payload === null
   ) {
     throw new Error('Not an envelope.')
   }

@@ -83,7 +83,11 @@ export function usePublicProfile() {
         for (let i = 0; i < FOLLOW.tries && did; i++) {
           await new Promise((done) => setTimeout(done, FOLLOW.every))
           const profile = await profileOf(did).catch(() => null)
-          if (profile?.displayName === payload.displayName) {
+          if (
+            profile &&
+            profile.displayName === payload.displayName &&
+            profile.bio === payload.bio
+          ) {
             setCurrent(profile)
             break
           }
@@ -100,7 +104,7 @@ export function usePublicProfile() {
   return {
     did,
     current,
-    loading: did !== null && loaded !== did,
+    loading: did === null || loaded !== did,
     busy,
     error,
     notice,

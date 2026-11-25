@@ -4,9 +4,11 @@
 
 // --- IMPORTS ---
 import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router'
 import { cn } from '@/components/ui/cn'
 import { Wordmark } from '@/components/ecoa/Wordmark'
 import { Container } from '@/components/ui/Container'
+import { ROUTES } from '@/routes'
 import { HeroField } from '@/site/landing/motifs/HeroField'
 import { FOOTER_LINKS } from '@/site/layout/nav'
 
@@ -36,13 +38,13 @@ export function SiteFooter() {
           )}
         >
           <div className="flex flex-col gap-4">
-            <a
-              href="#top"
+            <Link
+              to={ROUTES.home}
               className="flex items-center gap-3"
               aria-label={t('Ecoa — home')}
             >
               <Wordmark />
-            </a>
+            </Link>
             <p
               className={cn(
                 'font-display text-h3 font-medium tracking-heading',
@@ -61,19 +63,34 @@ export function SiteFooter() {
               <div key={group.heading} className="flex flex-col gap-3">
                 <h2 className="meta text-muted">{t(group.heading)}</h2>
                 <ul className="flex flex-col gap-2">
-                  {group.links.map((link) => (
-                    <li key={link.label}>
-                      <a
-                        href={link.href}
-                        className={cn(
-                          'text-body-s text-secondary transition-colors',
-                          'duration-interface hover:text-primary',
+                  {group.links.map((link) => {
+                    const cls = cn(
+                      'text-body-s text-secondary transition-colors',
+                      'duration-interface hover:text-primary',
+                    )
+                    const isExternal = link.href.startsWith('http')
+                    const isRoute =
+                      link.href.startsWith('/') && !link.href.includes('#')
+
+                    return (
+                      <li key={link.label}>
+                        {isRoute ? (
+                          <Link to={link.href} className={cls}>
+                            {t(link.label)}
+                          </Link>
+                        ) : (
+                          <a
+                            href={link.href}
+                            className={cls}
+                            target={isExternal ? '_blank' : undefined}
+                            rel={isExternal ? 'noreferrer' : undefined}
+                          >
+                            {t(link.label)}
+                          </a>
                         )}
-                      >
-                        {t(link.label)}
-                      </a>
-                    </li>
-                  ))}
+                      </li>
+                    )
+                  })}
                 </ul>
               </div>
             ))}

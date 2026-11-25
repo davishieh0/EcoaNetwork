@@ -62,6 +62,7 @@ export function cardOf(
     authorId: envelope.author,
     publishedAt: dateOf(envelope.createdAt),
     eventId: envelope.eventId,
+    observedBy: item.observed.nodes?.length,
     edited: item.derived.edited || envelope.eventType === 'review.replaced',
     endorsements: item.derived.endorsements,
     disputes: item.derived.disputes,

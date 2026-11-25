@@ -117,6 +117,12 @@ export function useInspection() {
 
     verifyEnvelope(data.envelope).then(
       (verdict) => live && setChecked({ raw: data.envelope, verdict }),
+      () =>
+        live &&
+        setChecked({
+          raw: data.envelope,
+          verdict: { ok: false, reason: 'Could not check this envelope.' },
+        }),
     )
 
     return () => {

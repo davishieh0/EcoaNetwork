@@ -76,7 +76,12 @@ export async function verifyEnvelope(raw: string): Promise<Verdict> {
     createdAt: envelope.createdAt,
     payload: envelope.payload,
   } as UnsignedEnvelope
-  const input = signingInput(unsigned)
+  let input
+  try {
+    input = signingInput(unsigned)
+  } catch {
+    return { ok: false, reason: 'Its payload cannot be canonicalized.' }
+  }
 
   // the eventId names exactly what was signed
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', input))
