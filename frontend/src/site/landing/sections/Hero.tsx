@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { motion, useReducedMotion } from 'motion/react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { CircleMark } from '@/components/ecoa/CircleMark'
 import { HeroField } from '@/site/landing/motifs/HeroField'
@@ -30,6 +31,7 @@ const CHIPS = [
  * @returns The chips, positioned around the headline.
  */
 function Chips() {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
 
   return (
@@ -60,7 +62,7 @@ function Chips() {
                 }
           }
         >
-          {chip.label}
+          {t(chip.label)}
         </motion.span>
       ))}
     </div>
@@ -73,6 +75,7 @@ function Chips() {
  * @returns The hero section.
  */
 export function Hero() {
+  const { t } = useTranslation()
   const rise = useRise()
 
   return (
@@ -101,11 +104,11 @@ export function Hero() {
             'uppercase',
           )}
         >
-          Every experience
+          {t('Every experience')}
           <br />
-          leaves an{' '}
+          {t('leaves an')}{' '}
           <span className="relative inline-block">
-            echo
+            {t('echo')}
             {/* Circles the word the product is named for. */}
             <CircleMark
               className="absolute -inset-x-6 -inset-y-5 -z-10 overflow-visible"
@@ -120,8 +123,10 @@ export function Hero() {
           {...rise(0.22)}
           className="max-w-2xl text-body-l text-secondary text-pretty"
         >
-          An open network of reviews. Signed by their authors, verifiable by
-          anyone.
+          {t(
+            'An open network of reviews. Signed by their authors, ' +
+              'verifiable by anyone.',
+          )}
         </motion.p>
 
         <motion.div
@@ -129,10 +134,10 @@ export function Hero() {
           className="flex flex-wrap items-center justify-center gap-3"
         >
           <Button as={Link} to={ROUTES.explore} size="lg">
-            Explore the network
+            {t('Explore the network')}
           </Button>
           <Button as={Link} to={ROUTES.write} variant="secondary" size="lg">
-            Write a review
+            {t('Write a review')}
           </Button>
         </motion.div>
       </div>
@@ -141,7 +146,7 @@ export function Hero() {
         {...rise(0.5)}
         className="meta absolute bottom-8 left-1/2 -translate-x-1/2 text-muted"
       >
-        No account needed to read
+        {t('No account needed to read')}
       </motion.p>
     </section>
   )
