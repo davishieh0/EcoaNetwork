@@ -348,7 +348,7 @@ flowchart LR
     SV -->|"queries"| PG
 ```
 
-`project` and `serve` are one binary run twice: the writer follows the logs, the reader answers. A second index (`--profile second-index`) is the same pair over its own database, ranking by endorsements, its API on :8082.
+`project` and `serve` are one binary run twice: the writer follows the logs, the reader answers.
 
 ---
 
