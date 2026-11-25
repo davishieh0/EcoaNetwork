@@ -12,6 +12,7 @@ import type {
   EventInspectorProps,
   InspectedEvent,
 } from '@/components/ecoa/EventInspector.t'
+import { i18n } from '@/i18n/i18n'
 import { getEvent } from '@/logic/datasource/events'
 import type { EventItem } from '@/logic/datasource/events.t'
 import { useModeration } from '@/logic/moderation/moderation'
@@ -67,13 +68,18 @@ function inspectedOf(item: EventItem, check: Check): InspectedEvent {
     badges: [
       {
         label:
-          `Held by ${String(held).padStart(2, '0')} ` +
-          (held === 1 ? 'node' : 'nodes'),
+          held === 1
+            ? i18n.t('Held by {{n}} node', {
+                n: String(held).padStart(2, '0'),
+              })
+            : i18n.t('Held by {{n}} nodes', {
+                n: String(held).padStart(2, '0'),
+              }),
         tone: 'neutral' as const,
         glyph: '●' as const,
       },
       ...(item.observed.labels ?? []).map((applied) => ({
-        label: `Labeled · ${applied.label}`,
+        label: `${i18n.t('Labeled')} · ${applied.label}`,
         tone: 'warning' as const,
         glyph: '●' as const,
       })),
