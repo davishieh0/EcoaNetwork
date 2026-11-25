@@ -14,6 +14,7 @@ src/
   site/           the marketing site
   app/            the platform
   styles/         tokens.css and global.css
+  i18n/           the interface's languages: setup, switch, pt-BR words
 ```
 
 | Folder | Knows | Responsibility |
@@ -24,6 +25,7 @@ src/
 | `site/` | the marketing site | Landing and its chrome. Leaves this repo one day. |
 | `app/` | the platform | Every product screen. |
 | `styles/` | — | The token layer and the base stylesheet. |
+| `i18n/` | the interface's words | English is the source and the key; `locales/pt-BR/` holds the Portuguese. The language switch and the number and date formats that follow it. |
 
 ## logic/
 
