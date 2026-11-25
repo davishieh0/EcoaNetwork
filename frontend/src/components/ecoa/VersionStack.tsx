@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 // --- GLOBALS ---
 /** Two versions, both still here. */
@@ -16,6 +17,7 @@ const EASE = [0.2, 0.8, 0.2, 1] as const
  * @returns The stack, as inline SVG.
  */
 export function VersionStack() {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
 
   /**
@@ -123,7 +125,7 @@ export function VersionStack() {
           letterSpacing={1}
           fill="var(--ecoa-text-primary)"
         >
-          v2 · current
+          v2 · {t('current')}
         </text>
       </motion.g>
     </svg>
