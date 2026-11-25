@@ -25,14 +25,13 @@ export function RatingSummary({
   conflicted,
   className,
 }: RatingSummaryProps) {
-  // subscribes to the language, so the decimal follows it
-  useTranslation()
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
   const most = Math.max(1, ...distribution)
 
   return (
     <section
-      aria-label="Rating summary"
+      aria-label={t('Rating summary')}
       className={cn(
         'grid gap-6 border border-structural bg-surface p-6',
         'sm:grid-cols-[auto_1fr]',
@@ -45,11 +44,13 @@ export function RatingSummary({
         </p>
         {mean !== undefined ? <Rating value={mean} /> : null}
         <p className="meta text-muted">
-          {count === 1 ? '1 review counts' : `${count} reviews count`}
+          {count === 1
+            ? t('1 review counts')
+            : t('{{n}} reviews count', { n: count })}
         </p>
       </div>
 
-      <ol className="flex flex-col gap-1.5" aria-label="Reviews by rating">
+      <ol className="flex flex-col gap-1.5" aria-label={t('Reviews by rating')}>
         {[5, 4, 3, 2, 1].map((stars) => {
           const n = distribution[stars - 1] ?? 0
 
@@ -75,12 +76,23 @@ export function RatingSummary({
       </ol>
 
       <p className="text-body-s text-muted sm:col-span-2">
-        This index counts the current version of each review, leaving out
-        withdrawn ones and what a moderator it follows hid.
+        {t(
+          'This index counts the current version of each review, leaving ' +
+            'out withdrawn ones and what a moderator it follows hid.',
+        )}
         {conflicted > 0
-          ? ` ${conflicted} by the entity’s own representative ` +
-            (conflicted === 1 ? 'is' : 'are') +
-            ' shown but not counted.'
+          ? ' ' +
+            (conflicted === 1
+              ? t(
+                  '{{n}} by the entity’s own representative is shown but ' +
+                    'not counted.',
+                  { n: conflicted },
+                )
+              : t(
+                  '{{n}} by the entity’s own representative are shown but ' +
+                    'not counted.',
+                  { n: conflicted },
+                ))
           : ''}
       </p>
     </section>
