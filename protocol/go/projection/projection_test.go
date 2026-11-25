@@ -98,3 +98,36 @@ func TestDeriveEntityIDHasTheShapeOfAnEntityIdentifier(t *testing.T) {
 		t.Fatalf("DeriveEntityID = %q, %v", got, err)
 	}
 }
+
+
+func TestResolveFieldsKeepsTierOneWhenRepresentativeRenewsClaim(t *testing.T) {
+	// Arrange: same author holds two active recognized domain claims (renewal overlap)
+	entity := "domain:aurora.test"
+	owner := "did:key:owner"
+	identities := map[string]Identity{
+		owner: {
+			Weight: 1.0,
+			Claims: []Claim{
+				{Entity: entity, Recognized: true, SelfVerifiable: true},
+				{Entity: entity, Recognized: true, SelfVerifiable: true},
+			},
+		},
+	}
+	proposals := []Event{
+		{
+			ID:        "evt-1",
+			Author:    owner,
+			CreatedAt: "2026-11-24T12:00:00Z",
+			Payload:   []byte(`{"entity":"domain:aurora.test","name":"Padaria Aurora"}`),
+		},
+	}
+
+	// Act
+	fields := ResolveFields(proposals, identities)
+
+	// Assert
+	got, ok := fields["name"]
+	if !ok || got.Tier != 1 || got.Value != "Padaria Aurora" {
+		t.Fatalf("fields[name] = %+v (ok=%v), want Tier 1 Padaria Aurora", got, ok)
+	}
+}

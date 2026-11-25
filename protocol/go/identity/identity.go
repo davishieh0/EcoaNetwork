@@ -128,6 +128,20 @@ func Moves(eventType string) bool {
 }
 
 
+// Check reports whether env can be observed without mutating the tracker.
+func (t *Tracker) Check(env *envelope.Envelope) error {
+	switch env.EventType {
+	case rotatedType:
+		_, err := t.checkRotate(env)
+		return err
+	case revokedType:
+		return nil
+	}
+
+	return &UnsupportedEventError{EventType: env.EventType}
+}
+
+
 // Observe records a rotation or revocation, refusing a conflicting rotation.
 func (t *Tracker) Observe(env *envelope.Envelope) error {
 	switch env.EventType {
@@ -189,30 +203,41 @@ func (t *Tracker) IsRevoked(key string) bool {
 }
 
 
-// rotate records the rotation of env, the first one observed per key.
-func (t *Tracker) rotate(env *envelope.Envelope) error {
+// checkRotate validates env without mutating the tracker and returns its successor.
+func (t *Tracker) checkRotate(env *envelope.Envelope) (string, error) {
 	successor, err := successorOf(env)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	current, rotated := t.successor[env.Author]
 	if rotated && current == successor {
-		return nil
+		return successor, nil
 	}
 
 	if rotated || t.contested[env.Author] {
-		return &SuccessorObservedError{
+		return "", &SuccessorObservedError{
 			Author:    env.Author,
 			Successor: successor,
 		}
 	}
 
 	if t.reaches(successor, env.Author) {
-		return &RotationCycleError{
+		return "", &RotationCycleError{
 			Author:    env.Author,
 			Successor: successor,
 		}
+	}
+
+	return successor, nil
+}
+
+
+// rotate records the rotation of env, the first one observed per key.
+func (t *Tracker) rotate(env *envelope.Envelope) error {
+	successor, err := t.checkRotate(env)
+	if err != nil {
+		return err
 	}
 
 	t.successor[env.Author] = successor

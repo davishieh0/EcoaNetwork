@@ -136,16 +136,26 @@ func representative(entity string, identities map[string]Identity) string {
 	var holders, selfVerifiable []string
 
 	for author, identity := range identities {
+		var hasClaim, hasSelf bool
+
 		for _, claim := range identity.Claims {
 			if claim.Entity != entity || !claim.Recognized {
 				continue
 			}
 
-			holders = append(holders, author)
+			hasClaim = true
 
 			if claim.SelfVerifiable {
-				selfVerifiable = append(selfVerifiable, author)
+				hasSelf = true
 			}
+		}
+
+		if hasClaim {
+			holders = append(holders, author)
+		}
+
+		if hasSelf {
+			selfVerifiable = append(selfVerifiable, author)
 		}
 	}
 
