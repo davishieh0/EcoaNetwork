@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { dateLocale } from '@/i18n/format'
+import { i18n } from '@/i18n/i18n'
 import type { Entity } from '@/logic/datasource/entities.t'
 
 // --- GLOBALS ---
@@ -38,7 +39,7 @@ const DATE_TIME: Intl.DateTimeFormatOptions = {
  * @returns The kind, in words.
  */
 export function kindOf(entity: string): string {
-  return KINDS[entity.slice(0, entity.indexOf(':'))] ?? 'Entity'
+  return i18n.t(KINDS[entity.slice(0, entity.indexOf(':'))] ?? 'Entity')
 }
 
 /**
@@ -79,7 +80,7 @@ export function nameOf(entity: Entity): string {
  */
 export function categoryOf(category: string): string {
   const words = category.replace(/-/g, ' ')
-  return words.charAt(0).toUpperCase() + words.slice(1)
+  return i18n.t(words.charAt(0).toUpperCase() + words.slice(1))
 }
 
 /**
