@@ -5,6 +5,7 @@
 // --- IMPORTS ---
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import { Link, NavLink, Outlet } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { Wordmark } from '@/components/ecoa/Wordmark'
 import { Button } from '@/components/ui/Button'
@@ -28,6 +29,7 @@ const APP_LINKS = [
  * @returns The identity slot of the header.
  */
 function Identity() {
+  const { t } = useTranslation()
   const session = useSession()
   const reduceMotion = useReducedMotion()
 
@@ -41,11 +43,13 @@ function Identity() {
           'duration-interface hover:text-primary',
         )}
       >
-        {session.account.handle ? `@${session.account.handle}` : 'Finish setup'}
+        {session.account.handle
+          ? `@${session.account.handle}`
+          : t('Finish setup')}
       </Link>
     ) : session.status === 'signed-out' ? (
       <Button as={Link} to={ROUTES.login} variant="ghost" size="sm">
-        Sign in
+        {t('Sign in')}
       </Button>
     ) : null
 
@@ -72,6 +76,7 @@ function Identity() {
  * @returns The chrome, with the matched route rendered inside it.
  */
 export function AppLayout() {
+  const { t } = useTranslation()
   const session = useSession()
 
   // the site is for visitors: someone signed in is home on the dashboard
@@ -92,13 +97,13 @@ export function AppLayout() {
           <Link
             to={home}
             className="col-start-1 row-start-1 flex items-center gap-3"
-            aria-label="Ecoa — home"
+            aria-label={t('Ecoa — home')}
           >
             <Wordmark />
           </Link>
 
           <nav
-            aria-label="App navigation"
+            aria-label={t('App navigation')}
             className={cn(
               'col-span-2 row-start-2 flex flex-wrap gap-x-5 gap-y-2',
               'sm:col-span-1 sm:col-start-2 sm:row-start-1',
@@ -115,7 +120,7 @@ export function AppLayout() {
                   'aria-[current=page]:text-primary',
                 )}
               >
-                {label}
+                {t(label)}
               </NavLink>
             ))}
           </nav>
