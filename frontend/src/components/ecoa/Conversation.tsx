@@ -4,6 +4,7 @@
 
 // --- IMPORTS ---
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import type { ConversationProps } from '@/components/ecoa/Conversation.t'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/components/ui/cn'
@@ -28,6 +29,7 @@ export function Conversation({
   onLabel,
   className,
 }: ConversationProps) {
+  const { t } = useTranslation()
   const reveal = useReveal()
 
   return (
@@ -45,13 +47,13 @@ export function Conversation({
           <div className="flex flex-wrap items-center gap-2">
             {reply.official ? (
               <Badge tone="valid" glyph="◆">
-                Official response
+                {t('Official response')}
               </Badge>
             ) : null}
             <span className="meta text-secondary">{reply.author}</span>
             {reply.human && !reply.official ? (
               <Badge tone="info" glyph="◆">
-                Human
+                {t('Human')}
               </Badge>
             ) : null}
             <span
@@ -65,7 +67,7 @@ export function Conversation({
 
           {reply.replyTo ? (
             <p className="meta mt-2 text-muted">
-              ↳ In reply to {reply.replyTo}
+              ↳ {t('In reply to {{who}}', { who: reply.replyTo })}
             </p>
           ) : null}
 
@@ -81,12 +83,12 @@ export function Conversation({
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {reply.textChanged ? (
               <Badge tone="neutral" glyph="■">
-                Answered an earlier version
+                {t('Answered an earlier version')}
               </Badge>
             ) : null}
             {reply.labels?.map((label) => (
               <Badge key={label} tone="warning" glyph="●">
-                Labeled · {label}
+                {t('Labeled')} · {label}
               </Badge>
             ))}
             {onLabel ? (
@@ -99,7 +101,7 @@ export function Conversation({
                   onReply ? '' : 'ml-auto',
                 )}
               >
-                Label…
+                {t('Label…')}
               </button>
             ) : null}
             {onReply ? (
@@ -111,7 +113,7 @@ export function Conversation({
                   'hover:text-primary',
                 )}
               >
-                Reply
+                {t('Reply')}
               </button>
             ) : null}
             {onInspect ? (
@@ -124,7 +126,7 @@ export function Conversation({
                   onReply ? '' : 'ml-auto',
                 )}
               >
-                Inspect ↗
+                {t('Inspect ↗')}
               </button>
             ) : null}
           </div>
