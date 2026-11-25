@@ -6,6 +6,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router'
+import { useTranslation } from 'react-i18next'
 
 import { AuthShell } from '@/app/auth/AuthShell'
 import type { LoginErrors } from '@/app/auth/login/Login.t'
@@ -37,6 +38,7 @@ const NOTICES = {
  * @returns The login screen.
  */
 export function Login() {
+  const { t } = useTranslation()
   const { submit, state } = useLoginData()
   const [email, setEmail] = useState(state.email ?? '')
   const [password, setPassword] = useState('')
@@ -76,9 +78,9 @@ export function Login() {
       lede={LEDE}
       footer={
         <>
-          No account yet?{' '}
+          {t('No account yet?')}{' '}
           <Link to={ROUTES.register} className="text-primary underline">
-            Create one
+            {t('Create one')}
           </Link>
         </>
       }
@@ -121,11 +123,11 @@ export function Login() {
             'duration-interface hover:text-primary',
           )}
         >
-          Forgot your password?
+          {t('Forgot your password?')}
         </Link>
 
         <Button type="submit" size="lg" pending={submit.pending}>
-          {submit.pending ? 'Signing in' : 'Sign in'}
+          {submit.pending ? t('Signing in') : t('Sign in')}
         </Button>
       </form>
     </AuthShell>
