@@ -1,11 +1,21 @@
 # The built site, and /api passed on to the backend on the same origin.
+# A template: the image fills in ${BACKEND_ORIGIN} when it starts, so the same
+# build serves any gateway (docs/mvp.md: the client is pointed at another
+# gateway without code changes).
 server {
     listen 8080;
     root /usr/share/nginx/html;
 
+    # Docker's DNS: the backend's address is looked up again every 10 s, so
+    # a backend recreated with another address is still reached
+    resolver 127.0.0.11 valid=10s;
+
     # the API: the backend, as Vite's proxy does in development
     location /api/ {
-        proxy_pass http://backend:8000;
+        # a variable makes nginx resolve per request; the request's URI is
+        # passed on as it came
+        set $upstream ${BACKEND_ORIGIN};
+        proxy_pass $upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
