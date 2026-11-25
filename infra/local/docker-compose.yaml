@@ -22,10 +22,12 @@ x-indexer: &indexer
     DATABASE_URL: postgres://indexer:${INDEXER_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_indexer?sslmode=disable
     NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
     MODERATORS_FILE: /config/moderators.json
+    VERIFIERS_FILE: /config/verifiers.json
     # domain claims are looked up in the local zone, not the public DNS
     DNS_SERVER: dns:53
   volumes:
     - ./configs/indexer/moderators.json:/config/moderators.json:ro
+    - ./configs/indexer/verifiers.json:/config/verifiers.json:ro
 
 x-backend: &backend
   build: ../../backend
@@ -36,6 +38,9 @@ x-backend: &backend
   environment:
     DATABASE_URL: postgresql+asyncpg://backend:${BACKEND_DB_PASSWORD:-goodpassword}@postgres:5432/ecoa_backend
     NODE_ADDRS: node-1:50051,node-2:50051,node-3:50051
+    # the human verifier's key, for this machine only: anyone with the
+    # repository has it (configs/indexer/verifiers.json lists its did:key)
+    HUMAN_VERIFIER_SEED: 341203c990162088dd711512907df227606c510bc83404d5f8c38d8c267c728d
     INDEXER_URL: http://indexer-serve:8081
     BIND: 0.0.0.0
     PORT: "8000"
