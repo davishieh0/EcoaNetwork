@@ -3,6 +3,7 @@
  */
 
 // --- IMPORTS ---
+import { dateLocale } from '@/i18n/format'
 import type { Entity } from '@/logic/datasource/entities.t'
 
 // --- GLOBALS ---
@@ -13,13 +14,13 @@ const KINDS: Record<string, string> = {
   entity: 'Entity',
 }
 
-const DATE = new Intl.DateTimeFormat('en', {
+const DATE: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
-})
+}
 
-const DATE_TIME = new Intl.DateTimeFormat('en', {
+const DATE_TIME: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
@@ -27,7 +28,7 @@ const DATE_TIME = new Intl.DateTimeFormat('en', {
   minute: '2-digit',
   second: '2-digit',
   timeZoneName: 'short',
-})
+}
 
 // --- CODE ---
 /**
@@ -88,7 +89,7 @@ export function categoryOf(category: string): string {
  * @returns The day, such as "23 Nov 2026".
  */
 export function dateOf(iso: string): string {
-  return DATE.format(new Date(iso))
+  return new Intl.DateTimeFormat(dateLocale(), DATE).format(new Date(iso))
 }
 
 /**
@@ -98,7 +99,7 @@ export function dateOf(iso: string): string {
  * @returns The date and time, with the zone.
  */
 export function momentOf(iso: string): string {
-  return DATE_TIME.format(new Date(iso))
+  return new Intl.DateTimeFormat(dateLocale(), DATE_TIME).format(new Date(iso))
 }
 
 /**
