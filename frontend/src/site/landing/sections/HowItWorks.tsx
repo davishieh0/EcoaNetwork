@@ -10,6 +10,7 @@ import {
   useReducedMotion,
   useScroll,
 } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 import { FlowDiagram } from '@/site/landing/motifs/FlowDiagram'
 import { Container } from '@/components/ui/Container'
@@ -25,6 +26,7 @@ import { useMediaQuery } from '@/components/ui/useMediaQuery'
  * @returns The HowItWorks section.
  */
 export function HowItWorks() {
+  const { t } = useTranslation()
   const reduceMotion = useReducedMotion()
   const stepsRef = useRef<HTMLOListElement>(null)
   const [active, setActive] = useState(0)
@@ -50,12 +52,12 @@ export function HowItWorks() {
     <Section id="how-it-works">
       <Container className="flex flex-col gap-16">
         <SectionHeading
-          eyebrow="How Ecoa works"
-          title="Four steps, and none of them need our permission."
-          lede={
+          eyebrow={t('How Ecoa works')}
+          title={t('Four steps, and none of them need our permission.')}
+          lede={t(
             'A review is not a row in our database. It is a signed object ' +
-            'that carries everything a stranger needs in order to check it.'
-          }
+              'that carries everything a stranger needs in order to check it.',
+          )}
         />
 
         <div
@@ -106,10 +108,10 @@ export function HowItWorks() {
                         reached ? 'text-primary' : 'text-muted',
                       )}
                     >
-                      {item.title}
+                      {t(item.title)}
                     </h3>
                     <p className="text-body-m text-secondary text-pretty">
-                      {item.body}
+                      {t(item.body)}
                     </p>
                   </div>
                 </li>
@@ -126,10 +128,12 @@ export function HowItWorks() {
                 )}
               >
                 <p className="meta text-muted">
-                  Step {String(step + 1).padStart(2, '0')} / 04
+                  {t('Step {{n}} / 04', {
+                    n: String(step + 1).padStart(2, '0'),
+                  })}
                 </p>
                 <FlowDiagram step={step} />
-                <p className="meta text-secondary">{STEPS[step].title}</p>
+                <p className="meta text-secondary">{t(STEPS[step].title)}</p>
               </div>
             </div>
           </div>
