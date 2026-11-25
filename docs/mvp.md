@@ -81,7 +81,7 @@ Checked on 2026-11-24 against this repository, every flow run end to end through
 | A brand-new node joins from the default bootstrap list alone | ❌ | the embedded list is empty until a public node exists |
 | One node down does not stop propagation | ✅ | publishing with node-1 down reached the other two |
 | The index dropped and rebuilt from the logs reproduces the deterministic half | ✅ | `indexer rebuild`: 1712 events, 15 tables identical; and in tests |
-| Two independently-built indexers agree on the deterministic list | ⚠️ | two instances of this indexer, fed the logs in other orders, agree in tests and live; a second implementation does not exist |
+| Two independently-built indexers agree on the deterministic list | ⚠️ | this indexer is the only implementation; two instances of it, fed the logs in other orders, agree in its tests (`guarantees_test.go`) |
 | A vote before its review is buffered, then accepted | ✅ | the node's orphan tests and fixtures |
 | A conflicting later rotation is rejected; both at once contest the identity | ✅ | the node's rotation tests |
 | An event from another network is ignored and never relayed | ✅ | the node's network test |
@@ -91,7 +91,7 @@ Checked on 2026-11-24 against this repository, every flow run end to end through
 | Oversized payload, unknown envelope field, future `createdAt` rejected | ✅ | rejection vectors |
 | The client is pointed at another gateway without code changes | ✅ | `BACKEND_ORIGIN` on the site's nginx: one image, any gateway. Per user at run time is not built ([architecture.md](./architecture.md#substitutability-only-counts-if-the-client-isnt-served-by-the-gateway)) |
 
-Every step of the demonstration below runs: steps 1–4 and 7–8 in the client, step 3's "which nodes hold it" in the inspection view, steps 5 and 6 with `indexer/cmd/demo`, step 9 with `indexer rebuild`, step 10 with the `second-index` profile. [infra/local/README.md](../infra/local/README.md#the-demonstration) has the commands.
+Every step of the demonstration below runs: steps 1–4 and 7–8 in the client, step 3's "which nodes hold it" in the inspection view, steps 5 and 6 with `indexer/cmd/demo`, step 9 with `indexer rebuild`, step 10 by restarting the indexer's API with `RANKING=endorsed`. [infra/local/README.md](../infra/local/README.md#the-demonstration) has the commands.
 
 ## The demonstration
 
@@ -108,9 +108,9 @@ Every step below runs on what's already in scope. Nothing here is an extra featu
 7. **Edit your own review after it was endorsed.** The endorsements don't carry to the new version ([protocol.md](./protocol.md#votes-do-not-follow-an-edit)) — a deliberate anti-abuse decision, made visible.
 8. **Verify a domain by publishing a DNS TXT record**, then post a company response that renders with an official badge — with no verifier service anywhere in the loop.
 9. **Drop the entire index and rebuild it from the node logs.** Same content, same chains, same votes.
-10. **Point a second indexer at the same log with a different ranking configuration.** Same events, different order, both correct. This is the project's thesis on screen: the log is the truth, the ranking is an opinion, and anyone can hold a different one.
+10. **Change the indexer's ranking configuration.** Same events, different order, both correct. This is the project's thesis on screen: the log is the truth, the ranking is an opinion, and anyone can hold a different one — another indexer, run by anyone, is this same choice made by someone else.
 
-Step 10 is the one worth rehearsing. Everything before it demonstrates that the system works; step 10 demonstrates *why it was built this way*, and it's nearly free — the same indexer binary, run twice, with two config files.
+Step 10 is the one worth rehearsing. Everything before it demonstrates that the system works; step 10 demonstrates *why it was built this way*, and it's nearly free — one setting, and the API restarted. That a second indexer would agree on the deterministic half is shown by the indexer's tests, not by running one.
 
 ## Phases
 

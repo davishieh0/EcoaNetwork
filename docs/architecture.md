@@ -93,7 +93,7 @@ A client that actually cares has one option and it's an honest one: fetch the en
 - Which nodes this indexer saw holding an event, which depends on which nodes it follows.
 - Which labels count, which is the moderators a reader or the indexer follows — in v1, chosen per request (`?moderators=`), so it can differ between two readers of the same indexer.
 
-The v1 indexer keeps the two halves in separate tables, and its tests and a live check confirm the deterministic half: a rebuild reproduces it, and a second indexer fed the same logs in another order agrees on it ([diagrams.md §13](./diagrams/diagrams.md#13-the-indexers-data-model)).
+The v1 indexer keeps the two halves in separate tables, and its tests and a live check confirm the deterministic half: a rebuild reproduces it, and two instances fed the same logs in other orders agree on it, in tests ([diagrams.md §13](./diagrams/diagrams.md#13-the-indexers-data-model)).
 
 Note the shape of the two entries in bold. Neither is a rule that differs between indexers — the rules are identical and written down. What differs is an *input* that no implementation can derive from the log alone. That's the honest test for which list something belongs in: not "is the rule shared" but "can it be recomputed from the events and nothing else".
 
