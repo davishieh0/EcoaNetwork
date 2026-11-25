@@ -3,6 +3,7 @@
  */
 
 // --- IMPORTS ---
+import { useTranslation } from 'react-i18next'
 import type { LoadMoreProps } from '@/app/reads/LoadMore.t'
 import { Button } from '@/components/ui/Button'
 
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/Button'
  * @returns The button, or nothing at the end of the list.
  */
 export function LoadMore({ hasMore, more, onLoad }: LoadMoreProps) {
+  const { t } = useTranslation()
   if (!hasMore) return null
 
   return (
@@ -23,11 +25,11 @@ export function LoadMore({ hasMore, more, onLoad }: LoadMoreProps) {
         onClick={onLoad}
         pending={more === 'loading'}
       >
-        Load more
+        {t('Load more')}
       </Button>
       {more === 'failed' ? (
         <p role="alert" className="meta text-danger">
-          The next page did not load. Try again.
+          {t('The next page did not load. Try again.')}
         </p>
       ) : null}
     </div>
