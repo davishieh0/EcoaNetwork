@@ -6,6 +6,7 @@
 import { cn } from '@/components/ui/cn'
 import { useState } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 // --- GLOBALS ---
 /** The seal, and what breaks it. */
@@ -26,6 +27,7 @@ const LINES = [
 export function SealMotif() {
   const reduceMotion = useReducedMotion()
   const [tampered, setTampered] = useState(false)
+  const { t } = useTranslation()
 
   return (
     <figure
@@ -33,7 +35,7 @@ export function SealMotif() {
         'flex flex-col gap-4 border border-structural bg-surface p-8',
       )}
     >
-      <figcaption className="meta text-muted">The seal</figcaption>
+      <figcaption className="meta text-muted">{t('The seal')}</figcaption>
 
       <svg
         viewBox="0 0 220 96"
@@ -113,9 +115,11 @@ export function SealMotif() {
         {/* aria-live: the change is in the drawing, which is hidden. */}
         <p aria-live="polite" className="meta">
           {tampered ? (
-            <span className="text-danger">◆ Signature no longer valid</span>
+            <span className="text-danger">
+              {t('◆ Signature no longer valid')}
+            </span>
           ) : (
-            <span className="text-valid">◆ Signature valid</span>
+            <span className="text-valid">{t('◆ Signature valid')}</span>
           )}
         </p>
 
@@ -127,7 +131,7 @@ export function SealMotif() {
             'transition-colors duration-interface hover:text-secondary',
           )}
         >
-          {tampered ? 'Restore the text' : 'Try changing the text'}
+          {tampered ? t('Restore the text') : t('Try changing the text')}
         </button>
       </div>
     </figure>
