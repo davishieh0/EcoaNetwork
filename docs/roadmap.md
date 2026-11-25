@@ -7,6 +7,26 @@ Two principles run through the ordering:
 - **Push the risky thing later, but not last.** libp2p is the single largest schedule risk. Everything that can be correct without a network is built and tested first, so when networking starts, a bug there is unambiguously a networking bug — and if libp2p has to be swapped for the declared fallback, nothing built before it is wasted.
 - **Instrument while building, not after.** The evaluation metrics are decided in step 0 so counters go in as each piece is written. Retrofitting measurement onto finished code is how a results chapter turns into guesswork.
 
+## Status
+
+As of 2026-11-24. The acceptance criteria, one by one, are in [mvp.md](./mvp.md#where-v1-stands); what remains in the indexer, in [its roadmap](../indexer/docs/roadmap.md#what-remains-for-the-mvp-indexer).
+
+| Step | State | What is open |
+|---|---|---|
+| 0. Decisions | Done | — |
+| 1. Spec artifacts | Done | two fixture cases cannot be signed as written ([indexer roadmap](../indexer/docs/roadmap.md#what-remains-for-the-mvp-indexer)) |
+| 2. Core library | Done: `protocol/go` | `protocol/ts`, a second implementation |
+| 3. Node storage and validation | Done | — |
+| 4. Networking | Done: libp2p, Gossipsub, the two-call sync, three nodes | — |
+| 5. Indexer and index | Done: every v1 type, the read API, `rebuild`, the guarantees tested | unknown types counted, lag in `/health` |
+| 6. Gateway | Done: publish with failover, whole envelopes on reads | rate limiting |
+| 7. Client | Done, including the inspection view, fresh identities, and replace, withdraw and responses | signature checks under ZIP-215 (WebCrypto checks under RFC 8032 until `protocol/ts`) |
+| 8. Domain verification | Done, DNS over DoH or a configured server | the `.well-known` fallback |
+| 9. Seeding and the demonstration | Done: the generator, the second indexer with another ranking | importing the real Receita dump, rehearsing |
+| 10. Cuttable social features | Done: profiles, labels, moderators chosen by the reader | reports (`moderation.report_created` is not projected) |
+| 11. Self-hosting | Started: a container image, operator docs in `node/README.md` | a published image, a public bootstrap node, metrics, a status dashboard |
+| Academic track | Related work written | the metrics below are not collected yet beyond logs (the indexer logs progress and rebuild time; a rebuild of 1712 events took about 5 s); legal policy |
+
 ## Dependencies
 
 ```mermaid

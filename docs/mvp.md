@@ -63,6 +63,36 @@ The MVP is done when:
 - An event with an oversized payload, an unknown top-level envelope field, or a `createdAt` more than 5 minutes in the future is rejected.
 - The client can be pointed at a different gateway without code changes.
 
+## Where v1 stands
+
+Checked on 2026-11-24 against this repository, every flow run end to end through [infra/local](../infra/local/README.md): three nodes, the indexer, the gateway behind nginx, and the web client driven in a browser.
+
+| Acceptance criterion | State | Shown by |
+|---|---|---|
+| Open the client with no signup and create an identity | ✅ | `/app/identity` needs no account; writing does, at this gateway |
+| Publish a signed review; the gateway never touches the key | ✅ | the key is non-extractable in IndexedDB; the gateway forwards bytes |
+| The node rejects bad signature, ID, schema, size, version | ✅ | `protocol/go` rejection vectors; a tampered event refused (`indexer/cmd/demo tamper`) |
+| A valid event on at least 3 nodes | ✅ | the inspection view: "Held by 03 nodes" |
+| A node back online catches up through sync | ✅ | node-2 stopped and restarted: it held the event within seconds |
+| The indexer processes events and search finds an entity | ✅ | search by name and by category |
+| Replace and withdraw a review | ✅ | from the review page, by its author |
+| A label changes what a client following its moderator sees, nothing for one that does not | ✅ | `?moderators=`; two browsers, one following the moderator |
+| A third party starts a node without touching its source | ⚠️ | a container image builds from the repository; publishing it to a registry is open |
+| A brand-new node joins from the default bootstrap list alone | ❌ | the embedded list is empty until a public node exists |
+| One node down does not stop propagation | ✅ | publishing with node-1 down reached the other two |
+| The index dropped and rebuilt from the logs reproduces the deterministic half | ✅ | `indexer rebuild`: 1712 events, 15 tables identical; and in tests |
+| Two independently-built indexers agree on the deterministic list | ⚠️ | two instances of this indexer, fed the logs in other orders, agree in tests and live; a second implementation does not exist |
+| A vote before its review is buffered, then accepted | ✅ | the node's orphan tests and fixtures |
+| A conflicting later rotation is rejected; both at once contest the identity | ✅ | the node's rotation tests |
+| An event from another network is ignored and never relayed | ✅ | the node's network test |
+| Two independently-built nodes agree on the ZIP-215 vector set | ⚠️ | the Go node and library pass every vector; a second implementation (`protocol/ts`) is pending |
+| Duplicate keys or nesting past the cap are rejected before signature work | ✅ | `protocol/go` envelope tests and vectors |
+| An edit after endorsement does not carry the endorsements | ✅ | the review's history: "▲ 1 on this version", the new head at ▲ 0 |
+| Oversized payload, unknown envelope field, future `createdAt` rejected | ✅ | rejection vectors |
+| The client is pointed at another gateway without code changes | ✅ | `BACKEND_ORIGIN` on the site's nginx: one image, any gateway. Per user at run time is not built ([architecture.md](./architecture.md#substitutability-only-counts-if-the-client-isnt-served-by-the-gateway)) |
+
+Every step of the demonstration below runs: steps 1–4 and 7–8 in the client, step 3's "which nodes hold it" in the inspection view, steps 5 and 6 with `indexer/cmd/demo`, step 9 with `indexer rebuild`, step 10 with the `second-index` profile. [infra/local/README.md](../infra/local/README.md#the-demonstration) has the commands.
+
 ## The demonstration
 
 The acceptance criteria above are a checklist; this is the narrative that makes them legible to someone watching for ten minutes. It's listed here because it changed what's in scope — the inspection view and the seeded dataset exist for this and nothing else, and they're cheap next to the amount of otherwise-invisible work they make visible.
@@ -135,10 +165,10 @@ Still genuinely open:
 
 - ~~Payload schemas per event type~~ — **settled** ([protocol.md](./protocol.md#payloads)). With this the protocol's design is closed; what remains for Phase 0 is producing artifacts from it, not deciding anything.
 - **LGPD, Marco Civil, and the illegal-content/PII process** — deferred to a dedicated pass, not because it's minor but because it's the opposite. See [Legal exposure](#legal-exposure).
-- Old-version display policy — how much of a replace chain a client shows by default.
+- Old-version display policy — how much of a replace chain a client shows by default. (The v1 client shows the current version, and the whole history below it on the review's page.)
 - Re-check intervals for the delegated claim types — the maximum lifetimes are settled, but `email` and `human` have no cheap re-check, so in practice they just expire ([docs/verification.md](./verification.md#open-questions)).
 - Whether an indexer should publish an auditable completeness commitment ([docs/architecture.md](./architecture.md#integrity-is-verifiable-completeness-is-not)).
-- Identity export/backup format. Which key model v1 ships is settled: the single key ([decisions.md](./decisions.md#35-v1-ships-the-single-key-model-and-rejects-any-devicekey--call)).
-- Which language, framework, and database the **gateway, indexer and client** use. The node is settled as Go ([decisions.md](./decisions.md#132-the-node-is-written-in-go--call)) with bbolt as its database ([decisions.md](./decisions.md#152-bbolt-is-the-node-database-in-six-buckets--call)); the rest speak HTTP and SQL rather than libp2p, and nothing is blocked on them.
+- ~~Identity export/backup format~~ — **settled for v1**: a backup made when the identity is created, the PKCS #8 key sealed with a password (PBKDF2-SHA-256, 600 000 rounds, AES-GCM bound to the `did:key`), the key kept non-extractable in the browser ([decisions.md](./decisions.md#168-the-identity-is-made-on-purpose-with-its-backup-made-at-that-moment--call)). Which key model v1 ships is settled too: the single key ([decisions.md](./decisions.md#35-v1-ships-the-single-key-model-and-rejects-any-devicekey--call)).
+- ~~Which language, framework, and database the gateway, indexer and client use~~ — **settled**: the node in Go with bbolt; the indexer in Go with Postgres; the gateway in Python with FastAPI and Postgres; the client in React with TypeScript ([README](../README.md#repository)).
 
 Settled during the architecture review and no longer open: node retention for v1 (nodes don't prune), minimum replica target (3), alias conflicts (an alias is an ordinary weighted metadata proposal), and the key-recovery strategy (single-key is terminal on compromise; the root/device model is the designed way out). Every decision taken, with its cost and the alternatives rejected, is in [docs/decisions.md](./decisions.md).
