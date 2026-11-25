@@ -872,8 +872,8 @@ module carrying its own `replace`, there is nothing left for it to link.
     nothing, since every label is stored, whoever signed it, and only which
     ones count changes.
 - **Ranking** is a setting, `RANKING=newest` or `endorsed` (endorsements
-  less disputes on the head, then newest), and each answer names it. The
-  demonstration's second indexer runs `endorsed`.
+  less disputes on the head, then newest), and each answer names it. Only
+  `serve` reads it, so switching it is a restart, never a rebuild.
 - **Claims.** A `domain` claim counts once `project` has found its DNS
   record; a delegated one (`human`) counts when its issuer is in
   `VERIFIERS_FILE`. The sole verified holder of a domain is its
